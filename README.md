@@ -7,7 +7,7 @@ Lume is an IPTV player for iOS, tvOS and macOS. It supports xtream playlists, EP
 ## Features
 - Xtream playlist support
 - EPG data display
-- Multiple streaming format support (HLS, DASH, etc.)
+- Multiple streaming format support (.m3u8 and .ts)
 - User-friendly interface (SwiftUI)
 - Cross-platform support (iOS, tvOS, macOS)
 - Customizable player settings (aspect ratio, subtitles, etc.)
