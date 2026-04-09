@@ -83,6 +83,7 @@ There are a lot of ideas for the future of the app, but the main focus will be o
 - [ ] Airplay / Chromecast support (depends on player engine support)
 - [ ] Picture-in-picture mode
 - [ ] Option to hide content (categories or specific channels)
+- [ ] Custom EPG sources
 
 ## Xtream Codes API Documentation
 For more information on the Xtream Codes API, please refer to the [Xtream Codes API Documentation](XtreamAPI.md) file, which provides detailed information on the available endpoints, authentication, and response formats for retrieving server information, live streams, video-on-demand content, series, and EPG data.
