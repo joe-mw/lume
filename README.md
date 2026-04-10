@@ -15,7 +15,7 @@ Lume is an IPTV player for iOS, tvOS and macOS. It supports xtream playlists, EP
 ## Layout
 
 ### General
-- The app has a clean and modern design, following the latest SwiftUI design patterns and best practices
+- The app has a clean and modern design, following the latest SwiftUI design patterns and best practices (including liquid glass)
 - Tab-based navigation with sections for Home (future), Live TV, Movies, TV Shows and search (search icon separated according to latest SwiftUI design patterns). On scroll, the tab bar will shrink to only the active tab icon, and the search icon will be always visible on the right side of the screen (latest SwiftUI design patterns).
 - Each section will have its own view
 - Settings in the top right corner

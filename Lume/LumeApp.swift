@@ -12,7 +12,13 @@ import SwiftData
 struct LumeApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            Item.self,
+            Playlist.self,
+            Category.self,
+            LiveStream.self,
+            Movie.self,
+            Series.self,
+            Episode.self,
+            EPGListing.self
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
