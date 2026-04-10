@@ -15,7 +15,13 @@ final class Category {
     var parentId: Int
     var typeRaw: String
     var playlist: Playlist?
-    
+
+    // Category management
+    var isHidden: Bool = false
+    var sortOrder: Int = 0
+    var customIcon: String?
+    var lastRefreshed: Date?
+
     // Relationships
     @Relationship(deleteRule: .cascade) var liveStreams: [LiveStream] = []
     @Relationship(deleteRule: .cascade) var movies: [Movie] = []

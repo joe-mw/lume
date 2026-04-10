@@ -29,7 +29,20 @@ final class Movie {
     var isFavorite: Bool = false
     var watchProgress: Double = 0.0 // seconds
     var isWatched: Bool = false
-    
+
+    // Download support
+    var downloadStatusRaw: String? // nil, pending, downloading, completed, failed
+    var localFileURL: String?
+    var downloadedAt: Date?
+
+    // Watch tracking
+    var lastWatchedDate: Date?
+    var addedToWatchlistDate: Date?
+
+    // External IDs (normalized)
+    var traktId: String?
+    var tmdbId: Int?
+
     init(id: String, streamId: Int, name: String, streamIcon: String? = nil, rating: Double = 0, rating5Based: Double = 0, added: String? = nil, containerExtension: String? = nil, tmdb: String? = nil, num: Int = 0, isAdult: Int = 0, category: Category? = nil) {
         self.id = id
         self.streamId = streamId
@@ -44,4 +57,22 @@ final class Movie {
         self.isAdult = isAdult
         self.category = category
     }
+
+    // Computed properties
+    var downloadStatus: DownloadStatus? {
+        get {
+            guard let raw = downloadStatusRaw else { return nil }
+            return DownloadStatus(rawValue: raw)
+        }
+        set { downloadStatusRaw = newValue?.rawValue }
+    }
+}
+
+// MARK: - Supporting Types
+
+enum DownloadStatus: String, Codable {
+    case pending
+    case downloading
+    case completed
+    case failed
 }

@@ -11,19 +11,16 @@ import SwiftData
 @main
 struct LumeApp: App {
     var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Playlist.self,
-            Category.self,
-            LiveStream.self,
-            Movie.self,
-            Series.self,
-            Episode.self,
-            EPGListing.self
-        ])
+        // Use the migration plan for safe schema evolution
+        let schema = Schema(versionedSchema: LumeSchemaV2.self)
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
         do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+            return try ModelContainer(
+                for: schema,
+                migrationPlan: LumeMigrationPlan.self,
+                configurations: [modelConfiguration]
+            )
         } catch {
             fatalError("Could not create ModelContainer: \(error)")
         }

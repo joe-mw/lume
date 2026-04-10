@@ -20,10 +20,18 @@ final class Episode {
     var airDate: String?
     
     var series: Series?
-    
+
     var watchProgress: Double = 0.0 // seconds
     var isWatched: Bool = false
-    
+
+    // Download support
+    var downloadStatusRaw: String? // nil, pending, downloading, completed, failed
+    var localFileURL: String?
+    var downloadedAt: Date?
+
+    // Watch tracking
+    var lastWatchedDate: Date?
+
     init(id: String, episodeId: String, title: String, containerExtension: String, seasonNum: Int, episodeNum: Int, added: String? = nil, directSource: String? = nil, series: Series? = nil) {
         self.id = id
         self.episodeId = episodeId
@@ -34,5 +42,14 @@ final class Episode {
         self.added = added
         self.directSource = directSource
         self.series = series
+    }
+
+    // Computed properties
+    var downloadStatus: DownloadStatus? {
+        get {
+            guard let raw = downloadStatusRaw else { return nil }
+            return DownloadStatus(rawValue: raw)
+        }
+        set { downloadStatusRaw = newValue?.rawValue }
     }
 }

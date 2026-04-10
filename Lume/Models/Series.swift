@@ -20,9 +20,17 @@ final class Series {
     
     var category: Category?
     @Relationship(deleteRule: .cascade) var episodes: [Episode] = []
-    
+
     var isFavorite: Bool = false
-    
+
+    // Watch tracking
+    var lastWatchedDate: Date?
+    var addedToWatchlistDate: Date?
+
+    // External IDs
+    var traktId: String?
+    var tmdbId: Int?
+
     init(id: String, seriesId: Int, name: String, cover: String? = nil, plot: String? = nil, cast: String? = nil, director: String? = nil, genre: String? = nil, releaseDate: String? = nil, lastModified: String? = nil, rating: String? = nil, rating5Based: String? = nil, tmdb: String? = nil, num: Int = 0, category: Category? = nil) {
         self.id = id
         self.seriesId = seriesId

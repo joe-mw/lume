@@ -17,9 +17,13 @@ final class LiveStream {
     
     var category: Category?
     @Relationship(deleteRule: .cascade) var epgListings: [EPGListing] = []
-    
+
     var isFavorite: Bool = false
-    
+
+    // User preferences
+    var lastWatchedDate: Date?
+    var customOrder: Int?
+
     init(id: String, streamId: Int, name: String, streamIcon: String? = nil, epgChannelId: String? = nil, added: String? = nil, customSid: String? = nil, tvArchive: Int = 0, tvArchiveDuration: Int = 0, isAdult: Int = 0, num: Int = 0, category: Category? = nil) {
         self.id = id
         self.streamId = streamId
