@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftData
+import OSLog
 
 // MARK: - ContentSyncManager
 
@@ -47,6 +48,11 @@ actor ContentSyncManager {
                 // Sync all categories
                 try await syncAllCategories(for: playlist, full: full)
 
+                // Sync all content (movies, series, live streams)
+                try await syncMovies(for: playlist)
+                // try await syncSeries(for: playlist)
+                // try await syncLiveStreams(for: playlist)
+
                 playlist.syncStatus = .idle
                 playlist.lastSyncDate = Date()
                 try modelContext.save()
@@ -66,17 +72,21 @@ actor ContentSyncManager {
         }
 
         activeSyncTasks.removeValue(forKey: playlist.id)
+        Logger.database.info("Completed sync for playlist \(playlist.name)")
     }
 
     /// Syncs all categories for a playlist
     func syncAllCategories(for playlist: Playlist, full: Bool = false) async throws {
         // Sync VOD categories and content
+        Logger.database.info("Starting VOD category sync for playlist \(playlist.name)")
         try await syncVODCategories(for: playlist)
 
         // Sync Series categories and content
+        Logger.database.info("Starting Series category sync for playlist \(playlist.name)")
         try await syncSeriesCategories(for: playlist)
 
         // Sync Live TV categories and content
+        Logger.database.info("Starting Live TV category sync for playlist \(playlist.name)")
         try await syncLiveCategories(for: playlist)
     }
 
@@ -86,8 +96,10 @@ actor ContentSyncManager {
     private func syncVODCategories(for playlist: Playlist) async throws {
         let categories = try await xtreamClient.getVODCategories(playlist: playlist)
 
+        Logger.database.info("Fetched \(categories.count) VOD categories for playlist \(playlist.name)")
+
         for categoryDTO in categories {
-            let category = await findOrCreateCategory(
+            let category = await createCategory(
                 apiId: categoryDTO.categoryId,
                 name: categoryDTO.categoryName,
                 parentId: categoryDTO.parentId ?? 0,
@@ -97,8 +109,6 @@ actor ContentSyncManager {
 
             category.lastRefreshed = Date()
 
-            // Sync movies for this category
-            try await syncMovies(for: category, playlist: playlist)
         }
 
         try modelContext.save()
@@ -109,7 +119,7 @@ actor ContentSyncManager {
         let categories = try await xtreamClient.getSeriesCategories(playlist: playlist)
 
         for categoryDTO in categories {
-            let category = await findOrCreateCategory(
+            let category = await createCategory(
                 apiId: categoryDTO.categoryId,
                 name: categoryDTO.categoryName,
                 parentId: categoryDTO.parentId ?? 0,
@@ -118,9 +128,6 @@ actor ContentSyncManager {
             )
 
             category.lastRefreshed = Date()
-
-            // Sync series for this category
-            try await syncSeries(for: category, playlist: playlist)
         }
 
         try modelContext.save()
@@ -131,7 +138,7 @@ actor ContentSyncManager {
         let categories = try await xtreamClient.getLiveCategories(playlist: playlist)
 
         for categoryDTO in categories {
-            let category = await findOrCreateCategory(
+            let category = await createCategory(
                 apiId: categoryDTO.categoryId,
                 name: categoryDTO.categoryName,
                 parentId: categoryDTO.parentId ?? 0,
@@ -140,9 +147,6 @@ actor ContentSyncManager {
             )
 
             category.lastRefreshed = Date()
-
-            // Sync live streams for this category
-            try await syncLiveStreams(for: category, playlist: playlist)
         }
 
         try modelContext.save()
@@ -150,47 +154,65 @@ actor ContentSyncManager {
 
     // MARK: - Content Sync
 
-    /// Syncs movies for a category
-    func syncMovies(for category: Category, playlist: Playlist) async throws {
-        let streams = try await xtreamClient.getVODStreams(playlist: playlist, categoryId: category.apiId)
+    /// Syncs movies
+    func syncMovies(for playlist: Playlist) async throws {
+        let movies = try await xtreamClient.getVODStreams(playlist: playlist)
 
-        for streamDTO in streams {
-            guard let streamId = streamDTO.streamId else { continue }
+        Logger.database.info("Fetched \(movies.count) movies for playlist \(playlist.name)")
+
+        for movieDTO in movies {
+            guard let streamId = movieDTO.streamId else { continue }
             let movieId = "\(playlist.id.uuidString)-movie-\(streamId)"
 
-            let movie = await findOrCreateMovie(id: movieId, streamId: streamId, category: category)
+            let movie = Movie(
+                id: movieId,
+                streamId: streamId,
+                name: ""
+            )
 
             // Update movie properties
-            movie.name = streamDTO.name ?? ""
-            movie.streamIcon = streamDTO.streamIcon
-            movie.rating = streamDTO.rating ?? 0
-            movie.rating5Based = streamDTO.rating5Based ?? 0
-            movie.added = streamDTO.added
-            movie.containerExtension = streamDTO.containerExtension
-            movie.tmdb = streamDTO.tmdb
-            movie.num = streamDTO.num ?? 0
-            movie.isAdult = streamDTO.isAdult ?? 0
+            movie.name = movieDTO.name ?? ""
+            movie.streamIcon = movieDTO.streamIcon
+            movie.rating = movieDTO.rating ?? 0
+            movie.rating5Based = movieDTO.rating5Based ?? 0
+            movie.added = movieDTO.added
+            movie.containerExtension = movieDTO.containerExtension
+            movie.tmdb = movieDTO.tmdb
+            movie.num = movieDTO.num ?? 0
+            movie.isAdult = movieDTO.isAdult ?? 0
+
+            // Store categories
+            movie.categories = [movieDTO.categoryId].compactMap { categoryId in
+                playlist.categories.first { $0.apiId == categoryId && $0.type == .vod }
+            }
 
             // Store TMDB ID if available
-            if let tmdbString = streamDTO.tmdb, let tmdbInt = Int(tmdbString) {
+            if let tmdbString = movieDTO.tmdb, let tmdbInt = Int(tmdbString) {
                 movie.tmdbId = tmdbInt
             }
+
+            modelContext.insert(movie)
         }
+
+        Logger.database.info("Completed syncing movies for playlist \(playlist.name)")
 
         try modelContext.save()
     }
 
-    /// Syncs series for a category
-    func syncSeries(for category: Category, playlist: Playlist) async throws {
-        let seriesList = try await xtreamClient.getSeries(playlist: playlist, categoryId: category.apiId)
+    /// Syncs series
+    func syncSeries(for playlist: Playlist) async throws {
+        let seriesList = try await xtreamClient.getSeries(playlist: playlist)
 
         for seriesDTO in seriesList {
             guard let seriesId = seriesDTO.seriesId else { continue }
             let id = "\(playlist.id.uuidString)-series-\(seriesId)"
 
-            let series = await findOrCreateSeries(id: id, seriesId: seriesId, category: category)
+            let series = Series(
+                id: id,
+                seriesId: seriesId,
+                name: ""
+            )
 
-            // Update series properties
             series.name = seriesDTO.name ?? ""
             series.cover = seriesDTO.cover
             series.plot = seriesDTO.plot
@@ -204,10 +226,17 @@ actor ContentSyncManager {
             series.tmdb = seriesDTO.tmdb
             series.num = seriesDTO.num ?? 0
 
+            // Store categories
+            series.categories = [seriesDTO.categoryId].compactMap { categoryId in
+                playlist.categories.first { $0.apiId == categoryId && $0.type == .series }
+            }
+
             // Store TMDB ID if available
             if let tmdbString = seriesDTO.tmdb, let tmdbInt = Int(tmdbString) {
                 series.tmdbId = tmdbInt
             }
+
+            modelContext.insert(series)
         }
 
         try modelContext.save()
@@ -227,9 +256,13 @@ actor ContentSyncManager {
                 guard let episodeIdString = episodeDTO.id else { continue }
                 let episodeId = "\(series.id)-episode-\(episodeIdString)"
 
-                let episode = await findOrCreateEpisode(
+                let episode = Episode(
                     id: episodeId,
-                    episodeIdString: episodeIdString,
+                    episodeId: episodeIdString,
+                    title: "",
+                    containerExtension: "mkv",
+                    seasonNum: seasonNum,
+                    episodeNum: episodeDTO.episodeNum ?? 0,
                     series: series
                 )
 
@@ -248,24 +281,26 @@ actor ContentSyncManager {
                     episode.rating = info.rating
                     episode.airDate = info.airDate
                 }
+
+                modelContext.insert(episode)
             }
         }
 
         try modelContext.save()
     }
 
-    /// Syncs live streams for a category
-    func syncLiveStreams(for category: Category, playlist: Playlist) async throws {
-        let streams = try await xtreamClient.getLiveStreams(playlist: playlist, categoryId: category.apiId)
+    /// Syncs live streams
+    func syncLiveStreams(for playlist: Playlist) async throws {
+        let streams = try await xtreamClient.getLiveStreams(playlist: playlist)
 
         for streamDTO in streams {
             guard let streamId = streamDTO.streamId else { continue }
             let id = "\(playlist.id.uuidString)-live-\(streamId)"
 
-            let liveStream = await findOrCreateLiveStream(
+            let liveStream = LiveStream(
                 id: id,
                 streamId: streamId,
-                category: category
+                name: ""
             )
 
             // Update live stream properties
@@ -278,6 +313,11 @@ actor ContentSyncManager {
             liveStream.tvArchiveDuration = streamDTO.tvArchiveDuration ?? 0
             liveStream.isAdult = streamDTO.isAdult ?? 0
             liveStream.num = streamDTO.num ?? 0
+
+            // Store categories
+            liveStream.categories = [streamDTO.categoryId].compactMap { categoryId in
+                playlist.categories.first { $0.apiId == categoryId && $0.type == .live }
+            }
         }
 
         try modelContext.save()
@@ -294,7 +334,7 @@ actor ContentSyncManager {
         playlist.lastUpdated = Date()
     }
 
-    private func findOrCreateCategory(
+    private func createCategory(
         apiId: String,
         name: String,
         parentId: Int,
@@ -302,14 +342,6 @@ actor ContentSyncManager {
         playlist: Playlist
     ) async -> Category {
         let id = "\(playlist.id.uuidString)-\(type.rawValue)-\(apiId)"
-
-        let descriptor = FetchDescriptor<Category>(
-            predicate: #Predicate { $0.id == id }
-        )
-
-        if let existing = try? modelContext.fetch(descriptor).first {
-            return existing
-        }
 
         let category = Category(
             apiId: apiId,
@@ -320,93 +352,6 @@ actor ContentSyncManager {
         )
         modelContext.insert(category)
         return category
-    }
-
-    private func findOrCreateMovie(id: String, streamId: Int, category: Category) async -> Movie {
-        let descriptor = FetchDescriptor<Movie>(
-            predicate: #Predicate { $0.id == id }
-        )
-
-        if let existing = try? modelContext.fetch(descriptor).first {
-            return existing
-        }
-
-        let movie = Movie(
-            id: id,
-            streamId: streamId,
-            name: "",
-            category: category
-        )
-        modelContext.insert(movie)
-        return movie
-    }
-
-    private func findOrCreateSeries(id: String, seriesId: Int, category: Category) async -> Series {
-        let descriptor = FetchDescriptor<Series>(
-            predicate: #Predicate { $0.id == id }
-        )
-
-        if let existing = try? modelContext.fetch(descriptor).first {
-            return existing
-        }
-
-        let series = Series(
-            id: id,
-            seriesId: seriesId,
-            name: "",
-            category: category
-        )
-        modelContext.insert(series)
-        return series
-    }
-
-    private func findOrCreateEpisode(
-        id: String,
-        episodeIdString: String,
-        series: Series
-    ) async -> Episode {
-        let descriptor = FetchDescriptor<Episode>(
-            predicate: #Predicate { $0.id == id }
-        )
-
-        if let existing = try? modelContext.fetch(descriptor).first {
-            return existing
-        }
-
-        let episode = Episode(
-            id: id,
-            episodeId: episodeIdString,
-            title: "",
-            containerExtension: "mkv",
-            seasonNum: 1,
-            episodeNum: 1,
-            series: series
-        )
-        modelContext.insert(episode)
-        return episode
-    }
-
-    private func findOrCreateLiveStream(
-        id: String,
-        streamId: Int,
-        category: Category
-    ) async -> LiveStream {
-        let descriptor = FetchDescriptor<LiveStream>(
-            predicate: #Predicate { $0.id == id }
-        )
-
-        if let existing = try? modelContext.fetch(descriptor).first {
-            return existing
-        }
-
-        let liveStream = LiveStream(
-            id: id,
-            streamId: streamId,
-            name: "",
-            category: category
-        )
-        modelContext.insert(liveStream)
-        return liveStream
     }
 }
 
