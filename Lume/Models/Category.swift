@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 
 enum CategoryType: String, Codable {
     case live
@@ -6,7 +7,33 @@ enum CategoryType: String, Codable {
     case series
 }
 
-typealias Category = LumeSchemaV3.Category
+@Model
+final class Category {
+    @Attribute(.unique) var id: String
+    var apiId: String
+    var name: String
+    var parentId: Int
+    var typeRaw: String
+    var playlist: Playlist?
+
+    var isHidden: Bool = false
+    var sortOrder: Int = 0
+    var customIcon: String?
+    var lastRefreshed: Date?
+
+    @Relationship(deleteRule: .cascade) var liveStreams: [LiveStream] = []
+    @Relationship(deleteRule: .cascade) var movies: [Movie] = []
+    @Relationship(deleteRule: .cascade) var series: [Series] = []
+
+    init(apiId: String, name: String, parentId: Int, typeRaw: String, playlist: Playlist? = nil) {
+        self.id = "\(playlist?.id.uuidString ?? "unknown")-\(typeRaw)-\(apiId)"
+        self.apiId = apiId
+        self.name = name
+        self.parentId = parentId
+        self.typeRaw = typeRaw
+        self.playlist = playlist
+    }
+}
 
 extension Category {
     var type: CategoryType {
