@@ -12,7 +12,7 @@ import SwiftData
 struct LumeApp: App {
     var sharedModelContainer: ModelContainer = {
         // Use the migration plan for safe schema evolution
-        let schema = Schema(versionedSchema: LumeSchemaV2.self)
+        let schema = Schema(versionedSchema: LumeSchemaV3.self)
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
         do {

@@ -10,16 +10,21 @@ import SwiftData
 
 enum LumeMigrationPlan: SchemaMigrationPlan {
     static var schemas: [any VersionedSchema.Type] {
-        [LumeSchemaV1.self, LumeSchemaV2.self]
+        [LumeSchemaV1.self, LumeSchemaV2.self, LumeSchemaV3.self]
     }
 
     static var stages: [MigrationStage] {
-        [migrateV1toV2]
+        [migrateV1toV2, migrateV2toV3]
     }
 
     static let migrateV1toV2 = MigrationStage.lightweight(
         fromVersion: LumeSchemaV1.self,
         toVersion: LumeSchemaV2.self
+    )
+
+    static let migrateV2toV3 = MigrationStage.lightweight(
+        fromVersion: LumeSchemaV2.self,
+        toVersion: LumeSchemaV3.self
     )
 }
 
