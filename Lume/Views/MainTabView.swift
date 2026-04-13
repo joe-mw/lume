@@ -12,38 +12,38 @@ struct MainTabView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var playlists: [Playlist]
 
-    @State private var selectedTab: Tab = .movies
+    @State private var selectedTab: TabItem = .movies
     @State private var navigationPath = NavigationPath()
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            MoviesView()
-                .tabItem {
-                    Label("Movies", systemImage: "film")
-                }
-                .tag(Tab.movies)
+            Tab(value: .movies) {
+                MoviesView()
+            } label: {
+                Label("Movies", systemImage: "film")
+            }
 
-            SeriesView()
-                .tabItem {
-                    Label("Series", systemImage: "tv")
-                }
-                .tag(Tab.series)
+            Tab(value: .series) {
+                SeriesView()
+            } label: {
+                Label("Series", systemImage: "tv")
+            }
 
-            LiveTVView()
-                .tabItem {
-                    Label("Live TV", systemImage: "antenna.radiowaves.left.and.right")
-                }
-                .tag(Tab.liveTV)
+            Tab(value: .liveTV) {
+                LiveTVView()
+            } label: {
+                Label("Live TV", systemImage: "antenna.radiowaves.left.and.right")
+            }
 
-            SettingsView()
-                .tabItem {
-                    Label("Settings", systemImage: "gear")
-                }
-                .tag(Tab.settings)
+            Tab(value: .settings) {
+                SettingsView()
+            } label: {
+                Label("Settings", systemImage: "gear")
+            }
         }
     }
 
-    enum Tab {
+    enum TabItem {
         case movies
         case series
         case liveTV
