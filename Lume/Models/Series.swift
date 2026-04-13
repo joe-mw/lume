@@ -18,7 +18,7 @@ final class Series {
     var tmdb: String?
     var num: Int
 
-    var categories: [Category] = []
+    @Relationship(deleteRule: .nullify, inverse: \Category.series) var categories: [Category] = []
 
     @Relationship(deleteRule: .cascade) var episodes: [Episode] = []
 

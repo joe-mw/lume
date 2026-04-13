@@ -15,7 +15,7 @@ final class LiveStream {
     var isAdult: Int
     var num: Int
 
-    var categories: [Category] = []
+    @Relationship(deleteRule: .nullify, inverse: \Category.liveStreams) var categories: [Category] = []
 
     @Relationship(deleteRule: .cascade) var epgListings: [EPGListing] = []
 

@@ -23,7 +23,7 @@ final class Movie {
     var durationSecs: Int?
     var youtubeTrailer: String?
 
-    var categories: [Category] = []
+    @Relationship(deleteRule: .nullify, inverse: \Category.movies) var categories: [Category] = []
 
     var isFavorite: Bool = false
     var watchProgress: Double = 0.0
