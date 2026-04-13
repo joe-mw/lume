@@ -181,10 +181,7 @@ actor ContentSyncManager {
             movie.num = movieDTO.num ?? 0
             movie.isAdult = movieDTO.isAdult ?? 0
 
-            // Store categories
-            movie.categories = [movieDTO.categoryId].compactMap { categoryId in
-                playlist.categories.first { $0.apiId == categoryId && $0.type == .vod }
-            }
+            
 
             // Store TMDB ID if available
             if let tmdbString = movieDTO.tmdb, let tmdbInt = Int(tmdbString) {
@@ -225,11 +222,6 @@ actor ContentSyncManager {
             series.rating5Based = seriesDTO.rating5Based
             series.tmdb = seriesDTO.tmdb
             series.num = seriesDTO.num ?? 0
-
-            // Store categories
-            series.categories = [seriesDTO.categoryId].compactMap { categoryId in
-                playlist.categories.first { $0.apiId == categoryId && $0.type == .series }
-            }
 
             // Store TMDB ID if available
             if let tmdbString = seriesDTO.tmdb, let tmdbInt = Int(tmdbString) {
@@ -313,11 +305,6 @@ actor ContentSyncManager {
             liveStream.tvArchiveDuration = streamDTO.tvArchiveDuration ?? 0
             liveStream.isAdult = streamDTO.isAdult ?? 0
             liveStream.num = streamDTO.num ?? 0
-
-            // Store categories
-            liveStream.categories = [streamDTO.categoryId].compactMap { categoryId in
-                playlist.categories.first { $0.apiId == categoryId && $0.type == .live }
-            }
         }
 
         try modelContext.save()

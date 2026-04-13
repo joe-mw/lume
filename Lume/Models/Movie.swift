@@ -23,7 +23,7 @@ final class Movie {
     var durationSecs: Int?
     var youtubeTrailer: String?
 
-    @Relationship(deleteRule: .nullify, inverse: \Category.movies) var categories: [Category] = []
+    var category: Category?
 
     var isFavorite: Bool = false
     var watchProgress: Double = 0.0
@@ -51,7 +51,7 @@ final class Movie {
         tmdb: String? = nil,
         num: Int = 0,
         isAdult: Int = 0,
-        categories: [Category] = []
+        category: Category? = nil
     ) {
         self.id = id
         self.streamId = streamId
@@ -64,7 +64,7 @@ final class Movie {
         self.tmdb = tmdb
         self.num = num
         self.isAdult = isAdult
-        self.categories = categories
+        self.category = category
     }
 }
 

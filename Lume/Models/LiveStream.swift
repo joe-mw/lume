@@ -15,8 +15,7 @@ final class LiveStream {
     var isAdult: Int
     var num: Int
 
-    @Relationship(deleteRule: .nullify, inverse: \Category.liveStreams) var categories: [Category] = []
-
+    var category: Category?
     @Relationship(deleteRule: .cascade) var epgListings: [EPGListing] = []
 
     var isFavorite: Bool = false
@@ -35,7 +34,7 @@ final class LiveStream {
         tvArchiveDuration: Int = 0,
         isAdult: Int = 0,
         num: Int = 0,
-        categories: [Category] = []
+        category: Category? = nil
     ) {
         self.id = id
         self.streamId = streamId
@@ -48,6 +47,6 @@ final class LiveStream {
         self.tvArchiveDuration = tvArchiveDuration
         self.isAdult = isAdult
         self.num = num
-        self.categories = categories
+        self.category = category
     }
 }
