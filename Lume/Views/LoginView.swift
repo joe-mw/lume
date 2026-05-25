@@ -18,11 +18,15 @@ struct LoginView: View {
                 Section(header: Text("Playlist Details")) {
                     TextField("Name (e.g. My IPTV)", text: $name)
                     TextField("Server URL (http://...)", text: $serverURL)
+                        #if os(iOS)
                         .textInputAutocapitalization(.never)
-                        .disableAutocorrection(true)
                         .keyboardType(.URL)
+                        #endif
+                        .disableAutocorrection(true)
                     TextField("Username", text: $username)
+                        #if os(iOS)
                         .textInputAutocapitalization(.never)
+                        #endif
                         .disableAutocorrection(true)
                     SecureField("Password", text: $password)
                 }

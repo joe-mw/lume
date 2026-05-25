@@ -58,7 +58,7 @@ struct SeriesView: View {
             }
             .navigationTitle("Series")
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .automatic) {
                     if let playlist = playlists.first {
                         Menu {
                             ForEach(playlists) { p in
@@ -79,7 +79,7 @@ struct SeriesView: View {
                     }
                 }
 
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .automatic) {
                     HStack {
                         Button {
                             showingSync = true

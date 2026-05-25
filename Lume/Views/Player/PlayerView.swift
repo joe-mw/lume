@@ -58,7 +58,9 @@ struct PlayerView: View {
                 .transition(.opacity)
             }
         }
+        #if os(iOS)
         .statusBarHidden(!showControls)
+        #endif
         .persistentSystemOverlays(showControls ? .visible : .hidden)
         .task {
             do {

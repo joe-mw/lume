@@ -60,7 +60,7 @@ struct MoviesView: View {
             }
             .navigationTitle("Movies")
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .automatic) {
                     if let playlist = playlists.first {
                         Menu {
                             ForEach(playlists) { p in
@@ -81,7 +81,7 @@ struct MoviesView: View {
                     }
                 }
 
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .automatic) {
                     HStack {
                         if isSyncing {
                             ProgressView()
@@ -234,7 +234,9 @@ struct SyncProgressView: View {
                 }
             }
             .navigationTitle("Sync Playlist")
+            #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
+            #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {

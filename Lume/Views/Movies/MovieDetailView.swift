@@ -195,9 +195,11 @@ struct MovieDetailView: View {
             }
             .padding(.vertical)
         }
+        #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
+        #endif
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItem(placement: .automatic) {
                 Button {
                     movie.isFavorite.toggle()
                 } label: {
@@ -206,11 +208,19 @@ struct MovieDetailView: View {
                 }
             }
         }
+        #if os(iOS)
         .fullScreenCover(isPresented: $showingPlayer) {
             if let playlist = playlists.first {
                 PlayerView(content: movie, playlist: playlist)
             }
         }
+        #else
+        .sheet(isPresented: $showingPlayer) {
+            if let playlist = playlists.first {
+                PlayerView(content: movie, playlist: playlist)
+            }
+        }
+        #endif
     }
 
     private func formatDuration(_ seconds: Int) -> String {

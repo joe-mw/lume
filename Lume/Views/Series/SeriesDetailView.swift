@@ -222,9 +222,11 @@ struct SeriesDetailView: View {
             }
             .padding(.vertical)
         }
+        #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
+        #endif
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItem(placement: .automatic) {
                 Button {
                     series.isFavorite.toggle()
                 } label: {
@@ -233,11 +235,19 @@ struct SeriesDetailView: View {
                 }
             }
         }
+        #if os(iOS)
         .fullScreenCover(isPresented: $showingPlayer) {
             if let episode = selectedEpisode, let playlist = playlists.first {
                 PlayerView(content: episode, playlist: playlist)
             }
         }
+        #else
+        .sheet(isPresented: $showingPlayer) {
+            if let episode = selectedEpisode, let playlist = playlists.first {
+                PlayerView(content: episode, playlist: playlist)
+            }
+        }
+        #endif
     }
 
     private var availableSeasons: [Int] {
