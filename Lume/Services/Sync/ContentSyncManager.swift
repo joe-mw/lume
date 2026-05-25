@@ -118,6 +118,8 @@ actor ContentSyncManager {
     private func syncSeriesCategories(for playlist: Playlist) async throws {
         let categories = try await xtreamClient.getSeriesCategories(playlist: playlist)
 
+        Logger.database.info("Fetched \(categories.count) Series categories for playlist \(playlist.name)")
+
         for categoryDTO in categories {
             let category = await createCategory(
                 apiId: categoryDTO.categoryId,
@@ -136,6 +138,8 @@ actor ContentSyncManager {
     /// Syncs Live TV categories
     private func syncLiveCategories(for playlist: Playlist) async throws {
         let categories = try await xtreamClient.getLiveCategories(playlist: playlist)
+
+        Logger.database.info("Fetched \(categories.count) Live categories for playlist \(playlist.name)")
 
         for categoryDTO in categories {
             let category = await createCategory(
@@ -160,6 +164,9 @@ actor ContentSyncManager {
 
         Logger.database.info("Fetched \(movies.count) movies for playlist \(playlist.name)")
 
+        let categoryLookup = buildCategoryLookup(playlist: playlist, type: .vod)
+        Logger.database.info("Loaded \(categoryLookup.count) VOD categories for movie mapping")
+
         for movieDTO in movies {
             guard let streamId = movieDTO.streamId else { continue }
             let movieId = "\(playlist.id.uuidString)-movie-\(streamId)"
@@ -181,13 +188,9 @@ actor ContentSyncManager {
             movie.num = movieDTO.num ?? 0
             movie.isAdult = movieDTO.isAdult ?? 0
 
-            // Assign category if available
-            if let categoryId = movieDTO.categoryId {
-                movie.category = findCategory(
-                    apiId: categoryId,
-                    type: .vod,
-                    playlist: playlist
-                )
+            // Assign category using prebuilt lookup (O(1) per movie)
+            if let categoryId = movieDTO.categoryId, let numericId = Int(categoryId) {
+                movie.category = categoryLookup[numericId]
             }
 
             // Store TMDB ID if available
@@ -206,6 +209,11 @@ actor ContentSyncManager {
     /// Syncs series
     func syncSeries(for playlist: Playlist) async throws {
         let seriesList = try await xtreamClient.getSeries(playlist: playlist)
+
+        Logger.database.info("Fetched \(seriesList.count) series for playlist \(playlist.name)")
+
+        let categoryLookup = buildCategoryLookup(playlist: playlist, type: .series)
+        Logger.database.info("Loaded \(categoryLookup.count) Series categories for series mapping")
 
         for seriesDTO in seriesList {
             guard let seriesId = seriesDTO.seriesId else { continue }
@@ -230,13 +238,9 @@ actor ContentSyncManager {
             series.tmdb = seriesDTO.tmdb
             series.num = seriesDTO.num ?? 0
 
-            // Assign category if available
-            if let categoryId = seriesDTO.categoryId {
-                series.category = findCategory(
-                    apiId: categoryId,
-                    type: .series,
-                    playlist: playlist
-                )
+            // Assign category using prebuilt lookup (O(1) per item)
+            if let categoryId = seriesDTO.categoryId, let numericId = Int(categoryId) {
+                series.category = categoryLookup[numericId]
             }
 
             // Store TMDB ID if available
@@ -301,6 +305,11 @@ actor ContentSyncManager {
     func syncLiveStreams(for playlist: Playlist) async throws {
         let streams = try await xtreamClient.getLiveStreams(playlist: playlist)
 
+        Logger.database.info("Fetched \(streams.count) live streams for playlist \(playlist.name)")
+
+        let categoryLookup = buildCategoryLookup(playlist: playlist, type: .live)
+        Logger.database.info("Loaded \(categoryLookup.count) Live categories for stream mapping")
+
         for streamDTO in streams {
             guard let streamId = streamDTO.streamId else { continue }
             let id = "\(playlist.id.uuidString)-live-\(streamId)"
@@ -322,13 +331,9 @@ actor ContentSyncManager {
             liveStream.isAdult = streamDTO.isAdult ?? 0
             liveStream.num = streamDTO.num ?? 0
 
-            // Assign category if available
-            if let categoryId = streamDTO.categoryId {
-                liveStream.category = findCategory(
-                    apiId: categoryId,
-                    type: .live,
-                    playlist: playlist
-                )
+            // Assign category using prebuilt lookup (O(1) per item)
+            if let categoryId = streamDTO.categoryId, let numericId = Int(categoryId) {
+                liveStream.category = categoryLookup[numericId]
             }
 
             modelContext.insert(liveStream)
@@ -346,6 +351,21 @@ actor ContentSyncManager {
         playlist.expDate = authResponse.userInfo.expDate
         playlist.serverTimezone = authResponse.serverInfo.timezone
         playlist.lastUpdated = Date()
+    }
+
+    private func buildCategoryLookup(playlist: Playlist, type: CategoryType) -> [Int: Category] {
+        let prefix = "\(playlist.id.uuidString)-\(type.rawValue)-"
+        let descriptor = FetchDescriptor<Category>(
+            predicate: #Predicate { $0.typeRaw == type.rawValue }
+        )
+        guard let allCategories = try? modelContext.fetch(descriptor) else { return [:] }
+        var lookup: [Int: Category] = [:]
+        lookup.reserveCapacity(allCategories.count)
+        for category in allCategories where category.id.hasPrefix(prefix) {
+            guard let numericId = Int(category.apiId) else { continue }
+            lookup[numericId] = category
+        }
+        return lookup
     }
 
     private func createCategory(
@@ -381,20 +401,13 @@ actor ContentSyncManager {
         type: CategoryType,
         playlist: Playlist
     ) -> Category? {
-        let playlistId = playlist.id
-        let typeRaw = type.rawValue
-
+        let targetId = "\(playlist.id.uuidString)-\(type.rawValue)-\(apiId)"
         let descriptor = FetchDescriptor<Category>(
-            predicate: #Predicate<Category> { category in
-                category.apiId == apiId &&
-                category.typeRaw == typeRaw &&
-                category.playlist != nil &&
-                category.playlist!.id == playlistId
-            }
+            predicate: #Predicate { $0.id == targetId }
         )
-
         return try? modelContext.fetch(descriptor).first
     }
+
 }
 
 // MARK: - Sync Error
