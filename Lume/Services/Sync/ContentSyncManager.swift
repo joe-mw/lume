@@ -181,7 +181,14 @@ actor ContentSyncManager {
             movie.num = movieDTO.num ?? 0
             movie.isAdult = movieDTO.isAdult ?? 0
 
-            
+            // Assign category if available
+            if let categoryId = movieDTO.categoryId {
+                movie.category = findCategory(
+                    apiId: categoryId,
+                    type: .vod,
+                    playlist: playlist
+                )
+            }
 
             // Store TMDB ID if available
             if let tmdbString = movieDTO.tmdb, let tmdbInt = Int(tmdbString) {
@@ -222,6 +229,15 @@ actor ContentSyncManager {
             series.rating5Based = seriesDTO.rating5Based
             series.tmdb = seriesDTO.tmdb
             series.num = seriesDTO.num ?? 0
+
+            // Assign category if available
+            if let categoryId = seriesDTO.categoryId {
+                series.category = findCategory(
+                    apiId: categoryId,
+                    type: .series,
+                    playlist: playlist
+                )
+            }
 
             // Store TMDB ID if available
             if let tmdbString = seriesDTO.tmdb, let tmdbInt = Int(tmdbString) {
@@ -305,6 +321,17 @@ actor ContentSyncManager {
             liveStream.tvArchiveDuration = streamDTO.tvArchiveDuration ?? 0
             liveStream.isAdult = streamDTO.isAdult ?? 0
             liveStream.num = streamDTO.num ?? 0
+
+            // Assign category if available
+            if let categoryId = streamDTO.categoryId {
+                liveStream.category = findCategory(
+                    apiId: categoryId,
+                    type: .live,
+                    playlist: playlist
+                )
+            }
+
+            modelContext.insert(liveStream)
         }
 
         try modelContext.save()
@@ -328,8 +355,15 @@ actor ContentSyncManager {
         type: CategoryType,
         playlist: Playlist
     ) async -> Category {
-        let id = "\(playlist.id.uuidString)-\(type.rawValue)-\(apiId)"
+        // Check if category already exists
+        if let existing = findCategory(apiId: apiId, type: type, playlist: playlist) {
+            // Update existing category
+            existing.name = name
+            existing.parentId = parentId
+            return existing
+        }
 
+        // Create new category
         let category = Category(
             apiId: apiId,
             name: name,
@@ -339,6 +373,27 @@ actor ContentSyncManager {
         )
         modelContext.insert(category)
         return category
+    }
+
+    /// Finds a category by API ID and type for a specific playlist
+    private func findCategory(
+        apiId: String,
+        type: CategoryType,
+        playlist: Playlist
+    ) -> Category? {
+        let playlistId = playlist.id
+        let typeRaw = type.rawValue
+
+        let descriptor = FetchDescriptor<Category>(
+            predicate: #Predicate<Category> { category in
+                category.apiId == apiId &&
+                category.typeRaw == typeRaw &&
+                category.playlist != nil &&
+                category.playlist!.id == playlistId
+            }
+        )
+
+        return try? modelContext.fetch(descriptor).first
     }
 }
 
