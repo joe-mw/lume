@@ -2,7 +2,7 @@
 //  ContentSyncTests.swift
 //  LumeTests
 //
-//  Tests that content sync processes large datasets with bounded memory.
+//  Tests that content sync processes large datasets with bounded memory and speed.
 //
 
 import Testing
@@ -12,29 +12,7 @@ import SwiftData
 
 struct ContentSyncTests {
 
-    /// Verifies that syncing 13,900 movies from the example JSON file
-    /// completes successfully and results in the correct number of persisted records.
-    /// Memory should stay bounded because each batch uses a fresh ModelContext.
-    @Test func syncMoviesFromExampleJSON() async throws {
-        // Load the example JSON
-        let jsonURL = Bundle.main.bundleURL
-            .deletingLastPathComponent() // .xctest
-            .deletingLastPathComponent() // Products
-            .deletingLastPathComponent() // Build
-            .deletingLastPathComponent() // DerivedData/...
-            // Fall back: try the project source tree
-        let projectURL = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent() // LumeTests
-            .deletingLastPathComponent() // Lume project root
-            .appendingPathComponent("ExampleData/Movies.json")
-
-        let data = try Data(contentsOf: projectURL)
-        let decoder = JSONDecoder()
-        let movies = try decoder.decode([XtreamVODStream].self, from: data)
-
-        #expect(movies.count > 10000, "Expected at least 10,000 movies in example data, got \(movies.count)")
-
-        // Set up an in-memory SwiftData container
+    private func makeContainer() throws -> ModelContainer {
         let schema = Schema([
             Playlist.self,
             Category.self,
@@ -45,26 +23,45 @@ struct ContentSyncTests {
             EPGListing.self,
         ])
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
-        let container = try ModelContainer(for: schema, configurations: [config])
+        return try ModelContainer(for: schema, configurations: [config])
+    }
+
+    private func exampleMoviesURL() -> URL {
+        URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("ExampleData/Movies.json")
+    }
+
+    /// Verifies that syncing 13,900 movies completes in a reasonable time
+    /// and results in the correct number of persisted records.
+    @Test func syncMoviesFromExampleJSON() async throws {
+        let data = try Data(contentsOf: exampleMoviesURL())
+        let movies = try JSONDecoder().decode([XtreamVODStream].self, from: data)
+        #expect(movies.count > 10000, "Expected at least 10,000 movies in example data, got \(movies.count)")
+
+        let container = try makeContainer()
 
         // Create a playlist
-        let context = ModelContext(container)
+        let setupContext = ModelContext(container)
         let playlist = Playlist(name: "Test", serverURL: "http://test.example.com", username: "user", password: "pass")
-        context.insert(playlist)
-        try context.save()
+        setupContext.insert(playlist)
+        try setupContext.save()
         let playlistId = playlist.id
 
-        // Process movies in batches (same logic as ContentSyncManager)
-        let batchSize = 500
+        let batchSize = 2000
         let totalCount = movies.count
 
+        let start = ContinuousClock.now
+
+        // Process in batches — same logic as ContentSyncManager
         for batchStart in stride(from: 0, to: totalCount, by: batchSize) {
             try autoreleasepool {
                 let batchEnd = min(batchStart + batchSize, totalCount)
                 let batch = movies[batchStart..<batchEnd]
 
-                let batchContext = ModelContext(container)
-                batchContext.autosaveEnabled = false
+                let context = ModelContext(container)
+                context.autosaveEnabled = false
 
                 for movieDTO in batch {
                     guard let streamId = movieDTO.streamId else { continue }
@@ -85,53 +82,47 @@ struct ContentSyncTests {
                         movie.tmdbId = tmdbInt
                     }
 
-                    batchContext.insert(movie)
+                    context.insert(movie)
                 }
 
-                try batchContext.save()
+                try context.save()
             }
         }
+
+        let elapsed = ContinuousClock.now - start
 
         // Verify all movies were persisted
         let verifyContext = ModelContext(container)
         let count = try verifyContext.fetchCount(FetchDescriptor<Movie>())
         #expect(count == movies.count, "Expected \(movies.count) movies in database, got \(count)")
+
+        // Should complete well under 30 seconds for 13,900 movies
+        let seconds = elapsed.components.seconds
+        #expect(seconds < 30, "Sync took \(seconds)s — expected < 30s for \(movies.count) movies")
     }
 
-    /// Verifies that re-syncing (upsert) the same data doesn't create duplicates,
-    /// thanks to @Attribute(.unique) on Movie.id.
+    /// Verifies that upsert via @Attribute(.unique) doesn't create duplicates.
     @Test func syncMoviesUpsertDoesNotDuplicate() async throws {
-        let schema = Schema([
-            Playlist.self,
-            Category.self,
-            LiveStream.self,
-            Movie.self,
-            Series.self,
-            Episode.self,
-            EPGListing.self,
-        ])
-        let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
-        let container = try ModelContainer(for: schema, configurations: [config])
-
+        let container = try makeContainer()
         let playlistId = UUID()
 
         // Insert 100 movies
+        let ctx1 = ModelContext(container)
+        ctx1.autosaveEnabled = false
         for i in 0..<100 {
-            let ctx = ModelContext(container)
-            ctx.autosaveEnabled = false
             let movie = Movie(id: "\(playlistId)-movie-\(i)", streamId: i, name: "Movie \(i)")
-            ctx.insert(movie)
-            try ctx.save()
+            ctx1.insert(movie)
         }
+        try ctx1.save()
 
         // Re-insert the same 100 movies with updated names (upsert)
+        let ctx2 = ModelContext(container)
+        ctx2.autosaveEnabled = false
         for i in 0..<100 {
-            let ctx = ModelContext(container)
-            ctx.autosaveEnabled = false
             let movie = Movie(id: "\(playlistId)-movie-\(i)", streamId: i, name: "Updated Movie \(i)")
-            ctx.insert(movie)
-            try ctx.save()
+            ctx2.insert(movie)
         }
+        try ctx2.save()
 
         // Verify count is still 100 (no duplicates)
         let verifyContext = ModelContext(container)

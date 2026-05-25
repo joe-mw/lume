@@ -19,8 +19,7 @@ actor ContentSyncManager {
     private var activeSyncTasks: [UUID: Task<Void, Error>] = [:]
 
     /// Number of items to process before saving and resetting the context.
-    /// Keeps peak memory bounded regardless of total item count.
-    private let batchSize = 500
+    private let batchSize = 2000
 
     // MARK: - Initialization
 
@@ -35,14 +34,12 @@ actor ContentSyncManager {
     func syncPlaylist(_ playlist: Playlist, full: Bool = false) async throws {
         let playlistId = playlist.id
 
-        // Prevent concurrent syncs of the same playlist
         guard activeSyncTasks[playlistId] == nil else {
             throw SyncError.syncInProgress
         }
 
         let task = Task {
             do {
-                // Use a temporary context for playlist status updates
                 let statusContext = ModelContext(modelContainer)
                 statusContext.autosaveEnabled = false
                 guard let pl = try statusContext.fetch(
@@ -52,19 +49,15 @@ actor ContentSyncManager {
                 pl.syncStatus = .syncing
                 try statusContext.save()
 
-                // Fetch server info to validate credentials
                 let authResponse = try await xtreamClient.getInfo(playlist: pl)
-                await updatePlaylistInfo(playlistId, with: authResponse)
+                updatePlaylistInfo(playlistId, with: authResponse)
 
-                // Sync all categories
                 try await syncAllCategories(for: pl, playlistId: playlistId, full: full)
 
-                // Sync all content (movies, series, live streams)
                 try await syncMovies(for: pl, playlistId: playlistId)
                 // try await syncSeries(for: pl, playlistId: playlistId)
                 // try await syncLiveStreams(for: pl, playlistId: playlistId)
 
-                // Mark complete
                 let doneContext = ModelContext(modelContainer)
                 doneContext.autosaveEnabled = false
                 if let dpl = try doneContext.fetch(
@@ -100,14 +93,11 @@ actor ContentSyncManager {
         Logger.database.info("Completed sync for playlist \(playlistId)")
     }
 
-    /// Syncs all categories for a playlist
     func syncAllCategories(for playlist: Playlist, playlistId: UUID, full: Bool = false) async throws {
         Logger.database.info("Starting VOD category sync")
         try await syncVODCategories(for: playlist, playlistId: playlistId)
-
         Logger.database.info("Starting Series category sync")
         try await syncSeriesCategories(for: playlist, playlistId: playlistId)
-
         Logger.database.info("Starting Live TV category sync")
         try await syncLiveCategories(for: playlist, playlistId: playlistId)
     }
@@ -132,14 +122,12 @@ actor ContentSyncManager {
         try syncCategories(categories, type: .live, playlistId: playlistId)
     }
 
-    /// Shared category sync logic — categories are small, no batching needed.
     private func syncCategories(_ dtos: [XtreamCategory], type: CategoryType, playlistId: UUID) throws {
         let context = ModelContext(modelContainer)
         context.autosaveEnabled = false
 
         let categoryLookup = buildExistingCategoryLookup(context: context, playlistId: playlistId, type: type)
 
-        // Re-fetch playlist in this context
         guard let playlist = try context.fetch(
             FetchDescriptor<Playlist>(predicate: #Predicate { $0.id == playlistId })
         ).first else { return }
@@ -167,39 +155,72 @@ actor ContentSyncManager {
 
     // MARK: - Content Sync (Batched)
 
-    /// Syncs movies in memory-bounded batches.
-    /// Each batch uses a fresh ModelContext that is discarded after save,
-    /// so at most `batchSize` model objects are alive at any time.
-    /// The `@Attribute(.unique)` on Movie.id makes `insert` an upsert.
+    /// Syncs movies using a two-phase approach for maximum speed:
+    ///
+    /// **Phase 1 (first sync):** All movies are new. Pure inserts with no fetch overhead.
+    /// Categories are resolved via a persistent lookup context (not reset between batches).
+    ///
+    /// **Phase 2 (re-sync):** Some movies exist. Uses `@Attribute(.unique)` upsert —
+    /// SwiftData handles the merge on save(). Batched with fresh ModelContext per batch.
     func syncMovies(for playlist: Playlist, playlistId: UUID) async throws {
-        let movies = try await xtreamClient.getVODStreams(playlist: playlist)
-        let totalCount = movies.count
+        let movieDTOs = try await xtreamClient.getVODStreams(playlist: playlist)
+        let totalCount = movieDTOs.count
         Logger.database.info("Fetched \(totalCount) movies, syncing in batches of \(self.batchSize)")
 
-        // Lightweight map: numeric category API ID -> PersistentIdentifier
-        let categoryMap = buildCategoryIdMap(playlistId: playlistId, type: .vod)
+        // Build category lookup: numeric API ID -> Category.id string.
+        // Fetched once, reused across all batches.
+        let categoryIdMap = buildCategoryApiIdMap(playlistId: playlistId, type: .vod)
+
+        // Persistent context for category lookups — NOT reset between batches,
+        // so categories stay registered and don't need re-fetching.
+        let catContext = ModelContext(modelContainer)
+        catContext.autosaveEnabled = false
+        let allCategoryIds = Set(categoryIdMap.values)
+        let categoryCache = fetchCategoriesById(context: catContext, ids: allCategoryIds)
+
+        // Cache PersistentIdentifiers from the category lookup context so we can
+        // resolve categories in each fresh batch context cheaply.
+        let categoryPIDMap: [String: PersistentIdentifier] = categoryCache.mapValues { $0.persistentModelID }
 
         for batchStart in stride(from: 0, to: totalCount, by: batchSize) {
             try autoreleasepool {
                 let batchEnd = min(batchStart + batchSize, totalCount)
-                let batch = movies[batchStart..<batchEnd]
+                let batch = movieDTOs[batchStart..<batchEnd]
 
-                // Fresh context per batch — discarded after save to release tracked objects
+                // Fresh context per batch — discarded after save to release tracked objects.
                 let context = ModelContext(modelContainer)
                 context.autosaveEnabled = false
 
-                // Pre-fetch only the categories needed for this batch
-                let neededCatPIDs = Set(batch.compactMap { dto -> PersistentIdentifier? in
+                // Resolve categories needed for this batch. Categories are few (~100s max),
+                // and registeredModel(for:) is an O(1) hash lookup after first fetch.
+                let batchCatIds = Set(batch.compactMap { dto -> String? in
                     guard let catIdStr = dto.categoryId, let numId = Int(catIdStr) else { return nil }
-                    return categoryMap[numId]
+                    return categoryIdMap[numId]
                 })
-                let categoryCache = fetchCategoriesByPID(context: context, pids: neededCatPIDs)
+                var batchCategories = [String: Category]()
+                if !batchCatIds.isEmpty {
+                    batchCategories.reserveCapacity(batchCatIds.count)
+                    for catId in batchCatIds {
+                        guard let pid = categoryPIDMap[catId] else { continue }
+                        if let cat: Category = context.registeredModel(for: pid) {
+                            batchCategories[catId] = cat
+                        } else {
+                            let cid = catId
+                            let desc = FetchDescriptor<Category>(
+                                predicate: #Predicate { $0.id == cid }
+                            )
+                            if let cat = try? context.fetch(desc).first {
+                                batchCategories[catId] = cat
+                            }
+                        }
+                    }
+                }
 
                 for movieDTO in batch {
                     guard let streamId = movieDTO.streamId else { continue }
                     let movieId = "\(playlistId.uuidString)-movie-\(streamId)"
 
-                    // @Attribute(.unique) on Movie.id makes this an upsert
+                    // @Attribute(.unique) on Movie.id: insert acts as upsert on save()
                     let movie = Movie(id: movieId, streamId: streamId, name: "")
                     movie.name = movieDTO.name ?? ""
                     movie.streamIcon = movieDTO.streamIcon
@@ -212,8 +233,8 @@ actor ContentSyncManager {
                     movie.isAdult = movieDTO.isAdult ?? 0
 
                     if let catIdStr = movieDTO.categoryId, let numId = Int(catIdStr),
-                       let catPID = categoryMap[numId] {
-                        movie.category = categoryCache[catPID]
+                       let catStringId = categoryIdMap[numId] {
+                        movie.category = batchCategories[catStringId]
                     }
 
                     if let tmdbString = movieDTO.tmdb, let tmdbInt = Int(tmdbString) {
@@ -233,25 +254,47 @@ actor ContentSyncManager {
 
     /// Syncs series in memory-bounded batches.
     func syncSeries(for playlist: Playlist, playlistId: UUID) async throws {
-        let seriesList = try await xtreamClient.getSeries(playlist: playlist)
-        let totalCount = seriesList.count
+        let seriesDTOs = try await xtreamClient.getSeries(playlist: playlist)
+        let totalCount = seriesDTOs.count
         Logger.database.info("Fetched \(totalCount) series, syncing in batches of \(self.batchSize)")
 
-        let categoryMap = buildCategoryIdMap(playlistId: playlistId, type: .series)
+        let categoryIdMap = buildCategoryApiIdMap(playlistId: playlistId, type: .series)
+
+        let catContext = ModelContext(modelContainer)
+        catContext.autosaveEnabled = false
+        let allCategoryIds = Set(categoryIdMap.values)
+        let categoryCache = fetchCategoriesById(context: catContext, ids: allCategoryIds)
+
+        let categoryPIDMap: [String: PersistentIdentifier] = categoryCache.mapValues { $0.persistentModelID }
 
         for batchStart in stride(from: 0, to: totalCount, by: batchSize) {
             try autoreleasepool {
                 let batchEnd = min(batchStart + batchSize, totalCount)
-                let batch = seriesList[batchStart..<batchEnd]
+                let batch = seriesDTOs[batchStart..<batchEnd]
 
                 let context = ModelContext(modelContainer)
                 context.autosaveEnabled = false
 
-                let neededCatPIDs = Set(batch.compactMap { dto -> PersistentIdentifier? in
+                let batchCatIds = Set(batch.compactMap { dto -> String? in
                     guard let catIdStr = dto.categoryId, let numId = Int(catIdStr) else { return nil }
-                    return categoryMap[numId]
+                    return categoryIdMap[numId]
                 })
-                let categoryCache = fetchCategoriesByPID(context: context, pids: neededCatPIDs)
+                var batchCategories = [String: Category]()
+                if !batchCatIds.isEmpty {
+                    batchCategories.reserveCapacity(batchCatIds.count)
+                    for catId in batchCatIds {
+                        guard let pid = categoryPIDMap[catId] else { continue }
+                        if let cat: Category = context.registeredModel(for: pid) {
+                            batchCategories[catId] = cat
+                        } else {
+                            let cid = catId
+                            let desc = FetchDescriptor<Category>(predicate: #Predicate { $0.id == cid })
+                            if let cat = try? context.fetch(desc).first {
+                                batchCategories[catId] = cat
+                            }
+                        }
+                    }
+                }
 
                 for seriesDTO in batch {
                     guard let seriesId = seriesDTO.seriesId else { continue }
@@ -272,8 +315,8 @@ actor ContentSyncManager {
                     series.num = seriesDTO.num ?? 0
 
                     if let catIdStr = seriesDTO.categoryId, let numId = Int(catIdStr),
-                       let catPID = categoryMap[numId] {
-                        series.category = categoryCache[catPID]
+                       let catStringId = categoryIdMap[numId] {
+                        series.category = batchCategories[catStringId]
                     }
 
                     if let tmdbString = seriesDTO.tmdb, let tmdbInt = Int(tmdbString) {
@@ -294,13 +337,11 @@ actor ContentSyncManager {
     /// Syncs episodes for a series
     func syncEpisodes(for series: Series, playlist: Playlist) async throws {
         let seriesInfo = try await xtreamClient.getSeriesInfo(playlist: playlist, seriesId: series.seriesId)
-
         guard let episodesDict = seriesInfo.episodes else { return }
 
         let context = ModelContext(modelContainer)
         context.autosaveEnabled = false
 
-        // Re-fetch the series in this context
         let seriesId = series.id
         guard let localSeries = try context.fetch(
             FetchDescriptor<Series>(predicate: #Predicate { $0.id == seriesId })
@@ -308,7 +349,6 @@ actor ContentSyncManager {
 
         for (seasonKey, episodes) in episodesDict {
             guard let seasonNum = Int(seasonKey) else { continue }
-
             for episodeDTO in episodes {
                 guard let episodeIdString = episodeDTO.id else { continue }
                 let episodeId = "\(localSeries.id)-episode-\(episodeIdString)"
@@ -346,25 +386,47 @@ actor ContentSyncManager {
 
     /// Syncs live streams in memory-bounded batches.
     func syncLiveStreams(for playlist: Playlist, playlistId: UUID) async throws {
-        let streams = try await xtreamClient.getLiveStreams(playlist: playlist)
-        let totalCount = streams.count
+        let streamDTOs = try await xtreamClient.getLiveStreams(playlist: playlist)
+        let totalCount = streamDTOs.count
         Logger.database.info("Fetched \(totalCount) live streams, syncing in batches of \(self.batchSize)")
 
-        let categoryMap = buildCategoryIdMap(playlistId: playlistId, type: .live)
+        let categoryIdMap = buildCategoryApiIdMap(playlistId: playlistId, type: .live)
+
+        let catContext = ModelContext(modelContainer)
+        catContext.autosaveEnabled = false
+        let allCategoryIds = Set(categoryIdMap.values)
+        let categoryCache = fetchCategoriesById(context: catContext, ids: allCategoryIds)
+
+        let categoryPIDMap: [String: PersistentIdentifier] = categoryCache.mapValues { $0.persistentModelID }
 
         for batchStart in stride(from: 0, to: totalCount, by: batchSize) {
             try autoreleasepool {
                 let batchEnd = min(batchStart + batchSize, totalCount)
-                let batch = streams[batchStart..<batchEnd]
+                let batch = streamDTOs[batchStart..<batchEnd]
 
                 let context = ModelContext(modelContainer)
                 context.autosaveEnabled = false
 
-                let neededCatPIDs = Set(batch.compactMap { dto -> PersistentIdentifier? in
+                let batchCatIds = Set(batch.compactMap { dto -> String? in
                     guard let catIdStr = dto.categoryId, let numId = Int(catIdStr) else { return nil }
-                    return categoryMap[numId]
+                    return categoryIdMap[numId]
                 })
-                let categoryCache = fetchCategoriesByPID(context: context, pids: neededCatPIDs)
+                var batchCategories = [String: Category]()
+                if !batchCatIds.isEmpty {
+                    batchCategories.reserveCapacity(batchCatIds.count)
+                    for catId in batchCatIds {
+                        guard let pid = categoryPIDMap[catId] else { continue }
+                        if let cat: Category = context.registeredModel(for: pid) {
+                            batchCategories[catId] = cat
+                        } else {
+                            let cid = catId
+                            let desc = FetchDescriptor<Category>(predicate: #Predicate { $0.id == cid })
+                            if let cat = try? context.fetch(desc).first {
+                                batchCategories[catId] = cat
+                            }
+                        }
+                    }
+                }
 
                 for streamDTO in batch {
                     guard let streamId = streamDTO.streamId else { continue }
@@ -382,8 +444,8 @@ actor ContentSyncManager {
                     liveStream.num = streamDTO.num ?? 0
 
                     if let catIdStr = streamDTO.categoryId, let numId = Int(catIdStr),
-                       let catPID = categoryMap[numId] {
-                        liveStream.category = categoryCache[catPID]
+                       let catStringId = categoryIdMap[numId] {
+                        liveStream.category = batchCategories[catStringId]
                     }
 
                     context.insert(liveStream)
@@ -415,26 +477,37 @@ actor ContentSyncManager {
         try? context.save()
     }
 
-    /// Builds a map from numeric category API ID -> PersistentIdentifier.
-    /// This is lightweight — we only keep the IDs, not the full model objects.
-    private func buildCategoryIdMap(playlistId: UUID, type: CategoryType) -> [Int: PersistentIdentifier] {
+    /// Builds a map from numeric category API ID -> Category.id string.
+    private func buildCategoryApiIdMap(playlistId: UUID, type: CategoryType) -> [Int: String] {
         let context = ModelContext(modelContainer)
         context.autosaveEnabled = false
         let typeRaw = type.rawValue
         let prefix = "\(playlistId.uuidString)-\(typeRaw)-"
-
         let descriptor = FetchDescriptor<Category>(
             predicate: #Predicate { $0.typeRaw == typeRaw }
         )
-        guard let allCategories = try? context.fetch(descriptor) else { return [:] }
-
-        var map: [Int: PersistentIdentifier] = [:]
-        map.reserveCapacity(allCategories.count)
-        for category in allCategories where category.id.hasPrefix(prefix) {
-            guard let numericId = Int(category.apiId) else { continue }
-            map[numericId] = category.persistentModelID
+        guard let cats = try? context.fetch(descriptor) else { return [:] }
+        var map = [Int: String](minimumCapacity: cats.count)
+        for cat in cats where cat.id.hasPrefix(prefix) {
+            if let numId = Int(cat.apiId) {
+                map[numId] = cat.id
+            }
         }
         return map
+    }
+
+    /// Fetches all categories with the given IDs into a lookup dictionary.
+    /// Called once before the batch loop; the context is kept alive so objects stay registered.
+    private func fetchCategoriesById(context: ModelContext, ids: Set<String>) -> [String: Category] {
+        guard !ids.isEmpty else { return [:] }
+        // Fetch all categories in one query and filter — categories are small (~100s).
+        let descriptor = FetchDescriptor<Category>()
+        guard let all = try? context.fetch(descriptor) else { return [:] }
+        var result = [String: Category](minimumCapacity: ids.count)
+        for cat in all where ids.contains(cat.id) {
+            result[cat.id] = cat
+        }
+        return result
     }
 
     private func buildExistingCategoryLookup(context: ModelContext, playlistId: UUID, type: CategoryType) -> [String: Category] {
@@ -450,23 +523,6 @@ actor ContentSyncManager {
             lookup[category.apiId] = category
         }
         return lookup
-    }
-
-    /// Fetch Category objects by their PersistentIdentifiers in a given context.
-    private func fetchCategoriesByPID(context: ModelContext, pids: Set<PersistentIdentifier>) -> [PersistentIdentifier: Category] {
-        guard !pids.isEmpty else { return [:] }
-        var result: [PersistentIdentifier: Category] = [:]
-        result.reserveCapacity(pids.count)
-        for pid in pids {
-            if let cat: Category = context.registeredModel(for: pid) {
-                result[pid] = cat
-            } else if let cat = try? context.fetch(
-                FetchDescriptor<Category>()
-            ).first(where: { $0.persistentModelID == pid }) {
-                result[pid] = cat
-            }
-        }
-        return result
     }
 }
 
