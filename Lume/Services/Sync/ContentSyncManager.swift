@@ -14,14 +14,18 @@ import OSLog
 actor ContentSyncManager {
     // MARK: - Properties
 
-    private let modelContext: ModelContext
+    private let modelContainer: ModelContainer
     private let xtreamClient: XtreamClient
     private var activeSyncTasks: [UUID: Task<Void, Error>] = [:]
 
+    /// Number of items to process before saving and resetting the context.
+    /// Keeps peak memory bounded regardless of total item count.
+    private let batchSize = 500
+
     // MARK: - Initialization
 
-    init(modelContext: ModelContext, xtreamClient: XtreamClient = XtreamClient()) {
-        self.modelContext = modelContext
+    init(modelContainer: ModelContainer, xtreamClient: XtreamClient = XtreamClient()) {
+        self.modelContainer = modelContainer
         self.xtreamClient = xtreamClient
     }
 
@@ -29,244 +33,285 @@ actor ContentSyncManager {
 
     /// Performs a full sync of a playlist (categories and content)
     func syncPlaylist(_ playlist: Playlist, full: Bool = false) async throws {
+        let playlistId = playlist.id
+
         // Prevent concurrent syncs of the same playlist
-        guard activeSyncTasks[playlist.id] == nil else {
+        guard activeSyncTasks[playlistId] == nil else {
             throw SyncError.syncInProgress
         }
 
         let task = Task {
             do {
-                playlist.syncStatus = .syncing
-                try modelContext.save()
+                // Use a temporary context for playlist status updates
+                let statusContext = ModelContext(modelContainer)
+                statusContext.autosaveEnabled = false
+                guard let pl = try statusContext.fetch(
+                    FetchDescriptor<Playlist>(predicate: #Predicate { $0.id == playlistId })
+                ).first else { return }
+
+                pl.syncStatus = .syncing
+                try statusContext.save()
 
                 // Fetch server info to validate credentials
-                let authResponse = try await xtreamClient.getInfo(playlist: playlist)
-
-                // Update playlist with server info
-                await updatePlaylistInfo(playlist, with: authResponse)
+                let authResponse = try await xtreamClient.getInfo(playlist: pl)
+                await updatePlaylistInfo(playlistId, with: authResponse)
 
                 // Sync all categories
-                try await syncAllCategories(for: playlist, full: full)
+                try await syncAllCategories(for: pl, playlistId: playlistId, full: full)
 
                 // Sync all content (movies, series, live streams)
-                try await syncMovies(for: playlist)
-                // try await syncSeries(for: playlist)
-                // try await syncLiveStreams(for: playlist)
+                try await syncMovies(for: pl, playlistId: playlistId)
+                // try await syncSeries(for: pl, playlistId: playlistId)
+                // try await syncLiveStreams(for: pl, playlistId: playlistId)
 
-                playlist.syncStatus = .idle
-                playlist.lastSyncDate = Date()
-                try modelContext.save()
+                // Mark complete
+                let doneContext = ModelContext(modelContainer)
+                doneContext.autosaveEnabled = false
+                if let dpl = try doneContext.fetch(
+                    FetchDescriptor<Playlist>(predicate: #Predicate { $0.id == playlistId })
+                ).first {
+                    dpl.syncStatus = .idle
+                    dpl.lastSyncDate = Date()
+                    try doneContext.save()
+                }
             } catch {
-                playlist.syncStatus = .error
-                try? modelContext.save()
+                let errContext = ModelContext(modelContainer)
+                errContext.autosaveEnabled = false
+                if let epl = try? errContext.fetch(
+                    FetchDescriptor<Playlist>(predicate: #Predicate { $0.id == playlistId })
+                ).first {
+                    epl.syncStatus = .error
+                    try? errContext.save()
+                }
                 throw error
             }
         }
 
-        activeSyncTasks[playlist.id] = task
+        activeSyncTasks[playlistId] = task
 
         do {
             try await task.value
         } catch {
+            activeSyncTasks.removeValue(forKey: playlistId)
             throw error
         }
 
-        activeSyncTasks.removeValue(forKey: playlist.id)
-        Logger.database.info("Completed sync for playlist \(playlist.name)")
+        activeSyncTasks.removeValue(forKey: playlistId)
+        Logger.database.info("Completed sync for playlist \(playlistId)")
     }
 
     /// Syncs all categories for a playlist
-    func syncAllCategories(for playlist: Playlist, full: Bool = false) async throws {
-        // Sync VOD categories and content
-        Logger.database.info("Starting VOD category sync for playlist \(playlist.name)")
-        try await syncVODCategories(for: playlist)
+    func syncAllCategories(for playlist: Playlist, playlistId: UUID, full: Bool = false) async throws {
+        Logger.database.info("Starting VOD category sync")
+        try await syncVODCategories(for: playlist, playlistId: playlistId)
 
-        // Sync Series categories and content
-        Logger.database.info("Starting Series category sync for playlist \(playlist.name)")
-        try await syncSeriesCategories(for: playlist)
+        Logger.database.info("Starting Series category sync")
+        try await syncSeriesCategories(for: playlist, playlistId: playlistId)
 
-        // Sync Live TV categories and content
-        Logger.database.info("Starting Live TV category sync for playlist \(playlist.name)")
-        try await syncLiveCategories(for: playlist)
+        Logger.database.info("Starting Live TV category sync")
+        try await syncLiveCategories(for: playlist, playlistId: playlistId)
     }
 
     // MARK: - Category Sync
 
-    /// Syncs VOD (Movies) categories
-    private func syncVODCategories(for playlist: Playlist) async throws {
+    private func syncVODCategories(for playlist: Playlist, playlistId: UUID) async throws {
         let categories = try await xtreamClient.getVODCategories(playlist: playlist)
-
-        Logger.database.info("Fetched \(categories.count) VOD categories for playlist \(playlist.name)")
-
-        for categoryDTO in categories {
-            let category = await createCategory(
-                apiId: categoryDTO.categoryId,
-                name: categoryDTO.categoryName,
-                parentId: categoryDTO.parentId ?? 0,
-                type: .vod,
-                playlist: playlist
-            )
-
-            category.lastRefreshed = Date()
-
-        }
-
-        try modelContext.save()
+        Logger.database.info("Fetched \(categories.count) VOD categories")
+        try syncCategories(categories, type: .vod, playlistId: playlistId)
     }
 
-    /// Syncs Series categories
-    private func syncSeriesCategories(for playlist: Playlist) async throws {
+    private func syncSeriesCategories(for playlist: Playlist, playlistId: UUID) async throws {
         let categories = try await xtreamClient.getSeriesCategories(playlist: playlist)
-
-        Logger.database.info("Fetched \(categories.count) Series categories for playlist \(playlist.name)")
-
-        for categoryDTO in categories {
-            let category = await createCategory(
-                apiId: categoryDTO.categoryId,
-                name: categoryDTO.categoryName,
-                parentId: categoryDTO.parentId ?? 0,
-                type: .series,
-                playlist: playlist
-            )
-
-            category.lastRefreshed = Date()
-        }
-
-        try modelContext.save()
+        Logger.database.info("Fetched \(categories.count) Series categories")
+        try syncCategories(categories, type: .series, playlistId: playlistId)
     }
 
-    /// Syncs Live TV categories
-    private func syncLiveCategories(for playlist: Playlist) async throws {
+    private func syncLiveCategories(for playlist: Playlist, playlistId: UUID) async throws {
         let categories = try await xtreamClient.getLiveCategories(playlist: playlist)
-
-        Logger.database.info("Fetched \(categories.count) Live categories for playlist \(playlist.name)")
-
-        for categoryDTO in categories {
-            let category = await createCategory(
-                apiId: categoryDTO.categoryId,
-                name: categoryDTO.categoryName,
-                parentId: categoryDTO.parentId ?? 0,
-                type: .live,
-                playlist: playlist
-            )
-
-            category.lastRefreshed = Date()
-        }
-
-        try modelContext.save()
+        Logger.database.info("Fetched \(categories.count) Live categories")
+        try syncCategories(categories, type: .live, playlistId: playlistId)
     }
 
-    // MARK: - Content Sync
+    /// Shared category sync logic — categories are small, no batching needed.
+    private func syncCategories(_ dtos: [XtreamCategory], type: CategoryType, playlistId: UUID) throws {
+        let context = ModelContext(modelContainer)
+        context.autosaveEnabled = false
 
-    /// Syncs movies
-    func syncMovies(for playlist: Playlist) async throws {
+        let categoryLookup = buildExistingCategoryLookup(context: context, playlistId: playlistId, type: type)
+
+        // Re-fetch playlist in this context
+        guard let playlist = try context.fetch(
+            FetchDescriptor<Playlist>(predicate: #Predicate { $0.id == playlistId })
+        ).first else { return }
+
+        for categoryDTO in dtos {
+            if let existingCat = categoryLookup[categoryDTO.categoryId] {
+                existingCat.name = categoryDTO.categoryName
+                existingCat.parentId = categoryDTO.parentId ?? 0
+                existingCat.lastRefreshed = Date()
+            } else {
+                let category = Category(
+                    apiId: categoryDTO.categoryId,
+                    name: categoryDTO.categoryName,
+                    parentId: categoryDTO.parentId ?? 0,
+                    type: type,
+                    playlist: playlist
+                )
+                category.lastRefreshed = Date()
+                context.insert(category)
+            }
+        }
+
+        try context.save()
+    }
+
+    // MARK: - Content Sync (Batched)
+
+    /// Syncs movies in memory-bounded batches.
+    /// Each batch uses a fresh ModelContext that is discarded after save,
+    /// so at most `batchSize` model objects are alive at any time.
+    /// The `@Attribute(.unique)` on Movie.id makes `insert` an upsert.
+    func syncMovies(for playlist: Playlist, playlistId: UUID) async throws {
         let movies = try await xtreamClient.getVODStreams(playlist: playlist)
+        let totalCount = movies.count
+        Logger.database.info("Fetched \(totalCount) movies, syncing in batches of \(self.batchSize)")
 
-        Logger.database.info("Fetched \(movies.count) movies for playlist \(playlist.name)")
+        // Lightweight map: numeric category API ID -> PersistentIdentifier
+        let categoryMap = buildCategoryIdMap(playlistId: playlistId, type: .vod)
 
-        let categoryLookup = buildCategoryLookup(playlist: playlist, type: .vod)
-        Logger.database.info("Loaded \(categoryLookup.count) VOD categories for movie mapping")
+        for batchStart in stride(from: 0, to: totalCount, by: batchSize) {
+            try autoreleasepool {
+                let batchEnd = min(batchStart + batchSize, totalCount)
+                let batch = movies[batchStart..<batchEnd]
 
-        for movieDTO in movies {
-            guard let streamId = movieDTO.streamId else { continue }
-            let movieId = "\(playlist.id.uuidString)-movie-\(streamId)"
+                // Fresh context per batch — discarded after save to release tracked objects
+                let context = ModelContext(modelContainer)
+                context.autosaveEnabled = false
 
-            let movie = Movie(
-                id: movieId,
-                streamId: streamId,
-                name: ""
-            )
+                // Pre-fetch only the categories needed for this batch
+                let neededCatPIDs = Set(batch.compactMap { dto -> PersistentIdentifier? in
+                    guard let catIdStr = dto.categoryId, let numId = Int(catIdStr) else { return nil }
+                    return categoryMap[numId]
+                })
+                let categoryCache = fetchCategoriesByPID(context: context, pids: neededCatPIDs)
 
-            // Update movie properties
-            movie.name = movieDTO.name ?? ""
-            movie.streamIcon = movieDTO.streamIcon
-            movie.rating = movieDTO.rating ?? 0
-            movie.rating5Based = movieDTO.rating5Based ?? 0
-            movie.added = movieDTO.added
-            movie.containerExtension = movieDTO.containerExtension
-            movie.tmdb = movieDTO.tmdb
-            movie.num = movieDTO.num ?? 0
-            movie.isAdult = movieDTO.isAdult ?? 0
+                for movieDTO in batch {
+                    guard let streamId = movieDTO.streamId else { continue }
+                    let movieId = "\(playlistId.uuidString)-movie-\(streamId)"
 
-            // Assign category using prebuilt lookup (O(1) per movie)
-            if let categoryId = movieDTO.categoryId, let numericId = Int(categoryId) {
-                movie.category = categoryLookup[numericId]
+                    // @Attribute(.unique) on Movie.id makes this an upsert
+                    let movie = Movie(id: movieId, streamId: streamId, name: "")
+                    movie.name = movieDTO.name ?? ""
+                    movie.streamIcon = movieDTO.streamIcon
+                    movie.rating = movieDTO.rating ?? 0
+                    movie.rating5Based = movieDTO.rating5Based ?? 0
+                    movie.added = movieDTO.added
+                    movie.containerExtension = movieDTO.containerExtension
+                    movie.tmdb = movieDTO.tmdb
+                    movie.num = movieDTO.num ?? 0
+                    movie.isAdult = movieDTO.isAdult ?? 0
+
+                    if let catIdStr = movieDTO.categoryId, let numId = Int(catIdStr),
+                       let catPID = categoryMap[numId] {
+                        movie.category = categoryCache[catPID]
+                    }
+
+                    if let tmdbString = movieDTO.tmdb, let tmdbInt = Int(tmdbString) {
+                        movie.tmdbId = tmdbInt
+                    }
+
+                    context.insert(movie)
+                }
+
+                try context.save()
+                Logger.database.info("Synced movies \(batchStart + 1)–\(batchEnd) of \(totalCount)")
             }
-
-            // Store TMDB ID if available
-            if let tmdbString = movieDTO.tmdb, let tmdbInt = Int(tmdbString) {
-                movie.tmdbId = tmdbInt
-            }
-
-            modelContext.insert(movie)
         }
 
-        Logger.database.info("Completed syncing movies for playlist \(playlist.name)")
-
-        try modelContext.save()
+        Logger.database.info("Completed syncing \(totalCount) movies")
     }
 
-    /// Syncs series
-    func syncSeries(for playlist: Playlist) async throws {
+    /// Syncs series in memory-bounded batches.
+    func syncSeries(for playlist: Playlist, playlistId: UUID) async throws {
         let seriesList = try await xtreamClient.getSeries(playlist: playlist)
+        let totalCount = seriesList.count
+        Logger.database.info("Fetched \(totalCount) series, syncing in batches of \(self.batchSize)")
 
-        Logger.database.info("Fetched \(seriesList.count) series for playlist \(playlist.name)")
+        let categoryMap = buildCategoryIdMap(playlistId: playlistId, type: .series)
 
-        let categoryLookup = buildCategoryLookup(playlist: playlist, type: .series)
-        Logger.database.info("Loaded \(categoryLookup.count) Series categories for series mapping")
+        for batchStart in stride(from: 0, to: totalCount, by: batchSize) {
+            try autoreleasepool {
+                let batchEnd = min(batchStart + batchSize, totalCount)
+                let batch = seriesList[batchStart..<batchEnd]
 
-        for seriesDTO in seriesList {
-            guard let seriesId = seriesDTO.seriesId else { continue }
-            let id = "\(playlist.id.uuidString)-series-\(seriesId)"
+                let context = ModelContext(modelContainer)
+                context.autosaveEnabled = false
 
-            let series = Series(
-                id: id,
-                seriesId: seriesId,
-                name: ""
-            )
+                let neededCatPIDs = Set(batch.compactMap { dto -> PersistentIdentifier? in
+                    guard let catIdStr = dto.categoryId, let numId = Int(catIdStr) else { return nil }
+                    return categoryMap[numId]
+                })
+                let categoryCache = fetchCategoriesByPID(context: context, pids: neededCatPIDs)
 
-            series.name = seriesDTO.name ?? ""
-            series.cover = seriesDTO.cover
-            series.plot = seriesDTO.plot
-            series.cast = seriesDTO.cast
-            series.director = seriesDTO.director
-            series.genre = seriesDTO.genre
-            series.releaseDate = seriesDTO.releaseDate
-            series.lastModified = seriesDTO.lastModified
-            series.rating = seriesDTO.rating
-            series.rating5Based = seriesDTO.rating5Based
-            series.tmdb = seriesDTO.tmdb
-            series.num = seriesDTO.num ?? 0
+                for seriesDTO in batch {
+                    guard let seriesId = seriesDTO.seriesId else { continue }
+                    let id = "\(playlistId.uuidString)-series-\(seriesId)"
 
-            // Assign category using prebuilt lookup (O(1) per item)
-            if let categoryId = seriesDTO.categoryId, let numericId = Int(categoryId) {
-                series.category = categoryLookup[numericId]
+                    let series = Series(id: id, seriesId: seriesId, name: "")
+                    series.name = seriesDTO.name ?? ""
+                    series.cover = seriesDTO.cover
+                    series.plot = seriesDTO.plot
+                    series.cast = seriesDTO.cast
+                    series.director = seriesDTO.director
+                    series.genre = seriesDTO.genre
+                    series.releaseDate = seriesDTO.releaseDate
+                    series.lastModified = seriesDTO.lastModified
+                    series.rating = seriesDTO.rating
+                    series.rating5Based = seriesDTO.rating5Based
+                    series.tmdb = seriesDTO.tmdb
+                    series.num = seriesDTO.num ?? 0
+
+                    if let catIdStr = seriesDTO.categoryId, let numId = Int(catIdStr),
+                       let catPID = categoryMap[numId] {
+                        series.category = categoryCache[catPID]
+                    }
+
+                    if let tmdbString = seriesDTO.tmdb, let tmdbInt = Int(tmdbString) {
+                        series.tmdbId = tmdbInt
+                    }
+
+                    context.insert(series)
+                }
+
+                try context.save()
+                Logger.database.info("Synced series \(batchStart + 1)–\(batchEnd) of \(totalCount)")
             }
-
-            // Store TMDB ID if available
-            if let tmdbString = seriesDTO.tmdb, let tmdbInt = Int(tmdbString) {
-                series.tmdbId = tmdbInt
-            }
-
-            modelContext.insert(series)
         }
 
-        try modelContext.save()
+        Logger.database.info("Completed syncing \(totalCount) series")
     }
 
     /// Syncs episodes for a series
     func syncEpisodes(for series: Series, playlist: Playlist) async throws {
         let seriesInfo = try await xtreamClient.getSeriesInfo(playlist: playlist, seriesId: series.seriesId)
 
-        // Parse episodes by season
         guard let episodesDict = seriesInfo.episodes else { return }
+
+        let context = ModelContext(modelContainer)
+        context.autosaveEnabled = false
+
+        // Re-fetch the series in this context
+        let seriesId = series.id
+        guard let localSeries = try context.fetch(
+            FetchDescriptor<Series>(predicate: #Predicate { $0.id == seriesId })
+        ).first else { return }
 
         for (seasonKey, episodes) in episodesDict {
             guard let seasonNum = Int(seasonKey) else { continue }
 
             for episodeDTO in episodes {
                 guard let episodeIdString = episodeDTO.id else { continue }
-                let episodeId = "\(series.id)-episode-\(episodeIdString)"
+                let episodeId = "\(localSeries.id)-episode-\(episodeIdString)"
 
                 let episode = Episode(
                     id: episodeId,
@@ -275,10 +320,9 @@ actor ContentSyncManager {
                     containerExtension: "mkv",
                     seasonNum: seasonNum,
                     episodeNum: episodeDTO.episodeNum ?? 0,
-                    series: series
+                    series: localSeries
                 )
 
-                // Update episode properties
                 episode.title = episodeDTO.title ?? ""
                 episode.containerExtension = episodeDTO.containerExtension ?? "mkv"
                 episode.seasonNum = seasonNum
@@ -286,7 +330,6 @@ actor ContentSyncManager {
                 episode.added = episodeDTO.added
                 episode.directSource = episodeDTO.directSource
 
-                // Episode info
                 if let info = episodeDTO.info {
                     episode.durationSecs = info.durationSecs
                     episode.movieImage = info.movieImage
@@ -294,120 +337,137 @@ actor ContentSyncManager {
                     episode.airDate = info.airDate
                 }
 
-                modelContext.insert(episode)
+                context.insert(episode)
             }
         }
 
-        try modelContext.save()
+        try context.save()
     }
 
-    /// Syncs live streams
-    func syncLiveStreams(for playlist: Playlist) async throws {
+    /// Syncs live streams in memory-bounded batches.
+    func syncLiveStreams(for playlist: Playlist, playlistId: UUID) async throws {
         let streams = try await xtreamClient.getLiveStreams(playlist: playlist)
+        let totalCount = streams.count
+        Logger.database.info("Fetched \(totalCount) live streams, syncing in batches of \(self.batchSize)")
 
-        Logger.database.info("Fetched \(streams.count) live streams for playlist \(playlist.name)")
+        let categoryMap = buildCategoryIdMap(playlistId: playlistId, type: .live)
 
-        let categoryLookup = buildCategoryLookup(playlist: playlist, type: .live)
-        Logger.database.info("Loaded \(categoryLookup.count) Live categories for stream mapping")
+        for batchStart in stride(from: 0, to: totalCount, by: batchSize) {
+            try autoreleasepool {
+                let batchEnd = min(batchStart + batchSize, totalCount)
+                let batch = streams[batchStart..<batchEnd]
 
-        for streamDTO in streams {
-            guard let streamId = streamDTO.streamId else { continue }
-            let id = "\(playlist.id.uuidString)-live-\(streamId)"
+                let context = ModelContext(modelContainer)
+                context.autosaveEnabled = false
 
-            let liveStream = LiveStream(
-                id: id,
-                streamId: streamId,
-                name: ""
-            )
+                let neededCatPIDs = Set(batch.compactMap { dto -> PersistentIdentifier? in
+                    guard let catIdStr = dto.categoryId, let numId = Int(catIdStr) else { return nil }
+                    return categoryMap[numId]
+                })
+                let categoryCache = fetchCategoriesByPID(context: context, pids: neededCatPIDs)
 
-            // Update live stream properties
-            liveStream.name = streamDTO.name ?? ""
-            liveStream.streamIcon = streamDTO.streamIcon
-            liveStream.epgChannelId = streamDTO.epgChannelId
-            liveStream.added = streamDTO.added
-            liveStream.customSid = streamDTO.customSid
-            liveStream.tvArchive = streamDTO.tvArchive ?? 0
-            liveStream.tvArchiveDuration = streamDTO.tvArchiveDuration ?? 0
-            liveStream.isAdult = streamDTO.isAdult ?? 0
-            liveStream.num = streamDTO.num ?? 0
+                for streamDTO in batch {
+                    guard let streamId = streamDTO.streamId else { continue }
+                    let id = "\(playlistId.uuidString)-live-\(streamId)"
 
-            // Assign category using prebuilt lookup (O(1) per item)
-            if let categoryId = streamDTO.categoryId, let numericId = Int(categoryId) {
-                liveStream.category = categoryLookup[numericId]
+                    let liveStream = LiveStream(id: id, streamId: streamId, name: "")
+                    liveStream.name = streamDTO.name ?? ""
+                    liveStream.streamIcon = streamDTO.streamIcon
+                    liveStream.epgChannelId = streamDTO.epgChannelId
+                    liveStream.added = streamDTO.added
+                    liveStream.customSid = streamDTO.customSid
+                    liveStream.tvArchive = streamDTO.tvArchive ?? 0
+                    liveStream.tvArchiveDuration = streamDTO.tvArchiveDuration ?? 0
+                    liveStream.isAdult = streamDTO.isAdult ?? 0
+                    liveStream.num = streamDTO.num ?? 0
+
+                    if let catIdStr = streamDTO.categoryId, let numId = Int(catIdStr),
+                       let catPID = categoryMap[numId] {
+                        liveStream.category = categoryCache[catPID]
+                    }
+
+                    context.insert(liveStream)
+                }
+
+                try context.save()
+                Logger.database.info("Synced streams \(batchStart + 1)–\(batchEnd) of \(totalCount)")
             }
-
-            modelContext.insert(liveStream)
         }
 
-        try modelContext.save()
+        Logger.database.info("Completed syncing \(totalCount) live streams")
     }
 
     // MARK: - Helper Methods
 
-    private func updatePlaylistInfo(_ playlist: Playlist, with authResponse: XtreamAuthResponse) {
+    private func updatePlaylistInfo(_ playlistId: UUID, with authResponse: XtreamAuthResponse) {
+        let context = ModelContext(modelContainer)
+        context.autosaveEnabled = false
+        guard let playlist = try? context.fetch(
+            FetchDescriptor<Playlist>(predicate: #Predicate { $0.id == playlistId })
+        ).first else { return }
+
         playlist.userStatus = authResponse.userInfo.status
         playlist.maxConnections = authResponse.userInfo.maxConnections
         playlist.activeConnections = authResponse.userInfo.activeCons
         playlist.expDate = authResponse.userInfo.expDate
         playlist.serverTimezone = authResponse.serverInfo.timezone
         playlist.lastUpdated = Date()
+        try? context.save()
     }
 
-    private func buildCategoryLookup(playlist: Playlist, type: CategoryType) -> [Int: Category] {
-        let prefix = "\(playlist.id.uuidString)-\(type.rawValue)-"
+    /// Builds a map from numeric category API ID -> PersistentIdentifier.
+    /// This is lightweight — we only keep the IDs, not the full model objects.
+    private func buildCategoryIdMap(playlistId: UUID, type: CategoryType) -> [Int: PersistentIdentifier] {
+        let context = ModelContext(modelContainer)
+        context.autosaveEnabled = false
+        let typeRaw = type.rawValue
+        let prefix = "\(playlistId.uuidString)-\(typeRaw)-"
+
         let descriptor = FetchDescriptor<Category>(
-            predicate: #Predicate { $0.typeRaw == type.rawValue }
+            predicate: #Predicate { $0.typeRaw == typeRaw }
         )
-        guard let allCategories = try? modelContext.fetch(descriptor) else { return [:] }
-        var lookup: [Int: Category] = [:]
-        lookup.reserveCapacity(allCategories.count)
+        guard let allCategories = try? context.fetch(descriptor) else { return [:] }
+
+        var map: [Int: PersistentIdentifier] = [:]
+        map.reserveCapacity(allCategories.count)
         for category in allCategories where category.id.hasPrefix(prefix) {
             guard let numericId = Int(category.apiId) else { continue }
-            lookup[numericId] = category
+            map[numericId] = category.persistentModelID
+        }
+        return map
+    }
+
+    private func buildExistingCategoryLookup(context: ModelContext, playlistId: UUID, type: CategoryType) -> [String: Category] {
+        let prefix = "\(playlistId.uuidString)-\(type.rawValue)-"
+        let typeRaw = type.rawValue
+        let descriptor = FetchDescriptor<Category>(
+            predicate: #Predicate { $0.typeRaw == typeRaw }
+        )
+        guard let allCategories = try? context.fetch(descriptor) else { return [:] }
+        var lookup: [String: Category] = [:]
+        lookup.reserveCapacity(allCategories.count)
+        for category in allCategories where category.id.hasPrefix(prefix) {
+            lookup[category.apiId] = category
         }
         return lookup
     }
 
-    private func createCategory(
-        apiId: String,
-        name: String,
-        parentId: Int,
-        type: CategoryType,
-        playlist: Playlist
-    ) async -> Category {
-        // Check if category already exists
-        if let existing = findCategory(apiId: apiId, type: type, playlist: playlist) {
-            // Update existing category
-            existing.name = name
-            existing.parentId = parentId
-            return existing
+    /// Fetch Category objects by their PersistentIdentifiers in a given context.
+    private func fetchCategoriesByPID(context: ModelContext, pids: Set<PersistentIdentifier>) -> [PersistentIdentifier: Category] {
+        guard !pids.isEmpty else { return [:] }
+        var result: [PersistentIdentifier: Category] = [:]
+        result.reserveCapacity(pids.count)
+        for pid in pids {
+            if let cat: Category = context.registeredModel(for: pid) {
+                result[pid] = cat
+            } else if let cat = try? context.fetch(
+                FetchDescriptor<Category>()
+            ).first(where: { $0.persistentModelID == pid }) {
+                result[pid] = cat
+            }
         }
-
-        // Create new category
-        let category = Category(
-            apiId: apiId,
-            name: name,
-            parentId: parentId,
-            type: type,
-            playlist: playlist
-        )
-        modelContext.insert(category)
-        return category
+        return result
     }
-
-    /// Finds a category by API ID and type for a specific playlist
-    private func findCategory(
-        apiId: String,
-        type: CategoryType,
-        playlist: Playlist
-    ) -> Category? {
-        let targetId = "\(playlist.id.uuidString)-\(type.rawValue)-\(apiId)"
-        let descriptor = FetchDescriptor<Category>(
-            predicate: #Predicate { $0.id == targetId }
-        )
-        return try? modelContext.fetch(descriptor).first
-    }
-
 }
 
 // MARK: - Sync Error

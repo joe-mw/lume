@@ -255,7 +255,7 @@ struct SyncProgressView: View {
 
         Task {
             do {
-                let syncManager = ContentSyncManager(modelContext: modelContext)
+                let syncManager = ContentSyncManager(modelContainer: modelContext.container)
                 try await syncManager.syncPlaylist(playlist, full: true)
 
                 await MainActor.run {

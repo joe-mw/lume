@@ -272,7 +272,7 @@ struct SeriesDetailView: View {
 
         Task {
             do {
-                let syncManager = ContentSyncManager(modelContext: modelContext)
+                let syncManager = ContentSyncManager(modelContainer: modelContext.container)
                 try await syncManager.syncEpisodes(for: series, playlist: playlist)
 
                 await MainActor.run {
