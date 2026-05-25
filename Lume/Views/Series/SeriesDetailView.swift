@@ -94,12 +94,14 @@ struct SeriesDetailView: View {
                     ActionButton(
                         icon: series.isFavorite ? "heart.fill" : "heart",
                         title: "Favorite",
+                        isActive: series.isFavorite,
                         action: { toggleFavorite() }
                     )
 
                     ActionButton(
                         icon: "square.and.arrow.down",
                         title: "Download",
+                        isActive: false,
                         action: { /* TODO */ }
                     )
                 }
@@ -155,28 +157,9 @@ struct SeriesDetailView: View {
                     // Season Picker
                     if !availableSeasons.isEmpty {
                         ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 12) {
+                            HStack(spacing: 10) {
                                 ForEach(availableSeasons, id: \.self) { season in
-                                    Button {
-                                        selectedSeason = season
-                                    } label: {
-                                        Text("Season \(season)")
-                                            .font(.subheadline)
-                                            .fontWeight(selectedSeason == season ? .semibold : .regular)
-                                            .padding(.horizontal, 16)
-                                            .padding(.vertical, 8)
-                                            .background(
-                                                selectedSeason == season
-                                                    ? Color.blue
-                                                    : Color.gray.opacity(0.2)
-                                            )
-                                            .foregroundStyle(
-                                                selectedSeason == season
-                                                    ? .white
-                                                    : .primary
-                                            )
-                                            .clipShape(Capsule())
-                                    }
+                                    seasonButton(for: season)
                                 }
                             }
                             .padding(.horizontal)
@@ -269,6 +252,32 @@ struct SeriesDetailView: View {
 
     private func toggleFavorite() {
         series.isFavorite.toggle()
+    }
+
+    @ViewBuilder
+    private func seasonButton(for season: Int) -> some View {
+        if season == selectedSeason {
+            Button {
+                selectedSeason = season
+            } label: {
+                Text("Season \(season)")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.blue)
+            .controlSize(.small)
+        } else {
+            Button {
+                selectedSeason = season
+            } label: {
+                Text("Season \(season)")
+                    .font(.subheadline)
+                    .fontWeight(.regular)
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+        }
     }
 
     private func loadEpisodes() {

@@ -97,17 +97,16 @@ struct MovieDetailView: View {
                 Button {
                     showingPlayer = true
                 } label: {
-                    HStack {
+                    HStack(spacing: 8) {
                         Image(systemName: "play.fill")
                         Text("Play")
                             .fontWeight(.semibold)
                     }
                     .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.blue)
-                    .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
+                .buttonStyle(.borderedProminent)
+                .tint(.blue)
+                .controlSize(.large)
                 .padding(.horizontal)
 
                 // Action Buttons
@@ -115,18 +114,21 @@ struct MovieDetailView: View {
                     ActionButton(
                         icon: movie.isFavorite ? "heart.fill" : "heart",
                         title: "Favorite",
+                        isActive: movie.isFavorite,
                         action: { toggleFavorite() }
                     )
 
                     ActionButton(
                         icon: movie.isWatched ? "checkmark.circle.fill" : "checkmark.circle",
                         title: "Watched",
+                        isActive: movie.isWatched,
                         action: { toggleWatched() }
                     )
 
                     ActionButton(
                         icon: "square.and.arrow.down",
                         title: "Download",
+                        isActive: false,
                         action: { /* TODO */ }
                     )
                 }
@@ -250,6 +252,7 @@ struct MovieDetailView: View {
 struct ActionButton: View {
     let icon: String
     let title: String
+    let isActive: Bool
     let action: () -> Void
 
     var body: some View {
@@ -262,10 +265,9 @@ struct ActionButton: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
-            .background(Color.gray.opacity(0.2))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
         }
-        .foregroundStyle(.primary)
+        .buttonStyle(.bordered)
+        .tint(isActive ? .blue : nil)
     }
 }
 
