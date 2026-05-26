@@ -16,6 +16,7 @@ struct KSPlayerEngineView: View {
     @Binding var duration: TimeInterval
 
     @StateObject private var coordinator = KSVideoPlayer.Coordinator()
+    @State private var hoverHideTask: Task<Void, Never>?
 
     var body: some View {
         let options = makeOptions()
@@ -25,6 +26,28 @@ struct KSPlayerEngineView: View {
             options: options,
             title: media.title
         )
+        #if os(macOS)
+        // KSPlayer's built-in `.onHover` only fires on the boundary, so the
+        // controls auto-hide and never re-appear while the cursor moves inside
+        // the video. We layer continuous hover on top to keep the mask shown
+        // while there's any cursor movement over the player.
+        .onContinuousHover(coordinateSpace: .local) { phase in
+            switch phase {
+            case .active:
+                coordinator.mask(show: true, autoHide: true)
+                hoverHideTask?.cancel()
+            case .ended:
+                // Cursor left the player view entirely — hide controls shortly
+                // after so we don't leave them stuck on screen.
+                hoverHideTask?.cancel()
+                hoverHideTask = Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: 600_000_000)
+                    guard !Task.isCancelled else { return }
+                    coordinator.isMaskShow = false
+                }
+            }
+        }
+        #endif
         .onAppear {
             coordinator.onPlay = { current, total in
                 if current.isFinite { currentTime = current }
@@ -32,6 +55,7 @@ struct KSPlayerEngineView: View {
             }
         }
         .onDisappear {
+            hoverHideTask?.cancel()
             coordinator.resetPlayer()
         }
     }
@@ -46,6 +70,15 @@ struct KSPlayerEngineView: View {
         if !media.isLive, media.startTime > 1 {
             options.startPlayTime = media.startTime
         }
+        #if os(macOS)
+        // When true, KSPlayer rewrites the window's aspect ratio + frame on
+        // `readyToPlay`. In fullscreen the frame call doesn't resize the
+        // window itself, but the aspect-ratio constraint shifts the rendered
+        // video to the bottom-left origin, leaving a thick black bar above
+        // and below depending on aspect. Disable so the video fills the
+        // window and is centered by the player layer's aspect-fit.
+        options.automaticWindowResize = false
+        #endif
         return options
     }
 }

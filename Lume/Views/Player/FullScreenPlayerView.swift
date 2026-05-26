@@ -34,9 +34,15 @@ struct FullScreenPlayerView: View {
             playerView
                 .ignoresSafeArea()
 
-            closeButton
-                .padding(.top, 4)
-                .padding(.leading, 4)
+            // KSPlayer ships its own close button inside the auto-hiding
+            // controls overlay — showing a second one here means the user
+            // sees duplicate X buttons whenever the controls are visible.
+            // Only render our custom close for engines that don't have one.
+            if engine != .ksPlayer {
+                closeButton
+                    .padding(.top, 4)
+                    .padding(.leading, 4)
+            }
         }
         #if os(iOS)
         .statusBarHidden(true)
