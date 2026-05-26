@@ -15,7 +15,7 @@ struct MovieDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Query private var playlists: [Playlist]
 
-    @State private var showingPlayer = false
+    @State private var playingMedia: PlayableMedia?
 
     var body: some View {
         ScrollView {
@@ -95,11 +95,11 @@ struct MovieDetailView: View {
 
                 // Play Button
                 Button {
-                    showingPlayer = true
+                    startPlayback()
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "play.fill")
-                        Text("Play")
+                        Text(movie.watchProgress > 1 ? "Resume" : "Play")
                             .fontWeight(.semibold)
                     }
                     .frame(maxWidth: .infinity)
@@ -108,6 +108,7 @@ struct MovieDetailView: View {
                 .tint(.blue)
                 .controlSize(.large)
                 .padding(.horizontal)
+                .disabled(playlists.first == nil)
 
                 // Action Buttons
                 HStack(spacing: 16) {
@@ -211,18 +212,19 @@ struct MovieDetailView: View {
             }
         }
         #if os(iOS)
-        .fullScreenCover(isPresented: $showingPlayer) {
-            if let playlist = playlists.first {
-                PlayerView(content: movie, playlist: playlist)
-            }
+        .fullScreenCover(item: $playingMedia) { media in
+            FullScreenPlayerView(media: media)
         }
         #else
-        .sheet(isPresented: $showingPlayer) {
-            if let playlist = playlists.first {
-                PlayerView(content: movie, playlist: playlist)
-            }
+        .sheet(item: $playingMedia) { media in
+            FullScreenPlayerView(media: media)
         }
         #endif
+    }
+
+    private func startPlayback() {
+        guard let playlist = playlists.first else { return }
+        playingMedia = PlayableMedia.from(movie: movie, playlist: playlist)
     }
 
     private func formatDuration(_ seconds: Int) -> String {

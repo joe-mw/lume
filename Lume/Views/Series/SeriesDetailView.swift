@@ -16,8 +16,7 @@ struct SeriesDetailView: View {
 
     @State private var selectedSeason: Int = 1
     @State private var isLoadingEpisodes = false
-    @State private var showingPlayer = false
-    @State private var selectedEpisode: Episode?
+    @State private var playingMedia: PlayableMedia?
 
     var body: some View {
         ScrollView {
@@ -191,8 +190,7 @@ struct SeriesDetailView: View {
                         LazyVStack(spacing: 0) {
                             ForEach(seasonEpisodes) { episode in
                                 EpisodeRow(episode: episode) {
-                                    selectedEpisode = episode
-                                    showingPlayer = true
+                                    playEpisode(episode)
                                 }
 
                                 if episode.id != seasonEpisodes.last?.id {
@@ -225,18 +223,19 @@ struct SeriesDetailView: View {
             }
         }
         #if os(iOS)
-        .fullScreenCover(isPresented: $showingPlayer) {
-            if let episode = selectedEpisode, let playlist = playlists.first {
-                PlayerView(content: episode, playlist: playlist)
-            }
+        .fullScreenCover(item: $playingMedia) { media in
+            FullScreenPlayerView(media: media)
         }
         #else
-        .sheet(isPresented: $showingPlayer) {
-            if let episode = selectedEpisode, let playlist = playlists.first {
-                PlayerView(content: episode, playlist: playlist)
-            }
+        .sheet(item: $playingMedia) { media in
+            FullScreenPlayerView(media: media)
         }
         #endif
+    }
+
+    private func playEpisode(_ episode: Episode) {
+        guard let playlist = playlists.first else { return }
+        playingMedia = PlayableMedia.from(episode: episode, playlist: playlist)
     }
 
     private var availableSeasons: [Int] {

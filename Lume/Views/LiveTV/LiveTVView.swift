@@ -18,6 +18,7 @@ struct LiveTVView: View {
     @State private var selectedPlaylist: Playlist?
     @State private var selectedCategory: Category?
     @State private var showingSync = false
+    @State private var playingMedia: PlayableMedia?
 
     @AppStorage(SortStorageKey.liveCategories) private var categorySortRaw: String = CategorySortOption.playlist.rawValue
     @AppStorage(SortStorageKey.liveContent) private var contentSortRaw: String = ContentSortOption.playlist.rawValue
@@ -71,8 +72,10 @@ struct LiveTVView: View {
 
                         // Channels list (lazy-loaded by category)
                         if let category = selectedCategory {
-                            ChannelsList(category: category, sort: contentSort)
-                                .id("\(category.id)-\(contentSort.rawValue)")
+                            ChannelsList(category: category, sort: contentSort) { stream in
+                                playChannel(stream)
+                            }
+                            .id("\(category.id)-\(contentSort.rawValue)")
                         } else {
                             ContentUnavailableView(
                                 "Select a Category",
@@ -142,15 +145,25 @@ struct LiveTVView: View {
                     SyncProgressView(playlist: playlist, isPresented: $showingSync)
                 }
             }
-            .navigationDestination(for: LiveStream.self) { stream in
-                // TODO: Create LiveStreamDetailView
-                Text("Live Stream: \(stream.name)")
+            #if os(iOS)
+            .fullScreenCover(item: $playingMedia) { media in
+                FullScreenPlayerView(media: media)
             }
+            #else
+            .sheet(item: $playingMedia) { media in
+                FullScreenPlayerView(media: media)
+            }
+            #endif
         }
     }
 
     private var sortedCategories: [Category] {
         categorySort.sort(categories)
+    }
+
+    private func playChannel(_ stream: LiveStream) {
+        guard let playlist = selectedPlaylist ?? playlists.first else { return }
+        playingMedia = PlayableMedia.from(stream: stream, playlist: playlist)
     }
 }
 
@@ -188,10 +201,12 @@ struct CategorySidebar: View {
 
 struct ChannelsList: View {
     let category: Category
+    let onPlay: (LiveStream) -> Void
     @Query private var streams: [LiveStream]
 
-    init(category: Category, sort: ContentSortOption) {
+    init(category: Category, sort: ContentSortOption, onPlay: @escaping (LiveStream) -> Void) {
         self.category = category
+        self.onPlay = onPlay
         let categoryId = category.id
         _streams = Query(
             filter: #Predicate<LiveStream> { $0.categoryId == categoryId },
@@ -210,9 +225,12 @@ struct ChannelsList: View {
                     )
                 } else {
                     ForEach(streams) { stream in
-                        NavigationLink(value: stream) {
+                        Button {
+                            onPlay(stream)
+                        } label: {
                             LiveStreamCardView(stream: stream)
                                 .padding(.horizontal)
+                                .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
 

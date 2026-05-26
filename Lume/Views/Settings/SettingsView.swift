@@ -5,11 +5,20 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var playlists: [Playlist]
     @State private var showingAddPlaylist = false
+    @AppStorage(PlayerSettings.engineKey) private var engineRaw: String = PlayerEngineKind.defaultValue.rawValue
+
+    private var engine: Binding<PlayerEngineKind> {
+        Binding(
+            get: { PlayerEngineKind(rawValue: engineRaw) ?? .defaultValue },
+            set: { engineRaw = $0.rawValue }
+        )
+    }
 
     var body: some View {
         NavigationStack {
             List {
                 playlistsSection
+                playerSection
                 aboutSection
             }
             #if os(macOS)
@@ -77,6 +86,32 @@ struct SettingsView: View {
             if !playlists.isEmpty {
                 Text("\(playlists.count) playlist\(playlists.count == 1 ? "" : "s")")
             }
+        }
+    }
+
+    @ViewBuilder
+    private var playerSection: some View {
+        Section {
+            Picker("Engine", selection: engine) {
+                ForEach(PlayerEngineKind.allCases) { kind in
+                    Text(kind.displayName).tag(kind)
+                }
+            }
+            .pickerStyle(.menu)
+
+            Text(engine.wrappedValue.subtitle)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        } header: {
+            Text("Player")
+        } footer: {
+            #if !canImport(KSPlayer)
+            if engine.wrappedValue == .ksPlayer {
+                Label("KSPlayer is not linked into this build. AVPlayer will be used as a fallback.", systemImage: "exclamationmark.triangle")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            }
+            #endif
         }
     }
 
