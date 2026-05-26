@@ -11,6 +11,9 @@ import SwiftData
 
 struct LiveTVView: View {
     @Environment(\.modelContext) private var modelContext
+    #if os(macOS)
+    @Environment(\.openWindow) private var openWindow
+    #endif
     @Query private var playlists: [Playlist]
     @Query(filter: #Predicate<Category> { $0.typeRaw == "live" && $0.isHidden == false })
     private var categories: [Category]
@@ -149,10 +152,6 @@ struct LiveTVView: View {
             .fullScreenCover(item: $playingMedia) { media in
                 FullScreenPlayerView(media: media)
             }
-            #else
-            .sheet(item: $playingMedia) { media in
-                FullScreenPlayerView(media: media)
-            }
             #endif
         }
     }
@@ -162,8 +161,13 @@ struct LiveTVView: View {
     }
 
     private func playChannel(_ stream: LiveStream) {
-        guard let playlist = selectedPlaylist ?? playlists.first else { return }
-        playingMedia = PlayableMedia.from(stream: stream, playlist: playlist)
+        guard let playlist = selectedPlaylist ?? playlists.first,
+              let media = PlayableMedia.from(stream: stream, playlist: playlist) else { return }
+        #if os(macOS)
+        openWindow(id: "player", value: media)
+        #else
+        playingMedia = media
+        #endif
     }
 }
 

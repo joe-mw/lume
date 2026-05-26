@@ -2,6 +2,10 @@ import SwiftUI
 import SwiftData
 import AVFoundation
 
+#if os(macOS)
+import AppKit
+#endif
+
 /// Top-level full-screen video host. Picks the engine implementation based on
 /// the user setting, owns progress state, and persists watch progress back
 /// into SwiftData for VOD content.
@@ -10,6 +14,9 @@ struct FullScreenPlayerView: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    #if os(macOS)
+    @Environment(\.dismissWindow) private var dismissWindow
+    #endif
     @AppStorage(PlayerSettings.engineKey) private var engineRaw: String = PlayerEngineKind.defaultValue.rawValue
 
     @State private var currentTime: TimeInterval = 0
@@ -41,6 +48,9 @@ struct FullScreenPlayerView: View {
         }
         .task {
             configureAudioSessionForPlayback()
+            #if os(macOS)
+            enterMacFullScreen()
+            #endif
         }
         .onDisappear {
             persistProgress(force: true)
@@ -61,7 +71,7 @@ struct FullScreenPlayerView: View {
     private var closeButton: some View {
         Button {
             persistProgress(force: true)
-            dismiss()
+            closePlayer()
         } label: {
             Image(systemName: "xmark")
                 .font(.system(size: 16, weight: .semibold))
@@ -70,8 +80,22 @@ struct FullScreenPlayerView: View {
                 .background(.ultraThinMaterial, in: Circle())
                 .overlay(Circle().strokeBorder(.white.opacity(0.15), lineWidth: 0.5))
         }
+        .buttonStyle(.plain)
         .padding(12)
         .accessibilityLabel("Close player")
+        .keyboardShortcut(.escape, modifiers: [])
+    }
+
+    private func closePlayer() {
+        #if os(macOS)
+        // Exit fullscreen first so the window animation is graceful, then close.
+        if let window = NSApp.keyWindow, window.styleMask.contains(.fullScreen) {
+            window.toggleFullScreen(nil)
+        }
+        dismissWindow(id: "player")
+        #else
+        dismiss()
+        #endif
     }
 
     private func configureAudioSessionForPlayback() {
@@ -87,6 +111,19 @@ struct FullScreenPlayerView: View {
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         #endif
     }
+
+    #if os(macOS)
+    private func enterMacFullScreen() {
+        // Wait for the window to mount before toggling fullscreen.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            guard let window = NSApp.keyWindow ?? NSApp.windows.last(where: { $0.isVisible }) else { return }
+            window.title = media.title
+            if !window.styleMask.contains(.fullScreen) {
+                window.toggleFullScreen(nil)
+            }
+        }
+    }
+    #endif
 
     private func persistProgress(force: Bool) {
         guard !media.isLive else {

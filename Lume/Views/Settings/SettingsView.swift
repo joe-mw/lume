@@ -104,14 +104,6 @@ struct SettingsView: View {
                 .foregroundStyle(.secondary)
         } header: {
             Text("Player")
-        } footer: {
-            #if !canImport(KSPlayer)
-            if engine.wrappedValue == .ksPlayer {
-                Label("KSPlayer is not linked into this build. AVPlayer will be used as a fallback.", systemImage: "exclamationmark.triangle")
-                    .font(.caption)
-                    .foregroundStyle(.orange)
-            }
-            #endif
         }
     }
 

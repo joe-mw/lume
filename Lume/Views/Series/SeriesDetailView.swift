@@ -12,6 +12,9 @@ struct SeriesDetailView: View {
     let series: Series
 
     @Environment(\.modelContext) private var modelContext
+    #if os(macOS)
+    @Environment(\.openWindow) private var openWindow
+    #endif
     @Query private var playlists: [Playlist]
 
     @State private var selectedSeason: Int = 1
@@ -226,16 +229,17 @@ struct SeriesDetailView: View {
         .fullScreenCover(item: $playingMedia) { media in
             FullScreenPlayerView(media: media)
         }
-        #else
-        .sheet(item: $playingMedia) { media in
-            FullScreenPlayerView(media: media)
-        }
         #endif
     }
 
     private func playEpisode(_ episode: Episode) {
-        guard let playlist = playlists.first else { return }
-        playingMedia = PlayableMedia.from(episode: episode, playlist: playlist)
+        guard let playlist = playlists.first,
+              let media = PlayableMedia.from(episode: episode, playlist: playlist) else { return }
+        #if os(macOS)
+        openWindow(id: "player", value: media)
+        #else
+        playingMedia = media
+        #endif
     }
 
     private var availableSeasons: [Int] {

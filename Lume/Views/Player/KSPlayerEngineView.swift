@@ -39,9 +39,9 @@ struct KSPlayerEngineView: View {
     private func makeOptions() -> KSOptions {
         // Prefer FFmpeg decoding for IPTV streams that AVFoundation chokes on.
         KSOptions.secondPlayerType = KSMEPlayer.self
+        KSOptions.isAutoPlay = true
 
         let options = KSOptions()
-        options.isAutoPlay = true
         options.preferredForwardBufferDuration = media.isLive ? 4 : 8
         if !media.isLive, media.startTime > 1 {
             options.startPlayTime = media.startTime

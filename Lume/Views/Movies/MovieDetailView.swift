@@ -13,6 +13,9 @@ struct MovieDetailView: View {
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    #if os(macOS)
+    @Environment(\.openWindow) private var openWindow
+    #endif
     @Query private var playlists: [Playlist]
 
     @State private var playingMedia: PlayableMedia?
@@ -215,16 +218,17 @@ struct MovieDetailView: View {
         .fullScreenCover(item: $playingMedia) { media in
             FullScreenPlayerView(media: media)
         }
-        #else
-        .sheet(item: $playingMedia) { media in
-            FullScreenPlayerView(media: media)
-        }
         #endif
     }
 
     private func startPlayback() {
-        guard let playlist = playlists.first else { return }
-        playingMedia = PlayableMedia.from(movie: movie, playlist: playlist)
+        guard let playlist = playlists.first,
+              let media = PlayableMedia.from(movie: movie, playlist: playlist) else { return }
+        #if os(macOS)
+        openWindow(id: "player", value: media)
+        #else
+        playingMedia = media
+        #endif
     }
 
     private func formatDuration(_ seconds: Int) -> String {

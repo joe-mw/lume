@@ -2,13 +2,14 @@ import Foundation
 
 /// A self-contained, value-type description of something playable.
 /// The player view does not know about SwiftData models — it only needs this.
-struct PlayableMedia: Identifiable, Hashable {
-    enum Kind: Hashable {
+/// `Codable` conformance lets us pass it as the value of a SwiftUI `Window`.
+struct PlayableMedia: Identifiable, Hashable, Codable {
+    enum Kind: Hashable, Codable {
         case vod
         case live
     }
 
-    enum ContentRef: Hashable {
+    enum ContentRef: Hashable, Codable {
         case movie(String)
         case episode(String)
         case live(String)

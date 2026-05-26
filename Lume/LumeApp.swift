@@ -34,5 +34,17 @@ struct LumeApp: App {
             ContentView()
         }
         .modelContainer(sharedModelContainer)
+
+        #if os(macOS)
+        WindowGroup(id: "player", for: PlayableMedia.self) { $media in
+            if let media {
+                FullScreenPlayerView(media: media)
+                    .frame(minWidth: 800, minHeight: 450)
+            }
+        }
+        .modelContainer(sharedModelContainer)
+        .windowStyle(.hiddenTitleBar)
+        .windowResizability(.contentMinSize)
+        #endif
     }
 }
