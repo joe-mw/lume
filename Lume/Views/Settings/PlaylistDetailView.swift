@@ -1,21 +1,35 @@
 import SwiftUI
+import SwiftData
 
 struct PlaylistDetailView: View {
-    let playlist: Playlist
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+    @Bindable var playlist: Playlist
+
+    @State private var isEditing = false
+    @State private var editName = ""
+    @State private var editServerURL = ""
+    @State private var editUsername = ""
+    @State private var editPassword = ""
+    @State private var showDeleteConfirmation = false
+    @State private var showSync = false
 
     var body: some View {
-        List {
-            Section("Server Information") {
-                LabeledContent("Name", value: playlist.name)
-                LabeledContent("Server URL", value: playlist.serverURL)
-                LabeledContent("Username", value: playlist.username)
+        Form {
+            if isEditing {
+                editingSection
+            } else {
+                readOnlySection
             }
 
             if let status = playlist.userStatus {
-                Section("Account Status") {
+                Section("Account") {
                     LabeledContent("Status", value: status)
                     if let expDate = playlist.expDate {
-                        LabeledContent("Expires", value: expDate)
+                        LabeledContent("Expires") {
+                            Text(formattedExpiry(expDate))
+                                .foregroundStyle(isExpired(expDate) ? .red : .secondary)
+                        }
                     }
                     if let maxConn = playlist.maxConnections {
                         LabeledContent("Max Connections", value: maxConn)
@@ -26,22 +40,169 @@ struct PlaylistDetailView: View {
                 }
             }
 
-            Section("Sync") {
-                Toggle("Sync Enabled", isOn: .constant(playlist.syncEnabled))
-                if let lastSync = playlist.lastSyncDate {
-                    LabeledContent("Last Synced") {
-                        Text(lastSync, style: .relative)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                Button("Sync Now") {
-                    // TODO: Trigger sync
+            syncSection
+
+            Section {
+                Button("Delete Playlist", role: .destructive) {
+                    showDeleteConfirmation = true
                 }
             }
         }
+        #if os(macOS)
+        .formStyle(.grouped)
+        #endif
         .navigationTitle(playlist.name)
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                if isEditing {
+                    Button("Done") { saveChanges() }
+                } else {
+                    Button("Edit") { startEditing() }
+                }
+            }
+            ToolbarItem(placement: .cancellationAction) {
+                if isEditing {
+                    Button("Cancel") { cancelEditing() }
+                }
+            }
+        }
+        .alert("Delete Playlist", isPresented: $showDeleteConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) { deletePlaylist() }
+        } message: {
+            Text("All synced content for this playlist will also be removed.")
+        }
+        .sheet(isPresented: $showSync) {
+            SyncProgressView(playlist: playlist, isPresented: $showSync)
+        }
+    }
+
+    // MARK: - Server Section (Read-only)
+
+    @ViewBuilder
+    private var readOnlySection: some View {
+        Section("Server") {
+            LabeledContent("Name", value: playlist.name)
+            LabeledContent("URL") {
+                Text(playlist.serverURL)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .foregroundStyle(.secondary)
+            }
+            LabeledContent("Username", value: playlist.username)
+            LabeledContent("Password") {
+                Text("••••••••")
+                    .foregroundStyle(.secondary)
+            }
+            LabeledContent("Added") {
+                Text(playlist.addedAt, style: .date)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    // MARK: - Server Section (Editing)
+
+    @ViewBuilder
+    private var editingSection: some View {
+        Section("Server") {
+            TextField("Name", text: $editName)
+            TextField("Server URL", text: $editServerURL)
+                #if os(iOS)
+                .textInputAutocapitalization(.never)
+                .keyboardType(.URL)
+                #endif
+                .autocorrectionDisabled()
+                .textContentType(.URL)
+            TextField("Username", text: $editUsername)
+                #if os(iOS)
+                .textInputAutocapitalization(.never)
+                #endif
+                .autocorrectionDisabled()
+                .textContentType(.username)
+            SecureField("Password", text: $editPassword)
+                .textContentType(.password)
+        }
+    }
+
+    // MARK: - Sync Section
+
+    @ViewBuilder
+    private var syncSection: some View {
+        Section("Sync") {
+            Toggle("Sync Enabled", isOn: $playlist.syncEnabled)
+
+            if playlist.syncStatus == .syncing {
+                HStack {
+                    Text("Status")
+                    Spacer()
+                    HStack(spacing: 6) {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text("Syncing")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
+            if let lastSync = playlist.lastSyncDate {
+                LabeledContent("Last Synced") {
+                    Text(lastSync, style: .relative)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Button("Sync Now") {
+                showSync = true
+            }
+            .disabled(playlist.syncStatus == .syncing)
+        }
+    }
+
+    // MARK: - Actions
+
+    private func startEditing() {
+        editName = playlist.name
+        editServerURL = playlist.serverURL
+        editUsername = playlist.username
+        editPassword = playlist.password
+        withAnimation { isEditing = true }
+    }
+
+    private func cancelEditing() {
+        withAnimation { isEditing = false }
+    }
+
+    private func saveChanges() {
+        playlist.name = editName.trimmingCharacters(in: .whitespacesAndNewlines)
+        playlist.serverURL = editServerURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        playlist.username = editUsername.trimmingCharacters(in: .whitespacesAndNewlines)
+        playlist.password = editPassword
+        playlist.lastUpdated = Date()
+        withAnimation { isEditing = false }
+    }
+
+    private func deletePlaylist() {
+        modelContext.delete(playlist)
+        dismiss()
+    }
+
+    // MARK: - Helpers
+
+    private func formattedExpiry(_ raw: String) -> String {
+        if let timestamp = TimeInterval(raw) {
+            let date = Date(timeIntervalSince1970: timestamp)
+            return date.formatted(date: .abbreviated, time: .omitted)
+        }
+        return raw
+    }
+
+    private func isExpired(_ raw: String) -> Bool {
+        guard let timestamp = TimeInterval(raw) else { return false }
+        let date = Date(timeIntervalSince1970: timestamp)
+        return date < Date()
     }
 }

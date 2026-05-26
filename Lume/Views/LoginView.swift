@@ -2,87 +2,128 @@ import SwiftUI
 import SwiftData
 
 struct LoginView: View {
+    @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
-    
+
     @State private var name = ""
     @State private var serverURL = ""
     @State private var username = ""
     @State private var password = ""
-    
+
     @State private var isLoading = false
     @State private var errorMessage: String?
-    
+
+    private var isFormValid: Bool {
+        !serverURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !password.isEmpty
+    }
+
     var body: some View {
         NavigationStack {
             Form {
-                Section(header: Text("Playlist Details")) {
-                    TextField("Name (e.g. My IPTV)", text: $name)
-                    TextField("Server URL (http://...)", text: $serverURL)
+                Section {
+                    TextField("e.g. My IPTV", text: $name)
+                        .textContentType(.name)
+
+                    TextField("e.g. http://example.com:8080", text: $serverURL)
                         #if os(iOS)
                         .textInputAutocapitalization(.never)
                         .keyboardType(.URL)
                         #endif
-                        .disableAutocorrection(true)
+                        .autocorrectionDisabled()
+                        .textContentType(.URL)
+
                     TextField("Username", text: $username)
                         #if os(iOS)
                         .textInputAutocapitalization(.never)
                         #endif
-                        .disableAutocorrection(true)
+                        .autocorrectionDisabled()
+                        .textContentType(.username)
+
                     SecureField("Password", text: $password)
+                        .textContentType(.password)
+                } header: {
+                    Text("Server Connection")
+                } footer: {
+                    Text("Your credentials are stored locally on this device.")
                 }
-                
-                if let errorMessage = errorMessage {
+
+                if let errorMessage {
                     Section {
-                        Text(errorMessage)
-                            .foregroundColor(.red)
+                        Label(errorMessage, systemImage: "exclamationmark.circle.fill")
+                            .foregroundStyle(.red)
+                            .font(.callout)
                     }
                 }
-                
-                Button(action: login) {
-                    if isLoading {
-                        ProgressView()
-                    } else {
-                        Text("Add Playlist")
-                            .frame(maxWidth: .infinity, alignment: .center)
+
+                Section {
+                    Button(action: login) {
+                        HStack {
+                            Spacer()
+                            if isLoading {
+                                ProgressView()
+                                    .controlSize(.small)
+                            } else {
+                                Text("Add Playlist")
+                                    .fontWeight(.semibold)
+                            }
+                            Spacer()
+                        }
                     }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .disabled(!isFormValid || isLoading)
                 }
-                .disabled(isLoading || serverURL.isEmpty || username.isEmpty || password.isEmpty)
             }
+            #if os(macOS)
+            .formStyle(.grouped)
+            #endif
             .navigationTitle("Add Playlist")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                        .disabled(isLoading)
+                }
+            }
+            .interactiveDismissDisabled(isLoading)
         }
     }
-    
+
     private func login() {
         isLoading = true
         errorMessage = nil
-        
+
+        let playlistName = name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? "My Playlist"
+            : name.trimmingCharacters(in: .whitespacesAndNewlines)
+
         Task {
             let playlist = Playlist(
-                name: name.isEmpty ? "My Playlist" : name,
-                serverURL: serverURL,
-                username: username,
+                name: playlistName,
+                serverURL: serverURL.trimmingCharacters(in: .whitespacesAndNewlines),
+                username: username.trimmingCharacters(in: .whitespacesAndNewlines),
                 password: password
             )
-            
+
             let client = XtreamClient()
             do {
                 let info = try await client.getInfo(playlist: playlist)
-                print("Server info fetched successfully: \(info)")
-                
+
                 await MainActor.run {
                     playlist.serverTimezone = info.serverInfo.timezone
-                    // Map other fields if needed from info.userInfo
                     playlist.userStatus = info.userInfo.status
                     playlist.maxConnections = String(info.userInfo.maxConnections ?? "0")
                     playlist.activeConnections = String(info.userInfo.activeCons ?? "0")
                     playlist.expDate = info.userInfo.expDate
-                    
+
                     modelContext.insert(playlist)
                     isLoading = false
+                    dismiss()
                 }
             } catch {
                 await MainActor.run {
-                    errorMessage = "Failed to connect: \(error.localizedDescription)"
+                    errorMessage = error.localizedDescription
                     isLoading = false
                 }
             }
