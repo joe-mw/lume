@@ -70,5 +70,64 @@ The app indexes content from the xtream playlist and EPG data locally using Swif
 ## Future Plans
 Upcoming features and enhancements are tracked as [GitHub Issues](https://github.com/bilipp/Lume/issues). Key planned items include a home screen dashboard, Trakt and TMDB integration, downloads for offline viewing, iCloud sync, m3u support, parental controls, Chromecast support, and more.
 
+## Testing
+
+### Test Suite
+Lume has **~173 tests** spanning unit tests (Swift Testing) and UI tests (XCTest).
+
+| Target | Tests | Type | Framework |
+|---|---|---|---|
+| `LumeTests` | 129 | Unit / Integration | Swift Testing |
+| `LumeUITests` | ~44 | UI Automation | XCTest |
+
+### Test Contents
+
+**DTO Decoding (17 tests)** — Decodes all 8 real API payloads from `ExampleData/` (Movies: 13,955; Live Streams: 2,568; Series: 2,215). Verifies JSON→Swift model mapping and type coercion (Int-as-String, String-as-Double, Unix timestamps).
+
+**URL Building (11 tests)** — Validates movie, episode, live stream, and catchup URL formats, trailing slash handling, and special characters in credentials.
+
+**API Client (16 tests)** — Tests `Endpoint.asURLRequest()` construction, `NetworkError` descriptions and retriable classification, `RetryBackoff` linear/exponential delay math.
+
+**Model Layer (13 tests)** — SwiftData `@Attribute(.unique)` upsert, computed properties, Category ID construction, Playlist sync status transitions.
+
+**Sort Options (17 tests)** — All `CategorySortOption`/`ContentSortOption` permutations, empty/duplicate arrays, label and icon validation.
+
+**Playable Media (9 tests)** — Factory methods, Codable round-trip, Hashable conformance.
+
+**Sync Progress (13 tests)** — State machine (`pending`→`active`→`completed`), `overallFraction` computation, all 7 `SyncSteps`.
+
+**Content Sync (8 tests)** — Large-batch performance (13,900 movies < 30s), upsert deduplication, empty/single edge cases.
+
+**Player Settings (4 tests)** — `PlayerEngineKind` all cases, display names, storage key.
+
+**UI Tests (~44 tests)** — App launch and performance, login flow, tab navigation (Live TV, Movies, Series, Settings), playlist detail view, settings controls.
+
+### Running Tests
+
+```bash
+# Unit tests only
+xcodebuild test -project Lume.xcodeproj -scheme Lume \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+  -only-testing:LumeTests
+
+# UI tests only
+xcodebuild test -project Lume.xcodeproj -scheme Lume \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+  -only-testing:LumeUITests
+
+# All tests
+xcodebuild test -project Lume.xcodeproj -scheme Lume \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
+```
+
+### Test Helpers
+Shared utilities in `LumeTests/Helpers/TestHelpers.swift`:
+- **`loadExampleJSON<T>(_:)`** — Loads and decodes any file from `ExampleData/` using `#filePath`-based navigation (no bundle resource setup needed)
+- **`makeTestContainer()`** — Creates an in-memory `ModelContainer` with all 7 SwiftData model types
+- **`exampleDataURL(_:)`** — Resolves a filename to its full path relative to the test target
+
+### Testing Strategy
+Full strategy document available in [`TestingStrategy.md`](TestingStrategy.md), covering priority matrix, file organization, and CI setup.
+
 ## Xtream Codes API Documentation
 For more information on the Xtream Codes API, please refer to the [Xtream Codes API Documentation](XtreamAPI.md) file, which provides detailed information on the available endpoints, authentication, and response formats for retrieving server information, live streams, video-on-demand content, series, and EPG data.

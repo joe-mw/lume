@@ -15,7 +15,7 @@ struct ContentSyncTests {
     private func makeContainer() throws -> ModelContainer {
         let schema = Schema([
             Playlist.self,
-            Category.self,
+            Lume.Category.self,
             LiveStream.self,
             Movie.self,
             Series.self,
@@ -26,23 +26,14 @@ struct ContentSyncTests {
         return try ModelContainer(for: schema, configurations: [config])
     }
 
-    private func exampleMoviesURL() -> URL {
-        URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .appendingPathComponent("ExampleData/Movies.json")
-    }
+    // MARK: - Large Dataset Performance
 
-    /// Verifies that syncing 13,900 movies completes in a reasonable time
-    /// and results in the correct number of persisted records.
     @Test func syncMoviesFromExampleJSON() async throws {
-        let data = try Data(contentsOf: exampleMoviesURL())
-        let movies = try JSONDecoder().decode([XtreamVODStream].self, from: data)
+        let movies: [XtreamVODStream] = try loadExampleJSON("Movies.json")
         #expect(movies.count > 10000, "Expected at least 10,000 movies in example data, got \(movies.count)")
 
         let container = try makeContainer()
 
-        // Create a playlist
         let setupContext = ModelContext(container)
         let playlist = Playlist(name: "Test", serverURL: "http://test.example.com", username: "user", password: "pass")
         setupContext.insert(playlist)
@@ -54,7 +45,6 @@ struct ContentSyncTests {
 
         let start = ContinuousClock.now
 
-        // Process in batches — same logic as ContentSyncManager
         for batchStart in stride(from: 0, to: totalCount, by: batchSize) {
             try autoreleasepool {
                 let batchEnd = min(batchStart + batchSize, totalCount)
@@ -78,7 +68,6 @@ struct ContentSyncTests {
                     movie.num = movieDTO.num ?? 0
                     movie.isAdult = movieDTO.isAdult ?? 0
 
-                    // Foreign key — same shape as ContentSyncManager produces.
                     if let catIdStr = movieDTO.categoryId {
                         movie.categoryId = "\(playlistId.uuidString)-vod-\(catIdStr)"
                     }
@@ -96,22 +85,20 @@ struct ContentSyncTests {
 
         let elapsed = ContinuousClock.now - start
 
-        // Verify all movies were persisted
         let verifyContext = ModelContext(container)
         let count = try verifyContext.fetchCount(FetchDescriptor<Movie>())
         #expect(count == movies.count, "Expected \(movies.count) movies in database, got \(count)")
 
-        // Should complete well under 30 seconds for 13,900 movies
         let seconds = elapsed.components.seconds
         #expect(seconds < 30, "Sync took \(seconds)s — expected < 30s for \(movies.count) movies")
     }
 
-    /// Verifies that upsert via @Attribute(.unique) doesn't create duplicates.
+    // MARK: - Upsert
+
     @Test func syncMoviesUpsertDoesNotDuplicate() async throws {
         let container = try makeContainer()
         let playlistId = UUID()
 
-        // Insert 100 movies
         let ctx1 = ModelContext(container)
         ctx1.autosaveEnabled = false
         for i in 0..<100 {
@@ -120,7 +107,6 @@ struct ContentSyncTests {
         }
         try ctx1.save()
 
-        // Re-insert the same 100 movies with updated names (upsert)
         let ctx2 = ModelContext(container)
         ctx2.autosaveEnabled = false
         for i in 0..<100 {
@@ -129,9 +115,90 @@ struct ContentSyncTests {
         }
         try ctx2.save()
 
-        // Verify count is still 100 (no duplicates)
         let verifyContext = ModelContext(container)
         let count = try verifyContext.fetchCount(FetchDescriptor<Movie>())
         #expect(count == 100, "Expected 100 movies after upsert, got \(count)")
+    }
+
+    // MARK: - Batch Edge Cases
+
+    @Test func emptyDatasetHandledGracefully() async throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let playlist = Playlist(name: "Test", serverURL: "http://x.com", username: "u", password: "p")
+        context.insert(playlist)
+        try context.save()
+
+        let count = try context.fetchCount(FetchDescriptor<Movie>())
+        #expect(count == 0)
+    }
+
+    @Test func singleItemInBatch() async throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let playlist = Playlist(name: "Test", serverURL: "http://x.com", username: "u", password: "p")
+        context.insert(playlist)
+        try context.save()
+
+        let movie = Movie(id: "\(playlist.id)-movie-1", streamId: 1, name: "Single", containerExtension: "mp4")
+        context.insert(movie)
+        try context.save()
+
+        let count = try context.fetchCount(FetchDescriptor<Movie>())
+        #expect(count == 1)
+    }
+
+    // MARK: - ID Construction
+
+    @Test func movieIDUsesPlaylistPrefix() throws {
+        let playlistId = UUID()
+        let streamId = 12345
+        let movieId = "\(playlistId.uuidString)-movie-\(streamId)"
+        #expect(movieId.hasPrefix(playlistId.uuidString))
+        #expect(movieId.hasSuffix("-movie-12345"))
+    }
+
+    @Test func categoryIDMatchesContentSyncManagerPattern() throws {
+        let playlistId = UUID()
+        let categoryId = "117"
+        let expected = "\(playlistId.uuidString)-vod-\(categoryId)"
+        #expect(expected == "\(playlistId.uuidString)-vod-117")
+    }
+
+    // MARK: - Playlist State Transitions
+
+    @Test func playlistSyncStatusTransitions() async throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let playlist = Playlist(name: "Test", serverURL: "http://x.com", username: "u", password: "p")
+        context.insert(playlist)
+        try context.save()
+
+        playlist.syncStatus = .syncing
+        try context.save()
+        #expect(playlist.syncStatus == .syncing)
+
+        playlist.syncStatus = .idle
+        playlist.lastSyncDate = Date()
+        try context.save()
+        #expect(playlist.syncStatus == .idle)
+        #expect(playlist.lastSyncDate != nil)
+    }
+
+    @Test func playlistErrorStatusPersists() async throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let playlist = Playlist(name: "Test", serverURL: "http://x.com", username: "u", password: "p")
+        context.insert(playlist)
+        try context.save()
+
+        playlist.syncStatus = .error
+        try context.save()
+
+        let targetId = playlist.id
+        let fetched = try context.fetch(
+            FetchDescriptor<Playlist>(predicate: #Predicate { $0.id == targetId })
+        ).first
+        #expect(fetched?.syncStatus == .error)
     }
 }

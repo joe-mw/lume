@@ -1,0 +1,177 @@
+import Testing
+import Foundation
+@testable import Lume
+
+struct DTODecodingTests {
+
+    // MARK: - Auth Response
+
+    @Test func decodeAccountInfo() async throws {
+        let response: XtreamAuthResponse = try loadExampleJSON("AccountInfo.json")
+        #expect(response.userInfo.username == "1234567890")
+        #expect(response.userInfo.status == "Active")
+        #expect(response.serverInfo.url == "example-iptv.com")
+        #expect(response.serverInfo.timezone != nil)
+    }
+
+    // MARK: - Categories
+
+    @Test func decodeLiveCategories() async throws {
+        let categories: [XtreamCategory] = try loadExampleJSON("LiveCategories.json")
+        #expect(categories.count == 48, "Expected 48 live categories")
+        #expect(!categories.allSatisfy { $0.categoryId.isEmpty })
+        #expect(!categories.allSatisfy { $0.categoryName.isEmpty })
+    }
+
+    @Test func decodeMovieCategories() async throws {
+        let categories: [XtreamCategory] = try loadExampleJSON("MovieCategories.json")
+        #expect(categories.count == 27, "Expected 27 movie categories")
+        let first = try #require(categories.first)
+        #expect(first.categoryId == "117")
+        #expect(first.categoryName == "Old movies")
+        #expect(first.parentId == 0)
+    }
+
+    @Test func decodeSeriesCategories() async throws {
+        let categories: [XtreamCategory] = try loadExampleJSON("SeriesCategories.json")
+        #expect(categories.count == 19, "Expected 19 series categories")
+    }
+
+    // MARK: - Live Streams
+
+    @Test func decodeLiveStreams() async throws {
+        let streams: [XtreamLiveStream] = try loadExampleJSON("LiveStreams.json")
+        #expect(streams.count == 2568, "Expected 2568 live streams")
+        let first = try #require(streams.first)
+        #expect(first.streamId == 1537280)
+        #expect(first.name != nil)
+        #expect(first.categoryId == "1339")
+    }
+
+    @Test func liveStreamTypeCoercion() async throws {
+        let streams: [XtreamLiveStream] = try loadExampleJSON("LiveStreams.json")
+        let sample = try #require(streams.first)
+        #expect(sample.isAdult == 0)
+        #expect(sample.tvArchive == 0)
+        #expect(sample.tvArchiveDuration == 0)
+    }
+
+    // MARK: - Movies
+
+    @Test func decodeMoviesCount() async throws {
+        let movies: [XtreamVODStream] = try loadExampleJSON("Movies.json")
+        #expect(movies.count > 10000, "Expected at least 10,000 movies")
+    }
+
+    @Test func decodeFirstMovie() async throws {
+        let movies: [XtreamVODStream] = try loadExampleJSON("Movies.json")
+        let first = try #require(movies.first)
+        #expect(first.streamId == 2001952)
+        #expect(first.name == "First movie")
+        #expect(first.categoryId == "117")
+        #expect(first.containerExtension == "mkv")
+    }
+
+    @Test func movieTypeCoercion() async throws {
+        let movies: [XtreamVODStream] = try loadExampleJSON("Movies.json")
+        let first = try #require(movies.first)
+        // rating comes as String "6.406" — should decode as Double
+        #expect(first.rating == 6.406)
+        // rating_5based comes as Double 3.2
+        #expect(first.rating5Based == 3.2)
+        // isAdult comes as Int 0
+        #expect(first.isAdult == 0)
+        // category_id comes as String "117"
+        #expect(first.categoryId == "117")
+        // tmdb comes as String "582913"
+        #expect(first.tmdb == "582913")
+        // added comes as Unix timestamp string
+        #expect(first.added == "1779391620")
+    }
+
+    @Test func movieTmdbTypeCoercion() async throws {
+        let movies: [XtreamVODStream] = try loadExampleJSON("Movies.json")
+        // Some tmdb values might be Int — the DTO handles both
+        let withIntTmdb = movies.first { $0.tmdb == "25641" }
+        #expect(withIntTmdb != nil)
+    }
+
+    // MARK: - Movie Info
+
+    @Test func decodeMovieInfo() async throws {
+        let info: XtreamVODInfo = try loadExampleJSON("MovieInfo.json")
+        let metadata = try #require(info.info)
+        #expect(metadata.name == "Harry Potter and the Chamber of Secrets")
+        #expect(metadata.tmdbId == "672")
+        #expect(metadata.durationSecs == 9660)
+        #expect(metadata.director == "Chris Columbus, Peter MacDonald, David Hanks, Annie Penn, Chris Carreras")
+
+        let movieData = try #require(info.movieData)
+        #expect(movieData.streamId == 535312)
+        #expect(movieData.containerExtension == "mkv")
+    }
+
+    // MARK: - Series
+
+    @Test func decodeSeriesCount() async throws {
+        let series: [XtreamSeries] = try loadExampleJSON("Series.json")
+        #expect(series.count == 2215, "Expected 2215 series")
+    }
+
+    @Test func decodeFirstSeries() async throws {
+        let series: [XtreamSeries] = try loadExampleJSON("Series.json")
+        let first = try #require(series.first)
+        #expect(first.seriesId == 46567)
+        #expect(first.name == "First series")
+        #expect(first.categoryId == "817")
+    }
+
+    @Test func seriesTypeCoercion() async throws {
+        let series: [XtreamSeries] = try loadExampleJSON("Series.json")
+        let sample = try #require(series.first { $0.seriesId == 46565 })
+        // rating comes as String "8"
+        #expect(sample.rating == "8")
+        // category_id comes as String
+        #expect(sample.categoryId == "209")
+        // tmdb comes as String
+        #expect(sample.tmdb == "278113")
+    }
+
+    @Test func seriesCategoryIdTypeCoercion() async throws {
+        let series: [XtreamSeries] = try loadExampleJSON("Series.json")
+        // All category_id values in the real data should be strings
+        for s in series.prefix(100) {
+            #expect(s.categoryId != nil)
+        }
+    }
+
+    // MARK: - Series Info
+
+    @Test func decodeSeriesInfo() async throws {
+        let info: XtreamSeriesInfoResponse = try loadExampleJSON("SeriesInfo.json")
+        let metadata = try #require(info.info)
+        #expect(metadata.name == "Breaking Bad")
+        #expect(metadata.tmdb == "1396")
+
+        let episodes = try #require(info.episodes)
+        #expect(episodes["1"]?.count == 7, "Season 1 should have 7 episodes")
+        #expect(episodes["2"]?.count == 13, "Season 2 should have 13 episodes")
+    }
+
+    @Test func decodeEpisodeFromSeriesInfo() async throws {
+        let info: XtreamSeriesInfoResponse = try loadExampleJSON("SeriesInfo.json")
+        let episodes = try #require(info.episodes)
+        let firstEp = try #require(episodes["1"]?.first)
+        #expect(firstEp.id == "129902")
+        #expect(firstEp.episodeNum == 1)
+        #expect(firstEp.season == 1)
+        #expect(firstEp.containerExtension == "mp4")
+        #expect(firstEp.title == "Breaking Bad - S01E01")
+
+        let epInfo = try #require(firstEp.info)
+        #expect(epInfo.airDate == "2008-01-20")
+        #expect(epInfo.durationSecs == 3486)
+        #expect(epInfo.rating == 7.826)
+        #expect(epInfo.movieImage != nil)
+    }
+}
