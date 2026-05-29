@@ -12,11 +12,17 @@ struct MainTabView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var playlists: [Playlist]
 
-    @State private var selectedTab: TabItem = .movies
+    @State private var selectedTab: TabItem = .home
     @State private var navigationPath = NavigationPath()
 
     var body: some View {
         TabView(selection: $selectedTab) {
+            Tab(value: .home) {
+                HomeView()
+            } label: {
+                Label("Home", systemImage: "house")
+            }
+
             Tab(value: .movies) {
                 MoviesView()
             } label: {
@@ -44,6 +50,7 @@ struct MainTabView: View {
     }
 
     enum TabItem {
+        case home
         case movies
         case series
         case liveTV

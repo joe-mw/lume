@@ -121,6 +121,7 @@
 				C67C02BC2F880F2200842DBA /* Sources */,
 				C67C02BD2F880F2200842DBA /* Frameworks */,
 				C67C02BE2F880F2200842DBA /* Resources */,
+				C6FEED020000000000000002 /* Inject .env secrets */,
 			);
 			buildRules = (
 			);
@@ -273,6 +274,25 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "\"${SRCROOT}/Scripts/fix-ksplayer-frameworks.sh\"\n";
+		};
+		C6FEED020000000000000002 /* Inject .env secrets */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Inject .env secrets";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${SRCROOT}/Scripts/inject-env.sh\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
