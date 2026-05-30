@@ -76,42 +76,15 @@ struct MoviesView: View {
                 }
             }
             .navigationTitle("Movies")
-            .toolbar {
-                ToolbarItem(placement: .automatic) {
-                    PlaylistSwitcher(playlists: playlists, selectedPlaylistID: $selectedPlaylistID)
-                }
-
-                ToolbarItem(placement: .automatic) {
-                    SortMenu(
-                        categorySortRaw: $categorySortRaw,
-                        contentSortRaw: $contentSortRaw
-                    )
-                }
-
-                ToolbarItem(placement: .automatic) {
-                    HStack {
-                        Button {
-                            showingSync = true
-                        } label: {
-                            Image(systemName: "arrow.triangle.2.circlepath")
-                        }
-
-                        Button {
-                            showingSettings = true
-                        } label: {
-                            Image(systemName: "gear")
-                        }
-                    }
-                }
-            }
-            .sheet(isPresented: $showingSettings) {
-                SettingsView()
-            }
-            .sheet(isPresented: $showingSync) {
-                if let playlist = activePlaylist {
-                    SyncProgressView(playlist: playlist, isPresented: $showingSync)
-                }
-            }
+            .libraryToolbar(
+                playlists: playlists,
+                selectedPlaylistID: $selectedPlaylistID,
+                categorySortRaw: $categorySortRaw,
+                contentSortRaw: $contentSortRaw,
+                showingSync: $showingSync,
+                showingSettings: $showingSettings,
+                activePlaylist: activePlaylist
+            )
             .navigationDestination(for: Category.self) { category in
                 MovieCategoryView(category: category, sort: contentSort, animationNamespace: animationNamespace)
             }

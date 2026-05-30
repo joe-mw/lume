@@ -91,34 +91,15 @@ struct LiveTVView: View {
                 }
             }
             .navigationTitle("Live TV")
-            .toolbar {
-                ToolbarItem(placement: .automatic) {
-                    PlaylistSwitcher(playlists: playlists, selectedPlaylistID: $selectedPlaylistID)
-                }
-
-                ToolbarItem(placement: .automatic) {
-                    SortMenu(
-                        categorySortRaw: $categorySortRaw,
-                        contentSortRaw: $contentSortRaw
-                    )
-                }
-
-                ToolbarItem(placement: .automatic) {
-                    HStack {
-                        Button {
-                            showingSync = true
-                        } label: {
-                            Image(systemName: "arrow.triangle.2.circlepath")
-                        }
-
-                        Button {
-                            showingSettings = true
-                        } label: {
-                            Image(systemName: "gear")
-                        }
-                    }
-                }
-            }
+            .libraryToolbar(
+                playlists: playlists,
+                selectedPlaylistID: $selectedPlaylistID,
+                categorySortRaw: $categorySortRaw,
+                contentSortRaw: $contentSortRaw,
+                showingSync: $showingSync,
+                showingSettings: $showingSettings,
+                activePlaylist: activePlaylist
+            )
             .task {
                 if selectedCategory == nil, let first = sortedCategories.first {
                     selectedCategory = first
@@ -129,14 +110,6 @@ struct LiveTVView: View {
                 // which belongs to the previous playlist. Reset to the new
                 // playlist's first category so the channel list stays in sync.
                 selectedCategory = sortedCategories.first
-            }
-            .sheet(isPresented: $showingSettings) {
-                SettingsView()
-            }
-            .sheet(isPresented: $showingSync) {
-                if let playlist = activePlaylist {
-                    SyncProgressView(playlist: playlist, isPresented: $showingSync)
-                }
             }
             #if os(iOS)
             .fullScreenCover(item: $playingMedia) { media in
