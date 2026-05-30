@@ -6,9 +6,13 @@
 //  Features trending movies the user owns using wide TMDB backdrop artwork,
 //  auto-advancing every few seconds while honouring manual swipes.
 //
-//  Built on a paging ScrollView (`scrollTargetBehavior(.paging)` +
-//  `scrollPosition`) rather than `TabView(.page)` so it works on macOS too,
-//  where the page tab style is unavailable.
+//  The artwork lives in a paging ScrollView (`scrollTargetBehavior(.paging)` +
+//  `scrollPosition`) so it works on macOS too, where the page tab style is
+//  unavailable. The title / overview / buttons are drawn as a FIXED overlay on
+//  top of the carousel (not inside the scrolling content) and simply update to
+//  the current page. Keeping the text out of the scroll axis avoids the
+//  unbounded-width proposal a horizontal ScrollView hands its content, which
+//  otherwise stops the copy from wrapping.
 //
 
 import SwiftUI
@@ -37,6 +41,8 @@ struct HomeHeroCarousel: View {
     @State private var isInteracting = false
 
     private let autoAdvanceInterval: Duration = .seconds(6)
+    /// Width below which the hero switches to the stacked, full-width layout.
+    private let compactWidthThreshold: CGFloat = 600
 
     #if os(macOS)
     private let heroHeight: CGFloat = 460
@@ -44,31 +50,72 @@ struct HomeHeroCarousel: View {
     private let heroHeight: CGFloat = 440
     #endif
 
+    private var currentHero: HeroMovie? {
+        movies.first { $0.id == currentID } ?? movies.first
+    }
+
     var body: some View {
-        ScrollView(.horizontal) {
-            LazyHStack(spacing: 0) {
-                ForEach(movies) { hero in
-                    HeroPage(hero: hero, height: heroHeight, onPlay: onPlay)
-                        .containerRelativeFrame(.horizontal)
+        GeometryReader { proxy in
+            let width = proxy.size.width
+            let isCompact = width < compactWidthThreshold
+
+            ZStack(alignment: .bottomLeading) {
+                artwork
+                // Darken the bottom so the title and buttons stay legible over
+                // any artwork.
+                LinearGradient(
+                    colors: [.clear, .black.opacity(0.15), .black.opacity(0.85)],
+                    startPoint: .center,
+                    endPoint: .bottom
+                )
+                .allowsHitTesting(false)
+
+                if let hero = currentHero {
+                    // Fixed overlay in normal layout — text wraps to `width`.
+                    HeroInfo(hero: hero, isCompact: isCompact, onPlay: onPlay)
                         .id(hero.id)
+                        .transition(.opacity)
                 }
+
+                pageIndicator
+                    .frame(maxWidth: .infinity, alignment: .center)
             }
-            .scrollTargetLayout()
+            .frame(width: width, height: heroHeight)
+            .clipped()
+            .contentShape(Rectangle())
+            .animation(.easeInOut(duration: 0.35), value: currentID)
         }
-        .scrollTargetBehavior(.paging)
-        .scrollPosition(id: $currentID)
-        .scrollIndicators(.hidden)
         .frame(height: heroHeight)
-        .clipped()
-        .overlay(alignment: .bottom) { pageIndicator }
-        .onScrollPhaseChange { _, newPhase, _ in
-            isInteracting = newPhase != .idle
-        }
         .onAppear {
             if currentID == nil { currentID = movies.first?.id }
         }
         .task(id: movies.count) {
             await autoAdvance()
+        }
+    }
+
+    // MARK: - Scrolling artwork
+
+    @ViewBuilder
+    private var artwork: some View {
+        GeometryReader { proxy in
+            let width = proxy.size.width
+            ScrollView(.horizontal) {
+                LazyHStack(spacing: 0) {
+                    ForEach(movies) { hero in
+                        HeroBackdrop(url: hero.imageURL)
+                            .frame(width: width, height: heroHeight)
+                            .id(hero.id)
+                    }
+                }
+                .scrollTargetLayout()
+            }
+            .scrollTargetBehavior(.paging)
+            .scrollPosition(id: $currentID)
+            .scrollIndicators(.hidden)
+            .onScrollPhaseChange { _, newPhase, _ in
+                isInteracting = newPhase != .idle
+            }
         }
     }
 
@@ -116,36 +163,13 @@ struct HomeHeroCarousel: View {
     }
 }
 
-// MARK: - Single hero page
+// MARK: - Backdrop image
 
-private struct HeroPage: View {
-    let hero: HeroMovie
-    let height: CGFloat
-    let onPlay: (Movie) -> Void
+private struct HeroBackdrop: View {
+    let url: URL?
 
     var body: some View {
-        ZStack(alignment: .bottomLeading) {
-            backdrop
-            // Darken the bottom so the title and buttons stay legible over
-            // any artwork.
-            LinearGradient(
-                colors: [.clear, .black.opacity(0.15), .black.opacity(0.8)],
-                startPoint: .center,
-                endPoint: .bottom
-            )
-            content
-        }
-        // Pin the page to an explicit height. Relying on `maxHeight: .infinity`
-        // lets the `.fill` backdrop report an oversized height on wide windows,
-        // which would push the bottom-aligned content below the clip region.
-        .frame(maxWidth: .infinity)
-        .frame(height: height)
-        .clipped()
-        .contentShape(Rectangle())
-    }
-
-    private var backdrop: some View {
-        AsyncImage(url: hero.imageURL) { phase in
+        AsyncImage(url: url) { phase in
             switch phase {
             case .empty:
                 Rectangle()
@@ -167,17 +191,22 @@ private struct HeroPage: View {
                 EmptyView()
             }
         }
-        // Constrain the fill image to the page box so it scales/crops within
-        // these bounds instead of dictating the ZStack's size.
-        .frame(maxWidth: .infinity)
-        .frame(height: height)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipped()
     }
+}
 
-    private var content: some View {
+// MARK: - Title / overview / buttons
+
+private struct HeroInfo: View {
+    let hero: HeroMovie
+    let isCompact: Bool
+    let onPlay: (Movie) -> Void
+
+    var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(hero.movie.name)
-                .font(.largeTitle.weight(.bold))
+                .font(isCompact ? .title2.weight(.bold) : .largeTitle.weight(.bold))
                 .lineLimit(2)
                 .shadow(radius: 6)
 
@@ -189,30 +218,58 @@ private struct HeroPage: View {
                     .shadow(radius: 4)
             }
 
-            HStack(spacing: 12) {
-                Button {
-                    onPlay(hero.movie)
-                } label: {
-                    Label("Play", systemImage: "play.fill")
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.black)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(.white)
-
-                NavigationLink(value: hero.movie) {
-                    Label("Details", systemImage: "info.circle")
-                        .fontWeight(.semibold)
-                }
-                .buttonStyle(.bordered)
-                .tint(.white)
-            }
-            .controlSize(.large)
-            .padding(.top, 4)
+            actionButtons
+                .controlSize(.large)
+                .padding(.top, 4)
         }
         .foregroundStyle(.white)
-        .padding(24)
-        .frame(maxWidth: 640, alignment: .leading)
+        .padding(.horizontal, isCompact ? 16 : 24)
+        .padding(.top, isCompact ? 16 : 24)
+        // Extra bottom inset so the (taller) stacked buttons clear the page
+        // indicator instead of colliding with it / clipping at the edge.
+        .padding(.bottom, 40)
+        // Cap the readable column on very wide windows; fill the width when
+        // compact. Pin the block to the leading edge.
+        .frame(maxWidth: isCompact ? .infinity : 640, alignment: .leading)
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private var actionButtons: some View {
+        if isCompact {
+            // Stacked, full-width buttons so nothing overflows horizontally.
+            VStack(spacing: 12) {
+                playButton(fullWidth: true)
+                detailsButton(fullWidth: true)
+            }
+        } else {
+            HStack(spacing: 12) {
+                playButton(fullWidth: false)
+                detailsButton(fullWidth: false)
+            }
+        }
+    }
+
+    private func playButton(fullWidth: Bool) -> some View {
+        Button {
+            onPlay(hero.movie)
+        } label: {
+            Label("Play", systemImage: "play.fill")
+                .fontWeight(.semibold)
+                .foregroundStyle(.black)
+                .frame(maxWidth: fullWidth ? .infinity : nil)
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(.white)
+    }
+
+    private func detailsButton(fullWidth: Bool) -> some View {
+        NavigationLink(value: hero.movie) {
+            Label("Details", systemImage: "info.circle")
+                .fontWeight(.semibold)
+                .frame(maxWidth: fullWidth ? .infinity : nil)
+        }
+        .buttonStyle(.bordered)
+        .tint(.white)
     }
 }
