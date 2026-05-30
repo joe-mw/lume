@@ -71,14 +71,20 @@ struct SearchView: View {
             }
             .navigationTitle("Search")
             .searchable(text: $searchText, prompt: "Movies, Series, Live TV...")
+            #if os(iOS)
             .searchToolbarBehavior(.minimize)
+            #endif
             .navigationDestination(for: Movie.self) { movie in
                 MovieDetailView(movie: movie, animationNamespace: animationNamespace)
+                    #if os(iOS)
                     .navigationTransition(.zoom(sourceID: movie.id, in: animationNamespace))
+                    #endif
             }
             .navigationDestination(for: Series.self) { series in
                 SeriesDetailView(series: series, animationNamespace: animationNamespace)
+                    #if os(iOS)
                     .navigationTransition(.zoom(sourceID: series.id, in: animationNamespace))
+                    #endif
             }
             .navigationDestination(for: LiveStream.self) { stream in
                 Text("Live Stream: \(stream.name)")

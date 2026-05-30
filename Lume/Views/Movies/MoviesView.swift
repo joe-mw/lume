@@ -90,7 +90,9 @@ struct MoviesView: View {
             }
             .navigationDestination(for: Movie.self) { movie in
                 MovieDetailView(movie: movie, animationNamespace: animationNamespace)
+                    #if os(iOS)
                     .navigationTransition(.zoom(sourceID: movie.id, in: animationNamespace))
+                    #endif
             }
         }
     }
@@ -189,7 +191,7 @@ struct MovieCategoryView: View {
         )
     }
 
-    private let columns = [GridItem(.adaptive(minimum: 140), spacing: 16)]
+    private let columns = [GridItem(.adaptive(minimum: 140), spacing: 4)]
 
     var body: some View {
         ScrollView {
@@ -201,7 +203,7 @@ struct MovieCategoryView: View {
                 )
                 .padding(.top, 40)
             } else {
-                LazyVGrid(columns: columns, spacing: 16) {
+                LazyVGrid(columns: columns, spacing: 4) {
                     ForEach(movies) { movie in
                         NavigationLink(value: movie) {
                             MovieCardView(movie: movie)

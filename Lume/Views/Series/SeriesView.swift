@@ -88,7 +88,9 @@ struct SeriesView: View {
             }
             .navigationDestination(for: Series.self) { series in
                 SeriesDetailView(series: series, animationNamespace: animationNamespace)
+                    #if os(iOS)
                     .navigationTransition(.zoom(sourceID: series.id, in: animationNamespace))
+                    #endif
             }
         }
     }
@@ -184,7 +186,7 @@ struct SeriesCategoryView: View {
         )
     }
 
-    private let columns = [GridItem(.adaptive(minimum: 140), spacing: 16)]
+    private let columns = [GridItem(.adaptive(minimum: 140), spacing: 4)]
 
     var body: some View {
         ScrollView {
@@ -196,7 +198,7 @@ struct SeriesCategoryView: View {
                 )
                 .padding(.top, 40)
             } else {
-                LazyVGrid(columns: columns, spacing: 16) {
+                LazyVGrid(columns: columns, spacing: 4) {
                     ForEach(series) { item in
                         NavigationLink(value: item) {
                             SeriesCardView(series: item)

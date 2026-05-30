@@ -142,11 +142,15 @@ struct HomeView: View {
             )
             .navigationDestination(for: Movie.self) { movie in
                 MovieDetailView(movie: movie, animationNamespace: animationNamespace)
+                    #if os(iOS)
                     .navigationTransition(.zoom(sourceID: movie.id, in: animationNamespace))
+                    #endif
             }
             .navigationDestination(for: Series.self) { series in
                 SeriesDetailView(series: series, animationNamespace: animationNamespace)
+                    #if os(iOS)
                     .navigationTransition(.zoom(sourceID: series.id, in: animationNamespace))
+                    #endif
             }
             .task(id: "\(playlists.count)-\(selectedPlaylistID)") {
                 await loadTrending()

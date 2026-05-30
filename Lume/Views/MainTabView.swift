@@ -40,7 +40,9 @@ struct MainTabView: View {
                 SearchView()
             }
         }
+        #if os(iOS)
         .tabBarMinimizeBehavior(.onScrollDown)
+        #endif
         .task(id: playlists.count) {
             startPendingInitialSyncs()
         }
