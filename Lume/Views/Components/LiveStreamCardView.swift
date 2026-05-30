@@ -69,13 +69,54 @@ struct LiveStreamCardView: View {
     }
 }
 
-#Preview {
+#Preview("Basic") {
     LiveStreamCardView(
         stream: LiveStream(
-            id: "preview",
+            id: "preview-1",
             streamId: 1,
-            name: "Sample Channel"
+            name: "BBC One"
         )
     )
     .padding()
+}
+
+#Preview("With Archive") {
+    LiveStreamCardView(
+        stream: LiveStream(
+            id: "preview-2",
+            streamId: 2,
+            name: "CNN International",
+            tvArchive: 1,
+            tvArchiveDuration: 7
+        )
+    )
+    .padding()
+}
+
+#Preview("With Logo") {
+    LiveStreamCardView(
+        stream: LiveStream(
+            id: "preview-3",
+            streamId: 3,
+            name: "National Geographic",
+            streamIcon: "https://example.com/logo.png",
+            epgChannelId: "NATGEO",
+            tvArchive: 1,
+            tvArchiveDuration: 3
+        )
+    )
+    .padding()
+}
+
+#Preview("Favorite") {
+    let stream = LiveStream(
+        id: "preview-4",
+        streamId: 4,
+        name: "HBO",
+        tvArchive: 1,
+        tvArchiveDuration: 14
+    )
+    stream.isFavorite = true
+    return LiveStreamCardView(stream: stream)
+        .padding()
 }

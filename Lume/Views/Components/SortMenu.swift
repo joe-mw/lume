@@ -44,3 +44,10 @@ struct SortMenu: View {
         }
     }
 }
+
+#Preview {
+    SortMenu(
+        categorySortRaw: .constant(CategorySortOption.playlist.rawValue),
+        contentSortRaw: .constant(ContentSortOption.playlist.rawValue)
+    )
+}

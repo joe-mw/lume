@@ -431,3 +431,125 @@ enum DetailFormat {
         return nil
     }
 }
+
+// MARK: - Previews
+
+#Preview("DetailHero with TMDB") {
+    DetailHero(
+        title: "The Matrix",
+        backdropURL: URL(string: "https://image.tmdb.org/t/p/w1280/fNG7i7RqM1T0sP1vQmRIqRnW.jpg"),
+        posterFallbackURL: nil,
+        tagline: "Welcome to the Real World.",
+        metadata: DetailMetadata(
+            genre: "Action, Sci-Fi",
+            year: "1999",
+            duration: "2h 16m",
+            rating: 8.7,
+            contentRating: "R"
+        ),
+        height: 400
+    )
+}
+
+#Preview("DetailHero without TMDB") {
+    DetailHero(
+        title: "The Matrix",
+        backdropURL: nil,
+        posterFallbackURL: nil,
+        metadata: DetailMetadata(
+            genre: "Action",
+            year: "1999",
+            rating: 8.7
+        ),
+        height: 400
+    )
+}
+
+#Preview("MetadataLineView - Full") {
+    MetadataLineView(
+        metadata: DetailMetadata(
+            genre: "Action, Sci-Fi",
+            year: "1999",
+            duration: "2h 16m",
+            rating: 8.7,
+            contentRating: "PG-13"
+        )
+    )
+}
+
+#Preview("MetadataLineView - Minimal") {
+    MetadataLineView(
+        metadata: DetailMetadata(
+            year: "1999",
+            rating: 6.5
+        )
+    )
+}
+
+#Preview("MetadataLineView - Empty") {
+    MetadataLineView(metadata: DetailMetadata())
+}
+
+#Preview("PrimaryPlayButton - Enabled") {
+    PrimaryPlayButton(title: "Play", action: {})
+        .padding()
+}
+
+#Preview("PrimaryPlayButton - Disabled") {
+    PrimaryPlayButton(title: "Play", isEnabled: false, action: {})
+        .padding()
+}
+
+#Preview("PrimaryPlayButton - Resume") {
+    PrimaryPlayButton(title: "Resume", systemImage: "play.fill", action: {})
+        .padding()
+}
+
+#Preview("GlassIconButton") {
+    HStack(spacing: 12) {
+        GlassIconButton(systemImage: "chevron.left", accessibilityLabel: "Back", action: {})
+        GlassIconButton(systemImage: "heart", accessibilityLabel: "Favorite", action: {})
+        GlassIconButton(systemImage: "checkmark.circle", accessibilityLabel: "Watched", action: {})
+    }
+    .padding()
+    .background(Color.black)
+}
+
+#Preview("ExpandableText - Short") {
+    ExpandableText(text: "A short synopsis that doesn't need a more/less toggle.")
+        .padding()
+}
+
+#Preview("ExpandableText - Long") {
+    ExpandableText(
+        text: "This is a very long synopsis that will definitely need a more/less toggle to expand or collapse because it exceeds the character limit we've set. The quick brown fox jumps over the lazy dog. This text keeps going and going until it crosses the threshold where the toggle becomes useful for the user to read the full content without taking up too much space initially."
+    )
+    .padding()
+}
+
+#Preview("CastRow") {
+    let m = Movie(id: "preview", streamId: 1, name: "Preview")
+    let cast = [
+        CastMember(id: "preview-cast-0", tmdbPersonId: 1, name: "Keanu Reeves", role: "Neo", order: 0, movie: m),
+        CastMember(id: "preview-cast-1", tmdbPersonId: 2, name: "Laurence Fishburne", role: "Morpheus", order: 1, movie: m),
+        CastMember(id: "preview-cast-2", tmdbPersonId: 3, name: "Carrie-Anne Moss", role: "Trinity", order: 2, movie: m),
+    ]
+    CastRow(cast: cast)
+}
+
+#Preview("SimilarRow") {
+    let m1 = Movie(id: "preview-sim-1", streamId: 1, name: "Similar Movie 1")
+    let m2 = Movie(id: "preview-sim-2", streamId: 2, name: "Similar Movie 2")
+    SimilarRow(items: [.movie(m1), .movie(m2)])
+}
+
+#Preview("DetailPosterCard") {
+    DetailPosterCard(
+        title: "The Matrix",
+        imageURL: URL(string: "https://image.tmdb.org/t/p/w185/f89U3ADr1oiB1s9GkdPOEpXUk5H.jpg")
+    )
+}
+
+#Preview("DetailPosterCard - No Image") {
+    DetailPosterCard(title: "No Poster", imageURL: nil)
+}

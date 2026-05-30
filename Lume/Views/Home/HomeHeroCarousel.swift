@@ -163,6 +163,39 @@ struct HomeHeroCarousel: View {
     }
 }
 
+// MARK: - Preview
+
+#Preview("Multiple Movies") {
+    let movies = [
+        HeroMovie(
+            movie: Movie(id: "preview-hero-1", streamId: 1, name: "The Matrix"),
+            backdropURL: URL(string: "https://image.tmdb.org/t/p/w1280/fNG7i7RqM1T0sP1vQmRIqRnW.jpg"),
+            overview: "A computer hacker learns about the true nature of reality."
+        ),
+        HeroMovie(
+            movie: Movie(id: "preview-hero-2", streamId: 2, name: "Inception"),
+            backdropURL: nil,
+            overview: "A thief who steals corporate secrets through dream-sharing technology."
+        ),
+    ]
+    HomeHeroCarousel(movies: movies, onPlay: { _ in })
+}
+
+#Preview("Single Movie") {
+    let movies = [
+        HeroMovie(
+            movie: Movie(id: "preview-hero-3", streamId: 3, name: "The Dark Knight"),
+            backdropURL: nil,
+            overview: "When the menace known as the Joker wreaks havoc on Gotham."
+        )
+    ]
+    HomeHeroCarousel(movies: movies, onPlay: { _ in })
+}
+
+#Preview("Empty") {
+    HomeHeroCarousel(movies: [], onPlay: { _ in })
+}
+
 // MARK: - Backdrop image
 
 private struct HeroBackdrop: View {

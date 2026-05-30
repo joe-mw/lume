@@ -183,3 +183,17 @@ struct FullScreenPlayerView: View {
         try? modelContext.save()
     }
 }
+
+#Preview {
+    FullScreenPlayerView(media: PlayableMedia(
+        id: "preview",
+        url: URL(string: "https://example.com/stream.m3u8")!,
+        title: "Sample Stream",
+        subtitle: nil,
+        posterURL: nil,
+        kind: .live,
+        startTime: 0,
+        contentRef: .live("preview")
+    ))
+    .preferredColorScheme(.dark)
+}

@@ -483,15 +483,50 @@ private struct EpisodeCard: View {
     }
 }
 
-#Preview {
-    NavigationStack {
-        SeriesDetailView(
-            series: Series(
-                id: "preview",
-                seriesId: 1,
-                name: "Sample Series"
-            )
-        )
+#Preview("Basic") {
+    let container = previewContainer()
+    let series = PreviewData.sampleSeries
+    return NavigationStack {
+        SeriesDetailView(series: series)
     }
-    .modelContainer(for: Playlist.self, inMemory: true)
+    .modelContainer(container)
+}
+
+#Preview("With TMDB + Episodes") {
+    let container = previewContainer()
+    let series = PreviewData.sampleSeriesWithTMDB
+    return NavigationStack {
+        SeriesDetailView(series: series)
+    }
+    .modelContainer(container)
+}
+
+#Preview("No Episodes") {
+    let container = previewContainer()
+    let series = PreviewData.sampleSeriesWithoutEpisodes
+    return NavigationStack {
+        SeriesDetailView(series: series)
+    }
+    .modelContainer(container)
+}
+
+#Preview("No TMDB") {
+    let container = previewContainer()
+    let series = PreviewData.sampleSeries
+    series.plot = nil
+    series.genre = nil
+    series.director = nil
+    return NavigationStack {
+        SeriesDetailView(series: series)
+    }
+    .modelContainer(container)
+}
+
+#Preview("Favorite") {
+    let container = previewContainer()
+    let series = PreviewData.sampleSeriesWithTMDB
+    return NavigationStack {
+        SeriesDetailView(series: series)
+    }
+    .modelContainer(container)
 }

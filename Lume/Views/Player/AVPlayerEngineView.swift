@@ -197,3 +197,21 @@ private struct AVPlayerVideoHost: View {
     }
 }
 #endif
+
+#Preview {
+    AVPlayerEngineView(
+        media: PlayableMedia(
+            id: "preview",
+            url: URL(string: "https://example.com/stream.m3u8")!,
+            title: "Sample Video",
+            subtitle: nil,
+            posterURL: nil,
+            kind: .vod,
+            startTime: 0,
+            contentRef: .movie("preview")
+        ),
+        currentTime: .constant(0),
+        duration: .constant(120)
+    )
+    .preferredColorScheme(.dark)
+}

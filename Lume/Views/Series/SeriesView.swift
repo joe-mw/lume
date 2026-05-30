@@ -227,7 +227,12 @@ struct SeriesCategoryView: View {
     }
 }
 
-#Preview {
+#Preview("Empty") {
     SeriesView()
         .modelContainer(for: Playlist.self, inMemory: true)
+}
+
+#Preview("With Data") {
+    SeriesView()
+        .modelContainer(previewContainer())
 }

@@ -244,7 +244,16 @@ struct ChannelsList: View {
     }
 }
 
-#Preview {
+#Preview("Empty") {
     LiveTVView()
         .modelContainer(for: Playlist.self, inMemory: true)
+}
+
+#Preview("With Data") {
+    LiveTVView()
+        .modelContainer(previewContainer())
+}
+
+#Preview("No Playlists") {
+    LiveTVView()
 }

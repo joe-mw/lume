@@ -493,7 +493,12 @@ private struct HomePosterCard: View {
     }
 }
 
-#Preview {
+#Preview("Empty") {
     HomeView()
         .modelContainer(for: Playlist.self, inMemory: true)
+}
+
+#Preview("With Data") {
+    HomeView()
+        .modelContainer(previewContainer())
 }

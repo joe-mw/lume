@@ -261,7 +261,12 @@ struct SearchResultRow: View {
     }
 }
 
-#Preview {
+#Preview("Empty") {
     SearchView()
         .modelContainer(for: Playlist.self, inMemory: true)
+}
+
+#Preview("With Data") {
+    SearchView()
+        .modelContainer(previewContainer())
 }

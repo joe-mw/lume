@@ -6,14 +6,54 @@
 //
 
 import Foundation
+import OSLog
 
-enum XtreamError: Error {
+enum XtreamError: LocalizedError {
     case invalidURL
     case authenticationFailed
     case networkError(Error)
     case decodingError(Error)
     case invalidResponse
     case serverError(Int)
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidURL:
+            return "The server URL is invalid."
+        case .authenticationFailed:
+            return "Authentication failed. The provider rejected the request (this can also happen when the account's connection limit is reached)."
+        case .networkError(let error):
+            return "Network error: \(error.localizedDescription)"
+        case .decodingError(let error):
+            return "Failed to read the server response: \(error.localizedDescription)"
+        case .invalidResponse:
+            return "Received an invalid response from the server."
+        case .serverError(let code):
+            return "Server error (HTTP \(code))."
+        }
+    }
+
+    /// Whether the failure is likely transient and worth retrying.
+    /// Note: `authenticationFailed` (HTTP 401/403) is *not* retriable by
+    /// default — for login it means bad credentials. During an
+    /// already-authenticated sync it's usually the provider's connection /
+    /// rate limit, so those call sites opt in via `retryAuthFailure`.
+    var isRetriable: Bool {
+        switch self {
+        case .networkError:
+            // Timeouts, connection reset (RST), lost connection — transient.
+            return true
+        case .serverError(let code):
+            return code >= 500
+        case .invalidURL, .authenticationFailed, .decodingError, .invalidResponse:
+            return false
+        }
+    }
+
+    var isAuthFailure: Bool {
+        if case .authenticationFailed = self { return true }
+        return false
+    }
 }
 
 // MARK: - XtreamClient
@@ -36,13 +76,13 @@ class XtreamClient: APIClient {
     let configuration: Configuration
     let session: URLSession
 
-    init(configuration: Configuration, urlSession: URLSession = .shared) {
+    init(configuration: Configuration, urlSession: URLSession? = nil) {
         self.configuration = configuration
-        self.session = urlSession
+        self.session = urlSession ?? Self.makeSession(timeout: configuration.timeout)
     }
 
     // Convenience initializer for backward compatibility
-    convenience init(urlSession: URLSession = .shared) {
+    convenience init(urlSession: URLSession? = nil) {
         let config = Configuration(
             serverURL: "",
             username: "",
@@ -50,6 +90,21 @@ class XtreamClient: APIClient {
             timeout: 30
         )
         self.init(configuration: config, urlSession: urlSession)
+    }
+
+    /// Builds a dedicated session for Xtream API calls.
+    ///
+    /// Uses a single connection per host: many Xtream providers cap an account
+    /// to one concurrent connection and reject extra requests with 401/403.
+    /// Serializing connections (instead of reusing `.shared`'s pool, which the
+    /// server may RST after a heavy transfer) avoids tripping that limit. Also
+    /// applies the configured timeout, which was previously ignored.
+    private static func makeSession(timeout: TimeInterval) -> URLSession {
+        let config = URLSessionConfiguration.default
+        config.httpMaximumConnectionsPerHost = 1
+        config.timeoutIntervalForRequest = timeout
+        config.timeoutIntervalForResource = 120
+        return URLSession(configuration: config)
     }
 
     // MARK: - Helper Methods
@@ -68,8 +123,47 @@ class XtreamClient: APIClient {
         return components?.url
     }
 
-    private func request<T: Decodable>(_ url: URL) async throws -> T {
-        let (data, response) = try await session.data(from: url)
+    /// Maximum number of attempts (1 initial + retries) for a single request.
+    private static let maxAttempts = 3
+
+    /// Performs a request with retry-and-backoff for transient failures.
+    ///
+    /// - Parameter retryAuthFailure: when `true`, HTTP 401/403 is also treated
+    ///   as transient. Sync/content calls set this because, after `getInfo`
+    ///   has already proven the credentials, a 401/403 is almost always the
+    ///   provider's connection/rate limit rather than bad credentials. Login
+    ///   (`getInfo`) leaves it `false` so wrong credentials fail fast.
+    private func request<T: Decodable>(_ url: URL, retryAuthFailure: Bool = true) async throws -> T {
+        var attempt = 0
+        while true {
+            attempt += 1
+            do {
+                return try await performRequest(url)
+            } catch let error as XtreamError {
+                let retriable = error.isRetriable || (retryAuthFailure && error.isAuthFailure)
+                guard retriable, attempt < Self.maxAttempts else { throw error }
+
+                // Exponential backoff: 2s, then 4s. Gives the provider time to
+                // release the connection slot / clear the rate-limit window.
+                let delay = pow(2.0, Double(attempt))
+                Logger.network.warning(
+                    "Xtream request failed (\(error.localizedDescription)); retry \(attempt)/\(Self.maxAttempts - 1) in \(delay)s"
+                )
+                try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+            }
+        }
+    }
+
+    /// A single request attempt. Network-level failures are wrapped into
+    /// `XtreamError.networkError` so callers see a consistent error type.
+    private func performRequest<T: Decodable>(_ url: URL) async throws -> T {
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await session.data(from: url)
+        } catch {
+            throw XtreamError.networkError(error)
+        }
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw XtreamError.invalidResponse
@@ -104,7 +198,8 @@ class XtreamClient: APIClient {
             throw XtreamError.invalidURL
         }
 
-        return try await request(url)
+        // Login: a 401/403 means bad credentials, so don't retry it.
+        return try await request(url, retryAuthFailure: false)
     }
 
     /// 2. Get Live Categories

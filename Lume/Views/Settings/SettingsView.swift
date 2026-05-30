@@ -137,3 +137,19 @@ struct SettingsView: View {
         }
     }
 }
+
+#Preview("Empty") {
+    SettingsView()
+}
+
+#Preview("With Playlists") {
+    SettingsView()
+        .modelContainer(for: Playlist.self, inMemory: true) { result in
+            if case .success(let container) = result {
+                let p = Playlist(name: "My IPTV", serverURL: "http://example.com:8080", username: "user", password: "pass")
+                let p2 = Playlist(name: "Backup", serverURL: "http://backup.com:8080", username: "user2", password: "pass2")
+                container.mainContext.insert(p)
+                container.mainContext.insert(p2)
+            }
+        }
+}

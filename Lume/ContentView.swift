@@ -35,7 +35,16 @@ struct ContentView: View {
     }
 }
 
-#Preview {
+#Preview("No Playlists") {
     ContentView()
-        .modelContainer(for: Playlist.self, inMemory: true)
+}
+
+#Preview("With Playlists") {
+    ContentView()
+        .modelContainer(for: Playlist.self, inMemory: true) { result in
+            if case .success(let container) = result {
+                let p = Playlist(name: "My IPTV", serverURL: "http://example.com:8080", username: "user", password: "pass")
+                container.mainContext.insert(p)
+            }
+        }
 }

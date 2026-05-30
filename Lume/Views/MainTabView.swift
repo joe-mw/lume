@@ -91,7 +91,16 @@ struct MainTabView: View {
     }
 }
 
-#Preview {
+#Preview("No Playlists") {
     MainTabView()
-        .modelContainer(for: Playlist.self, inMemory: true)
+}
+
+#Preview("With Playlists") {
+    MainTabView()
+        .modelContainer(for: Playlist.self, inMemory: true) { result in
+            if case .success(let container) = result {
+                let p = Playlist(name: "My IPTV", serverURL: "http://example.com:8080", username: "user", password: "pass")
+                container.mainContext.insert(p)
+            }
+        }
 }

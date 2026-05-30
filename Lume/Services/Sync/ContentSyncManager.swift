@@ -63,7 +63,13 @@ actor ContentSyncManager {
                 try await syncAllCategories(for: pl, playlistId: playlistId, progress: progress, full: full)
 
                 try await syncMovies(for: pl, playlistId: playlistId, progress: progress)
+                // Brief pause so the provider can release the connection slot
+                // used by the large movie transfer before the next heavy fetch.
+                // Many Xtream accounts cap concurrent connections and otherwise
+                // reject the immediately-following get_series with 401/403.
+                try await Task.sleep(for: .seconds(2))
                 try await syncSeries(for: pl, playlistId: playlistId, progress: progress)
+                try await Task.sleep(for: .seconds(2))
                 try await syncLiveStreams(for: pl, playlistId: playlistId, progress: progress)
 
                 let doneContext = ModelContext(modelContainer)

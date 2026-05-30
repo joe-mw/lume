@@ -206,3 +206,36 @@ struct PlaylistDetailView: View {
         return date < Date()
     }
 }
+
+#Preview("With Account Info") {
+    let container = previewContainer()
+    let playlist = PreviewData.samplePlaylist
+    return NavigationStack {
+        PlaylistDetailView(playlist: playlist)
+    }
+    .modelContainer(container)
+}
+
+#Preview("No Account Info") {
+    let container = previewContainer()
+    let playlist = PreviewData.samplePlaylist
+    playlist.userStatus = nil
+    playlist.expDate = nil
+    playlist.maxConnections = nil
+    playlist.activeConnections = nil
+    return NavigationStack {
+        PlaylistDetailView(playlist: playlist)
+    }
+    .modelContainer(container)
+}
+
+#Preview("No Sync") {
+    let container = previewContainer()
+    let playlist = PreviewData.samplePlaylist
+    playlist.lastSyncDate = nil
+    playlist.syncEnabled = false
+    return NavigationStack {
+        PlaylistDetailView(playlist: playlist)
+    }
+    .modelContainer(container)
+}

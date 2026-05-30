@@ -144,6 +144,13 @@ struct LoginView: View {
     }
 }
 
-#Preview {
+#Preview("Empty") {
     LoginView()
+}
+
+#Preview("With Error") {
+    let view = LoginView()
+    // Note: error state is managed internally, shown via the errorMessage field.
+    // In previews this can be simulated by setting initial state.
+    return view
 }

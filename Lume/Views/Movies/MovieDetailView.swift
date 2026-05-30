@@ -310,15 +310,52 @@ struct MovieDetailView: View {
     }
 }
 
-#Preview {
-    NavigationStack {
-        MovieDetailView(
-            movie: Movie(
-                id: "preview",
-                streamId: 1,
-                name: "Sample Movie"
-            )
-        )
+#Preview("Basic") {
+    let container = previewContainer()
+    let movie = PreviewData.sampleMovie
+    return NavigationStack {
+        MovieDetailView(movie: movie)
     }
-    .modelContainer(for: Playlist.self, inMemory: true)
+    .modelContainer(container)
+}
+
+#Preview("With TMDB") {
+    let container = previewContainer()
+    let movie = PreviewData.sampleMovieWithTMDB
+    return NavigationStack {
+        MovieDetailView(movie: movie)
+    }
+    .modelContainer(container)
+}
+
+#Preview("Watched") {
+    let container = previewContainer()
+    let movie = PreviewData.sampleMovieWatched
+    return NavigationStack {
+        MovieDetailView(movie: movie)
+    }
+    .modelContainer(container)
+}
+
+#Preview("No TMDB") {
+    let container = previewContainer()
+    let movie = PreviewData.sampleMovie
+    movie.plot = nil
+    movie.director = nil
+    movie.actors = nil
+    movie.genre = nil
+    return NavigationStack {
+        MovieDetailView(movie: movie)
+    }
+    .modelContainer(container)
+}
+
+#Preview("Favorite") {
+    let container = previewContainer()
+    let movie = PreviewData.sampleMovieWithTMDB
+    movie.isFavorite = true
+    return NavigationStack {
+        MovieDetailView(movie: movie)
+    }
+    .modelContainer(container)
 }

@@ -70,3 +70,18 @@ struct PlaylistSwitcher: View {
         playlists.active(for: selectedPlaylistID)?.name ?? ""
     }
 }
+
+#Preview("Multiple Playlists") {
+    let p1 = Playlist(name: "My IPTV", serverURL: "http://example.com:8080", username: "user", password: "pass")
+    let p2 = Playlist(name: "Backup", serverURL: "http://backup.com:8080", username: "user2", password: "pass2")
+    PlaylistSwitcher(playlists: [p1, p2], selectedPlaylistID: .constant(p1.id.uuidString))
+}
+
+#Preview("Single Playlist") {
+    let p = Playlist(name: "My IPTV", serverURL: "http://example.com:8080", username: "user", password: "pass")
+    PlaylistSwitcher(playlists: [p], selectedPlaylistID: .constant(p.id.uuidString))
+}
+
+#Preview("Empty") {
+    PlaylistSwitcher(playlists: [], selectedPlaylistID: .constant(""))
+}

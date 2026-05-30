@@ -272,3 +272,10 @@ private struct StepRowView: View {
         }
     }
 }
+
+#Preview("Ready") {
+    let container = previewContainer()
+    let playlist = PreviewData.samplePlaylist
+    return SyncProgressView(playlist: playlist, isPresented: .constant(true))
+        .modelContainer(container)
+}

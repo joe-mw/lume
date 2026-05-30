@@ -232,7 +232,12 @@ struct MovieCategoryView: View {
     }
 }
 
-#Preview {
+#Preview("Empty") {
     MoviesView()
         .modelContainer(for: Playlist.self, inMemory: true)
+}
+
+#Preview("With Data") {
+    MoviesView()
+        .modelContainer(previewContainer())
 }
