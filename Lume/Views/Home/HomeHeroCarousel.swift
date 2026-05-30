@@ -38,19 +38,17 @@ struct HomeHeroCarousel: View {
 
     private let autoAdvanceInterval: Duration = .seconds(6)
 
-    private var heroHeight: CGFloat {
-        #if os(macOS)
-        460
-        #else
-        440
-        #endif
-    }
+    #if os(macOS)
+    private let heroHeight: CGFloat = 460
+    #else
+    private let heroHeight: CGFloat = 440
+    #endif
 
     var body: some View {
         ScrollView(.horizontal) {
             LazyHStack(spacing: 0) {
                 ForEach(movies) { hero in
-                    HeroPage(hero: hero, onPlay: onPlay)
+                    HeroPage(hero: hero, height: heroHeight, onPlay: onPlay)
                         .containerRelativeFrame(.horizontal)
                         .id(hero.id)
                 }
@@ -122,6 +120,7 @@ struct HomeHeroCarousel: View {
 
 private struct HeroPage: View {
     let hero: HeroMovie
+    let height: CGFloat
     let onPlay: (Movie) -> Void
 
     var body: some View {
@@ -136,7 +135,11 @@ private struct HeroPage: View {
             )
             content
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // Pin the page to an explicit height. Relying on `maxHeight: .infinity`
+        // lets the `.fill` backdrop report an oversized height on wide windows,
+        // which would push the bottom-aligned content below the clip region.
+        .frame(maxWidth: .infinity)
+        .frame(height: height)
         .clipped()
         .contentShape(Rectangle())
     }
@@ -164,7 +167,10 @@ private struct HeroPage: View {
                 EmptyView()
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // Constrain the fill image to the page box so it scales/crops within
+        // these bounds instead of dictating the ZStack's size.
+        .frame(maxWidth: .infinity)
+        .frame(height: height)
         .clipped()
     }
 
