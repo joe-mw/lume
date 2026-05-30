@@ -19,6 +19,7 @@ import AppKit
 
 struct MovieDetailView: View {
     let movie: Movie
+    var animationNamespace: Namespace.ID?
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -74,7 +75,7 @@ struct MovieDetailView: View {
 
                     if !similar.isEmpty {
                         section(title: "You May Also Like") {
-                            SimilarRow(items: similar)
+                            SimilarRow(items: similar, animationNamespace: animationNamespace)
                         }
                     }
                 }

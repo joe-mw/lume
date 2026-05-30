@@ -9,6 +9,7 @@ import SwiftUI
 import SwiftData
 
 struct SearchView: View {
+    @Namespace private var animationNamespace
     @Environment(\.modelContext) private var modelContext
     @Query private var movies: [Movie]
     @Query private var series: [Series]
@@ -43,8 +44,21 @@ struct SearchView: View {
                     } else {
                         Section {
                             ForEach(filteredResults) { result in
-                                NavigationLink(value: result) {
-                                    SearchResultRow(result: result)
+                                switch result {
+                                case .movie(let movie):
+                                    NavigationLink(value: movie) {
+                                        SearchResultRow(result: result)
+                                            .matchedTransitionSourceIfAvailable(id: movie.id, in: animationNamespace)
+                                    }
+                                case .series(let series):
+                                    NavigationLink(value: series) {
+                                        SearchResultRow(result: result)
+                                            .matchedTransitionSourceIfAvailable(id: series.id, in: animationNamespace)
+                                    }
+                                case .liveStream(let stream):
+                                    NavigationLink(value: stream) {
+                                        SearchResultRow(result: result)
+                                    }
                                 }
                             }
                         } header: {
@@ -56,10 +70,12 @@ struct SearchView: View {
             .navigationTitle("Search")
             .searchable(text: $searchText, prompt: "Movies, Series, Live TV...")
             .navigationDestination(for: Movie.self) { movie in
-                MovieDetailView(movie: movie)
+                MovieDetailView(movie: movie, animationNamespace: animationNamespace)
+                    .navigationTransition(.zoom(sourceID: movie.id, in: animationNamespace))
             }
             .navigationDestination(for: Series.self) { series in
-                SeriesDetailView(series: series)
+                SeriesDetailView(series: series, animationNamespace: animationNamespace)
+                    .navigationTransition(.zoom(sourceID: series.id, in: animationNamespace))
             }
             .navigationDestination(for: LiveStream.self) { stream in
                 Text("Live Stream: \(stream.name)")

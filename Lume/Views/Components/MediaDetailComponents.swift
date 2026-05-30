@@ -11,6 +11,17 @@
 
 import SwiftUI
 
+extension View {
+    @ViewBuilder
+    func matchedTransitionSourceIfAvailable(id: some Hashable, in namespace: Namespace.ID?) -> some View {
+        if let ns = namespace {
+            self.matchedTransitionSource(id: id, in: ns)
+        } else {
+            self
+        }
+    }
+}
+
 // MARK: - Layout metrics
 
 enum DetailMetrics {
@@ -342,6 +353,7 @@ private struct CastCard: View {
 /// destination links match the rest of the app.
 struct SimilarRow: View {
     let items: [HomeMediaItem]
+    var animationNamespace: Namespace.ID?
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -351,11 +363,13 @@ struct SimilarRow: View {
                     case .movie(let movie):
                         NavigationLink(value: movie) {
                             DetailPosterCard(title: item.title, imageURL: item.imageURL)
+                                .matchedTransitionSourceIfAvailable(id: movie.id, in: animationNamespace)
                         }
                         .buttonStyle(.plain)
                     case .series(let series):
                         NavigationLink(value: series) {
                             DetailPosterCard(title: item.title, imageURL: item.imageURL)
+                                .matchedTransitionSourceIfAvailable(id: series.id, in: animationNamespace)
                         }
                         .buttonStyle(.plain)
                     case .live:

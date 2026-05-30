@@ -10,6 +10,7 @@ import SwiftUI
 import SwiftData
 
 struct SeriesView: View {
+    @Namespace private var animationNamespace
     @Environment(\.modelContext) private var modelContext
     @Query private var playlists: [Playlist]
     @Query(filter: #Predicate<Category> { $0.typeRaw == "series" && $0.isHidden == false })
@@ -63,7 +64,7 @@ struct SeriesView: View {
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 24, pinnedViews: []) {
                             ForEach(sortedCategories) { category in
-                                SeriesCategoryPreview(category: category, limit: previewLimit, sort: contentSort)
+                                SeriesCategoryPreview(category: category, limit: previewLimit, sort: contentSort, animationNamespace: animationNamespace)
                                     .id("\(category.id)-\(contentSort.rawValue)")
                             }
                         }
@@ -106,10 +107,11 @@ struct SeriesView: View {
                 }
             }
             .navigationDestination(for: Category.self) { category in
-                SeriesCategoryView(category: category, sort: contentSort)
+                SeriesCategoryView(category: category, sort: contentSort, animationNamespace: animationNamespace)
             }
             .navigationDestination(for: Series.self) { series in
-                SeriesDetailView(series: series)
+                SeriesDetailView(series: series, animationNamespace: animationNamespace)
+                    .navigationTransition(.zoom(sourceID: series.id, in: animationNamespace))
             }
         }
     }
@@ -135,9 +137,11 @@ struct SeriesView: View {
 struct SeriesCategoryPreview: View {
     let category: Category
     @Query private var series: [Series]
+    var animationNamespace: Namespace.ID?
 
-    init(category: Category, limit: Int, sort: ContentSortOption) {
+    init(category: Category, limit: Int, sort: ContentSortOption, animationNamespace: Namespace.ID? = nil) {
         self.category = category
+        self.animationNamespace = animationNamespace
         let categoryId = category.id
         var descriptor = FetchDescriptor<Series>(
             predicate: #Predicate<Series> { $0.categoryId == categoryId },
@@ -173,6 +177,7 @@ struct SeriesCategoryPreview: View {
                         ForEach(series) { item in
                             NavigationLink(value: item) {
                                 SeriesCardView(series: item)
+                                    .matchedTransitionSourceIfAvailable(id: item.id, in: animationNamespace)
                             }
                             .buttonStyle(.plain)
                         }
@@ -190,9 +195,11 @@ struct SeriesCategoryPreview: View {
 struct SeriesCategoryView: View {
     let category: Category
     @Query private var series: [Series]
+    var animationNamespace: Namespace.ID?
 
-    init(category: Category, sort: ContentSortOption) {
+    init(category: Category, sort: ContentSortOption, animationNamespace: Namespace.ID? = nil) {
         self.category = category
+        self.animationNamespace = animationNamespace
         let categoryId = category.id
         _series = Query(
             filter: #Predicate<Series> { $0.categoryId == categoryId },
@@ -216,6 +223,7 @@ struct SeriesCategoryView: View {
                     ForEach(series) { item in
                         NavigationLink(value: item) {
                             SeriesCardView(series: item)
+                                .matchedTransitionSourceIfAvailable(id: item.id, in: animationNamespace)
                         }
                         .buttonStyle(.plain)
                     }

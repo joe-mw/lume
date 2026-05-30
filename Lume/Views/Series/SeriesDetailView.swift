@@ -18,6 +18,7 @@ import AppKit
 
 struct SeriesDetailView: View {
     let series: Series
+    var animationNamespace: Namespace.ID?
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -67,7 +68,7 @@ struct SeriesDetailView: View {
 
                     if !similar.isEmpty {
                         section(title: "You May Also Like") {
-                            SimilarRow(items: similar)
+                            SimilarRow(items: similar, animationNamespace: animationNamespace)
                         }
                     }
                 }

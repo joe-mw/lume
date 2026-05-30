@@ -15,6 +15,7 @@ import SwiftUI
 import SwiftData
 
 struct HomeView: View {
+    @Namespace private var animationNamespace
     @Environment(\.modelContext) private var modelContext
     #if os(macOS)
     @Environment(\.openWindow) private var openWindow
@@ -109,13 +110,13 @@ struct HomeView: View {
                                 HomeHeroCarousel(movies: heroMovies, onPlay: playMovie)
                             }
                             if !recentlyWatched.isEmpty {
-                                HomeRow(title: "Recently Watched", items: recentlyWatched, onPlayLive: playChannel)
+                                HomeRow(title: "Recently Watched", items: recentlyWatched, onPlayLive: playChannel, animationNamespace: animationNamespace)
                             }
                             if !trending.isEmpty {
-                                HomeRow(title: "Trending", items: trending, onPlayLive: playChannel)
+                                HomeRow(title: "Trending", items: trending, onPlayLive: playChannel, animationNamespace: animationNamespace)
                             }
                             if !favorites.isEmpty {
-                                HomeRow(title: "Favorites", items: favorites, onPlayLive: playChannel)
+                                HomeRow(title: "Favorites", items: favorites, onPlayLive: playChannel, animationNamespace: animationNamespace)
                             }
                         }
                         .padding(.bottom)
@@ -163,10 +164,12 @@ struct HomeView: View {
                 }
             }
             .navigationDestination(for: Movie.self) { movie in
-                MovieDetailView(movie: movie)
+                MovieDetailView(movie: movie, animationNamespace: animationNamespace)
+                    .navigationTransition(.zoom(sourceID: movie.id, in: animationNamespace))
             }
             .navigationDestination(for: Series.self) { series in
-                SeriesDetailView(series: series)
+                SeriesDetailView(series: series, animationNamespace: animationNamespace)
+                    .navigationTransition(.zoom(sourceID: series.id, in: animationNamespace))
             }
             .task(id: "\(playlists.count)-\(selectedPlaylistID)") {
                 await loadTrending()
@@ -377,6 +380,7 @@ private struct HomeRow: View {
     let title: String
     let items: [HomeMediaItem]
     let onPlayLive: (LiveStream) -> Void
+    var animationNamespace: Namespace.ID?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -388,7 +392,7 @@ private struct HomeRow: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 16) {
                     ForEach(items) { item in
-                        HomeItemCell(item: item, onPlayLive: onPlayLive)
+                        HomeItemCell(item: item, onPlayLive: onPlayLive, animationNamespace: animationNamespace)
                     }
                 }
                 .padding(.horizontal)
@@ -401,17 +405,20 @@ private struct HomeRow: View {
 private struct HomeItemCell: View {
     let item: HomeMediaItem
     let onPlayLive: (LiveStream) -> Void
+    var animationNamespace: Namespace.ID?
 
     var body: some View {
         switch item {
         case .movie(let movie):
             NavigationLink(value: movie) {
                 HomePosterCard(title: item.title, imageURL: item.imageURL, progress: item.progress)
+                    .matchedTransitionSourceIfAvailable(id: movie.id, in: animationNamespace)
             }
             .buttonStyle(.plain)
         case .series(let series):
             NavigationLink(value: series) {
                 HomePosterCard(title: item.title, imageURL: item.imageURL)
+                    .matchedTransitionSourceIfAvailable(id: series.id, in: animationNamespace)
             }
             .buttonStyle(.plain)
         case .live(let stream):
