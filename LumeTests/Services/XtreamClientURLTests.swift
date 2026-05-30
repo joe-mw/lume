@@ -1,9 +1,8 @@
-import Testing
 import Foundation
 @testable import Lume
+import Testing
 
 struct XtreamClientURLTests {
-
     private func makeClient(serverURL: String = "http://example.com:8080") -> XtreamClient {
         let config = XtreamClient.Configuration(
             serverURL: serverURL,
@@ -25,7 +24,7 @@ struct XtreamClientURLTests {
 
     // MARK: - Movie URL
 
-    @Test func buildMovieURLStandard() async throws {
+    @Test func buildMovieURLStandard() {
         let client = makeClient()
         let playlist = makePlaylist()
         let movie = Movie(id: "t-123", streamId: 123, name: "Test", containerExtension: "mp4")
@@ -34,7 +33,7 @@ struct XtreamClientURLTests {
         #expect(url == expected)
     }
 
-    @Test func buildMovieURLDefaultExtension() async throws {
+    @Test func buildMovieURLDefaultExtension() {
         let client = makeClient()
         let playlist = makePlaylist()
         let movie = Movie(id: "t-456", streamId: 456, name: "No Ext")
@@ -43,7 +42,7 @@ struct XtreamClientURLTests {
         #expect(url == expected)
     }
 
-    @Test func buildMovieURLSpecialChars() async throws {
+    @Test func buildMovieURLSpecialChars() {
         let client = makeClient(serverURL: "http://example.com:8080")
         let playlist = makePlaylist(username: "user@name", password: "p@ss!word")
         let movie = Movie(id: "t-789", streamId: 789, name: "Test", containerExtension: "mkv")
@@ -54,7 +53,7 @@ struct XtreamClientURLTests {
 
     // MARK: - Episode URL
 
-    @Test func buildEpisodeURL() async throws {
+    @Test func buildEpisodeURL() {
         let client = makeClient()
         let playlist = makePlaylist()
         let episode = Episode(
@@ -70,7 +69,7 @@ struct XtreamClientURLTests {
         #expect(url == expected)
     }
 
-    @Test func buildEpisodeURLDefaultExtension() async throws {
+    @Test func buildEpisodeURLDefaultExtension() {
         let client = makeClient()
         let playlist = makePlaylist()
         let episode = Episode(
@@ -88,7 +87,7 @@ struct XtreamClientURLTests {
 
     // MARK: - Live Stream URL
 
-    @Test func buildLiveStreamURLDefaultFormat() async throws {
+    @Test func buildLiveStreamURLDefaultFormat() {
         let client = makeClient()
         let playlist = makePlaylist()
         let stream = LiveStream(id: "l-1", streamId: 555, name: "Test Channel")
@@ -97,7 +96,7 @@ struct XtreamClientURLTests {
         #expect(url == expected)
     }
 
-    @Test func buildLiveStreamURLTSFormat() async throws {
+    @Test func buildLiveStreamURLTSFormat() {
         let client = makeClient()
         let playlist = makePlaylist()
         let stream = LiveStream(id: "l-2", streamId: 666, name: "TS Channel")
@@ -108,7 +107,7 @@ struct XtreamClientURLTests {
 
     // MARK: - Catchup URL
 
-    @Test func buildCatchupURL() async throws {
+    @Test func buildCatchupURL() {
         let client = makeClient()
         let playlist = makePlaylist()
         let stream = LiveStream(id: "l-3", streamId: 777, name: "Catchup Channel")
@@ -121,7 +120,7 @@ struct XtreamClientURLTests {
 
     // MARK: - Server URL trailing slash handling
 
-    @Test func buildMovieURLWithTrailingSlash() async throws {
+    @Test func buildMovieURLWithTrailingSlash() {
         let client = makeClient(serverURL: "http://example.com:8080/")
         let playlist = makePlaylist(serverURL: "http://example.com:8080/")
         let movie = Movie(id: "t-1", streamId: 1, name: "Test", containerExtension: "mp4")
@@ -129,7 +128,7 @@ struct XtreamClientURLTests {
         #expect(url?.absoluteString == "http://example.com:8080//movie/testuser/testpass/1.mp4")
     }
 
-    @Test func buildMovieURLWithoutTrailingSlash() async throws {
+    @Test func buildMovieURLWithoutTrailingSlash() {
         let client = makeClient(serverURL: "http://example.com:8080")
         let playlist = makePlaylist(serverURL: "http://example.com:8080")
         let movie = Movie(id: "t-1", streamId: 1, name: "Test", containerExtension: "mp4")
@@ -139,7 +138,7 @@ struct XtreamClientURLTests {
 
     // MARK: - API URLs
 
-    @Test func getInfoURL() throws {
+    @Test func getInfoURL() {
         let client = makeClient()
         #expect(client.configuration.serverURL == "http://example.com:8080")
         #expect(client.configuration.username == "testuser")

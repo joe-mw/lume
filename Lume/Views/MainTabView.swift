@@ -5,8 +5,8 @@
 //  Main tab-based navigation for the app
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 struct MainTabView: View {
     @Environment(\.modelContext) private var modelContext
@@ -76,7 +76,7 @@ struct MainTabView: View {
 #Preview("With Playlists") {
     MainTabView()
         .modelContainer(for: Playlist.self, inMemory: true) { result in
-            if case .success(let container) = result {
+            if case let .success(container) = result {
                 let p = Playlist(name: "My IPTV", serverURL: "http://example.com:8080", username: "user", password: "pass")
                 container.mainContext.insert(p)
             }

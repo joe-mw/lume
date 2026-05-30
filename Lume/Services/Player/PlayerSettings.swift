@@ -4,7 +4,9 @@ enum PlayerEngineKind: String, CaseIterable, Identifiable {
     case ksPlayer
     case avPlayer
 
-    var id: String { rawValue }
+    var id: String {
+        rawValue
+    }
 
     var displayName: String {
         switch self {
@@ -22,9 +24,9 @@ enum PlayerEngineKind: String, CaseIterable, Identifiable {
 
     static var defaultValue: PlayerEngineKind {
         #if canImport(KSPlayer)
-        return .ksPlayer
+            return .ksPlayer
         #else
-        return .avPlayer
+            return .avPlayer
         #endif
     }
 }

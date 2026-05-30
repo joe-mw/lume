@@ -1,9 +1,8 @@
-import Testing
 import Foundation
 @testable import Lume
+import Testing
 
 struct SyncProgressTests {
-
     @Test func initialState() {
         let progress = SyncProgress()
         #expect(progress.currentStep == nil)

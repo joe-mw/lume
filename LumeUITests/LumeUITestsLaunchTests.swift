@@ -1,7 +1,6 @@
 import XCTest
 
 final class LumeUITestsLaunchTests: XCTestCase {
-
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
         true
     }
@@ -11,7 +10,7 @@ final class LumeUITestsLaunchTests: XCTestCase {
     }
 
     @MainActor
-    func testLaunch() throws {
+    func testLaunch() {
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing"]
         app.launch()
@@ -23,7 +22,7 @@ final class LumeUITestsLaunchTests: XCTestCase {
     }
 
     @MainActor
-    func testLaunchPerformance() throws {
+    func testLaunchPerformance() {
         measure(metrics: [XCTApplicationLaunchMetric()]) {
             XCUIApplication().launch()
         }

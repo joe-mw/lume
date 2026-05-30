@@ -1,5 +1,5 @@
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 struct LoginView: View {
     @Environment(\.dismiss) private var dismiss
@@ -28,17 +28,17 @@ struct LoginView: View {
                         .textContentType(.name)
 
                     TextField("e.g. http://example.com:8080", text: $serverURL)
-                        #if os(iOS)
+                    #if os(iOS)
                         .textInputAutocapitalization(.never)
                         .keyboardType(.URL)
-                        #endif
+                    #endif
                         .autocorrectionDisabled()
                         .textContentType(.URL)
 
                     TextField("Username", text: $username)
-                        #if os(iOS)
+                    #if os(iOS)
                         .textInputAutocapitalization(.never)
-                        #endif
+                    #endif
                         .autocorrectionDisabled()
                         .textContentType(.username)
 
@@ -149,8 +149,7 @@ struct LoginView: View {
 }
 
 #Preview("With Error") {
-    let view = LoginView()
+    return LoginView()
     // Note: error state is managed internally, shown via the errorMessage field.
     // In previews this can be simulated by setting initial state.
-    return view
 }

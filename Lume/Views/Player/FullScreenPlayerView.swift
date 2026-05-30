@@ -1,9 +1,9 @@
-import SwiftUI
-import SwiftData
 import AVFoundation
+import SwiftData
+import SwiftUI
 
 #if os(macOS)
-import AppKit
+    import AppKit
 #endif
 
 /// Top-level full-screen video host. Picks the engine implementation based on
@@ -15,7 +15,7 @@ struct FullScreenPlayerView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     #if os(macOS)
-    @Environment(\.dismissWindow) private var dismissWindow
+        @Environment(\.dismissWindow) private var dismissWindow
     #endif
     @AppStorage(PlayerSettings.engineKey) private var engineRaw: String = PlayerEngineKind.defaultValue.rawValue
 
@@ -55,7 +55,7 @@ struct FullScreenPlayerView: View {
         .task {
             configureAudioSessionForPlayback()
             #if os(macOS)
-            enterMacFullScreen()
+                enterMacFullScreen()
             #endif
         }
         .onDisappear {
@@ -94,41 +94,41 @@ struct FullScreenPlayerView: View {
 
     private func closePlayer() {
         #if os(macOS)
-        // Exit fullscreen first so the window animation is graceful, then close.
-        if let window = NSApp.keyWindow, window.styleMask.contains(.fullScreen) {
-            window.toggleFullScreen(nil)
-        }
-        dismissWindow(id: "player")
+            // Exit fullscreen first so the window animation is graceful, then close.
+            if let window = NSApp.keyWindow, window.styleMask.contains(.fullScreen) {
+                window.toggleFullScreen(nil)
+            }
+            dismissWindow(id: "player")
         #else
-        dismiss()
+            dismiss()
         #endif
     }
 
     private func configureAudioSessionForPlayback() {
         #if os(iOS)
-        let session = AVAudioSession.sharedInstance()
-        try? session.setCategory(.playback, mode: .moviePlayback, options: [])
-        try? session.setActive(true, options: [])
+            let session = AVAudioSession.sharedInstance()
+            try? session.setCategory(.playback, mode: .moviePlayback, options: [])
+            try? session.setActive(true, options: [])
         #endif
     }
 
     private func releaseAudioSession() {
         #if os(iOS)
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         #endif
     }
 
     #if os(macOS)
-    private func enterMacFullScreen() {
-        // Wait for the window to mount before toggling fullscreen.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-            guard let window = NSApp.keyWindow ?? NSApp.windows.last(where: { $0.isVisible }) else { return }
-            window.title = media.title
-            if !window.styleMask.contains(.fullScreen) {
-                window.toggleFullScreen(nil)
+        private func enterMacFullScreen() {
+            // Wait for the window to mount before toggling fullscreen.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                guard let window = NSApp.keyWindow ?? NSApp.windows.last(where: { $0.isVisible }) else { return }
+                window.title = media.title
+                if !window.styleMask.contains(.fullScreen) {
+                    window.toggleFullScreen(nil)
+                }
             }
         }
-    }
     #endif
 
     private func persistProgress(force: Bool) {
@@ -145,9 +145,9 @@ struct FullScreenPlayerView: View {
         let completed = total > 0 && now / total >= 0.9
 
         switch media.contentRef {
-        case .movie(let id):
+        case let .movie(id):
             updateMovie(id: id, progress: now, completed: completed)
-        case .episode(let id):
+        case let .episode(id):
             updateEpisode(id: id, progress: now, completed: completed)
         case .live:
             break
@@ -175,7 +175,7 @@ struct FullScreenPlayerView: View {
     }
 
     private func touchLiveLastWatched() {
-        guard case .live(let id) = media.contentRef else { return }
+        guard case let .live(id) = media.contentRef else { return }
         var descriptor = FetchDescriptor<LiveStream>(predicate: #Predicate { $0.id == id })
         descriptor.fetchLimit = 1
         guard let stream = try? modelContext.fetch(descriptor).first else { return }

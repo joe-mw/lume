@@ -6,8 +6,8 @@
 //
 
 import Foundation
-import SwiftData
 import OSLog
+import SwiftData
 
 // MARK: - ContentSyncManager
 
@@ -107,7 +107,7 @@ actor ContentSyncManager {
         Logger.database.info("Completed sync for playlist \(playlistId)")
     }
 
-    func syncAllCategories(for playlist: Playlist, playlistId: UUID, progress: SyncProgress? = nil, full: Bool = false) async throws {
+    func syncAllCategories(for playlist: Playlist, playlistId: UUID, progress: SyncProgress? = nil, full _: Bool = false) async throws {
         Logger.database.info("Starting VOD category sync")
         await progress?.start(.movieCategories)
         try await syncVODCategories(for: playlist, playlistId: playlistId, progress: progress)
@@ -191,7 +191,7 @@ actor ContentSyncManager {
         await progress?.start(.movies)
         let movieDTOs = try await xtreamClient.getVODStreams(playlist: playlist)
         let totalCount = movieDTOs.count
-        Logger.database.info("Fetched \(totalCount) movies, syncing in batches of \(self.batchSize)")
+        Logger.database.info("Fetched \(totalCount) movies, syncing in batches of \(batchSize)")
         await progress?.update(detail: "0 of \(totalCount)", fraction: 0)
 
         let playlistPrefix = "\(playlistId.uuidString)-\(CategoryType.vod.rawValue)-"
@@ -199,7 +199,7 @@ actor ContentSyncManager {
         for batchStart in stride(from: 0, to: totalCount, by: batchSize) {
             try autoreleasepool {
                 let batchEnd = min(batchStart + batchSize, totalCount)
-                let batch = movieDTOs[batchStart..<batchEnd]
+                let batch = movieDTOs[batchStart ..< batchEnd]
 
                 let context = ModelContext(modelContainer)
                 context.autosaveEnabled = false
@@ -249,7 +249,7 @@ actor ContentSyncManager {
         await progress?.start(.series)
         let seriesDTOs = try await xtreamClient.getSeries(playlist: playlist)
         let totalCount = seriesDTOs.count
-        Logger.database.info("Fetched \(totalCount) series, syncing in batches of \(self.batchSize)")
+        Logger.database.info("Fetched \(totalCount) series, syncing in batches of \(batchSize)")
         await progress?.update(detail: "0 of \(totalCount)", fraction: 0)
 
         let playlistPrefix = "\(playlistId.uuidString)-\(CategoryType.series.rawValue)-"
@@ -257,7 +257,7 @@ actor ContentSyncManager {
         for batchStart in stride(from: 0, to: totalCount, by: batchSize) {
             try autoreleasepool {
                 let batchEnd = min(batchStart + batchSize, totalCount)
-                let batch = seriesDTOs[batchStart..<batchEnd]
+                let batch = seriesDTOs[batchStart ..< batchEnd]
 
                 let context = ModelContext(modelContainer)
                 context.autosaveEnabled = false
@@ -359,7 +359,7 @@ actor ContentSyncManager {
         await progress?.start(.liveStreams)
         let streamDTOs = try await xtreamClient.getLiveStreams(playlist: playlist)
         let totalCount = streamDTOs.count
-        Logger.database.info("Fetched \(totalCount) live streams, syncing in batches of \(self.batchSize)")
+        Logger.database.info("Fetched \(totalCount) live streams, syncing in batches of \(batchSize)")
         await progress?.update(detail: "0 of \(totalCount)", fraction: 0)
 
         let playlistPrefix = "\(playlistId.uuidString)-\(CategoryType.live.rawValue)-"
@@ -367,7 +367,7 @@ actor ContentSyncManager {
         for batchStart in stride(from: 0, to: totalCount, by: batchSize) {
             try autoreleasepool {
                 let batchEnd = min(batchStart + batchSize, totalCount)
-                let batch = streamDTOs[batchStart..<batchEnd]
+                let batch = streamDTOs[batchStart ..< batchEnd]
 
                 let context = ModelContext(modelContainer)
                 context.autosaveEnabled = false
@@ -568,9 +568,9 @@ enum SyncError: LocalizedError {
             return "The playlist could not be found"
         case .invalidCredentials:
             return "Invalid username or password"
-        case .networkError(let error):
+        case let .networkError(error):
             return "Network error: \(error.localizedDescription)"
-        case .databaseError(let error):
+        case let .databaseError(error):
             return "Database error: \(error.localizedDescription)"
         }
     }

@@ -1,9 +1,8 @@
-import Testing
 import Foundation
 @testable import Lume
+import Testing
 
 struct PlayableMediaTests {
-
     private func makePlaylist() -> Playlist {
         Playlist(name: "Test", serverURL: "http://example.com:8080", username: "user", password: "pass")
     }
@@ -105,9 +104,9 @@ struct PlayableMediaTests {
     // MARK: - Codable
 
     @Test func playableMediaCodableRoundTrip() throws {
-        let media = PlayableMedia(
+        let media = try PlayableMedia(
             id: "test-1",
-            url: URL(string: "http://example.com/stream.m3u8")!,
+            url: #require(URL(string: "http://example.com/stream.m3u8")),
             title: "Test",
             subtitle: "S1 E1",
             posterURL: URL(string: "http://example.com/poster.jpg"),
@@ -123,9 +122,9 @@ struct PlayableMediaTests {
     }
 
     @Test func playableMediaLiveCodeableRoundTrip() throws {
-        let media = PlayableMedia(
+        let media = try PlayableMedia(
             id: "live-1",
-            url: URL(string: "http://example.com/live.m3u8")!,
+            url: #require(URL(string: "http://example.com/live.m3u8")),
             title: "Live",
             subtitle: nil,
             posterURL: nil,
@@ -141,14 +140,14 @@ struct PlayableMediaTests {
 
     // MARK: - Hashable
 
-    @Test func playableMediaHashable() {
-        let a = PlayableMedia(id: "x", url: URL(string: "http://a.com")!, title: "A", subtitle: nil, posterURL: nil, kind: .vod, startTime: 0, contentRef: .movie("m-1"))
-        let b = PlayableMedia(id: "x", url: URL(string: "http://b.com")!, title: "B", subtitle: nil, posterURL: nil, kind: .vod, startTime: 0, contentRef: .movie("m-1"))
-        let c = PlayableMedia(id: "y", url: URL(string: "http://a.com")!, title: "A", subtitle: nil, posterURL: nil, kind: .vod, startTime: 0, contentRef: .movie("m-2"))
-        let d = PlayableMedia(id: "x", url: URL(string: "http://a.com")!, title: "A", subtitle: nil, posterURL: nil, kind: .vod, startTime: 0, contentRef: .movie("m-1"))
-        #expect(a == d)   // All same properties
-        #expect(a != b)   // Different url and title
-        #expect(a != c)   // Different id
+    @Test func playableMediaHashable() throws {
+        let a = try PlayableMedia(id: "x", url: #require(URL(string: "http://a.com")), title: "A", subtitle: nil, posterURL: nil, kind: .vod, startTime: 0, contentRef: .movie("m-1"))
+        let b = try PlayableMedia(id: "x", url: #require(URL(string: "http://b.com")), title: "B", subtitle: nil, posterURL: nil, kind: .vod, startTime: 0, contentRef: .movie("m-1"))
+        let c = try PlayableMedia(id: "y", url: #require(URL(string: "http://a.com")), title: "A", subtitle: nil, posterURL: nil, kind: .vod, startTime: 0, contentRef: .movie("m-2"))
+        let d = try PlayableMedia(id: "x", url: #require(URL(string: "http://a.com")), title: "A", subtitle: nil, posterURL: nil, kind: .vod, startTime: 0, contentRef: .movie("m-1"))
+        #expect(a == d) // All same properties
+        #expect(a != b) // Different url and title
+        #expect(a != c) // Different id
         let set: Set<PlayableMedia> = [a, b, c, d]
         #expect(set.count == 3)
     }

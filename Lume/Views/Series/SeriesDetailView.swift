@@ -7,13 +7,13 @@
 //  episode cards. TMDB enrichment and episodes are loaded lazily on appear.
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 #if canImport(UIKit)
-import UIKit
+    import UIKit
 #endif
 #if canImport(AppKit)
-import AppKit
+    import AppKit
 #endif
 
 struct SeriesDetailView: View {
@@ -23,7 +23,7 @@ struct SeriesDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     #if os(macOS)
-    @Environment(\.openWindow) private var openWindow
+        @Environment(\.openWindow) private var openWindow
     #endif
     @Query private var playlists: [Playlist]
 
@@ -31,7 +31,7 @@ struct SeriesDetailView: View {
     @State private var isLoadingEpisodes = false
     @State private var playingMedia: PlayableMedia?
     @State private var similar: [HomeMediaItem] = []
-    @State private var refreshToken: UUID = UUID()
+    @State private var refreshToken: UUID = .init()
 
     var body: some View {
         GeometryReader { proxy in
@@ -80,28 +80,27 @@ struct SeriesDetailView: View {
         }
         .background(backgroundColor)
         #if os(iOS)
-        .toolbar(.hidden, for: .tabBar)
-        .navigationBarBackButtonHidden(true)
-        .toolbarBackground(.hidden, for: .navigationBar)
+            .toolbar(.hidden, for: .tabBar)
+            .navigationBarBackButtonHidden(true)
+            .toolbarBackground(.hidden, for: .navigationBar)
         #endif
-        .toolbar { toolbarContent }
-        .task(id: series.id) {
-            await loadEpisodesIfNeeded()
-            await enrichIfNeeded()
-            resolveSimilar()
-        }
-        .onChange(of: series.similarTMDBIds) { resolveSimilar() }
-        .onChange(of: refreshToken) { resolveSimilar() }
+            .toolbar { toolbarContent }
+            .task(id: series.id) {
+                await loadEpisodesIfNeeded()
+                await enrichIfNeeded()
+                resolveSimilar()
+            }
+            .onChange(of: series.similarTMDBIds) { resolveSimilar() }
+            .onChange(of: refreshToken) { resolveSimilar() }
         #if os(iOS)
-        .fullScreenCover(item: $playingMedia) { media in
-            FullScreenPlayerView(media: media)
-        }
+            .fullScreenCover(item: $playingMedia) { media in
+                FullScreenPlayerView(media: media)
+            }
         #endif
     }
 
     // MARK: - Sections
 
-    @ViewBuilder
     private func section<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             DetailSectionHeader(title: title)
@@ -118,7 +117,6 @@ struct SeriesDetailView: View {
         )
     }
 
-    @ViewBuilder
     private var episodesSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -228,27 +226,27 @@ struct SeriesDetailView: View {
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         #if os(iOS)
-        ToolbarItem(placement: .topBarLeading) {
-            GlassIconButton(systemImage: "chevron.left", accessibilityLabel: "Back") {
-                dismiss()
+            ToolbarItem(placement: .topBarLeading) {
+                GlassIconButton(systemImage: "chevron.left", accessibilityLabel: "Back") {
+                    dismiss()
+                }
             }
-        }
-        ToolbarItem(placement: .topBarTrailing) {
-            GlassIconButton(
-                systemImage: series.isFavorite ? "heart.fill" : "heart",
-                accessibilityLabel: series.isFavorite ? "Remove from favorites" : "Add to favorites"
-            ) { toggleFavorite() }
-        }
+            ToolbarItem(placement: .topBarTrailing) {
+                GlassIconButton(
+                    systemImage: series.isFavorite ? "heart.fill" : "heart",
+                    accessibilityLabel: series.isFavorite ? "Remove from favorites" : "Add to favorites"
+                ) { toggleFavorite() }
+            }
         #else
-        ToolbarItem(placement: .primaryAction) {
-            Button {
-                toggleFavorite()
-            } label: {
-                Image(systemName: series.isFavorite ? "heart.fill" : "heart")
-                    .foregroundStyle(series.isFavorite ? .red : .primary)
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    toggleFavorite()
+                } label: {
+                    Image(systemName: series.isFavorite ? "heart.fill" : "heart")
+                        .foregroundStyle(series.isFavorite ? .red : .primary)
+                }
+                .help(series.isFavorite ? "Remove from Favorites" : "Add to Favorites")
             }
-            .help(series.isFavorite ? "Remove from Favorites" : "Add to Favorites")
-        }
         #endif
     }
 
@@ -300,9 +298,9 @@ struct SeriesDetailView: View {
 
     private var backgroundColor: Color {
         #if os(macOS)
-        Color(nsColor: .windowBackgroundColor)
+            Color(nsColor: .windowBackgroundColor)
         #else
-        Color(uiColor: .systemBackground)
+            Color(uiColor: .systemBackground)
         #endif
     }
 
@@ -341,7 +339,8 @@ struct SeriesDetailView: View {
     private func enrichIfNeeded() async {
         guard let tmdbId = series.tmdbId else { return }
         if let enrichedAt = series.tmdbEnrichedAt,
-           Date().timeIntervalSince(enrichedAt) < 14 * 24 * 3600 {
+           Date().timeIntervalSince(enrichedAt) < 14 * 24 * 3600
+        {
             return
         }
         let manager = ContentSyncManager(modelContainer: modelContext.container)
@@ -389,9 +388,9 @@ struct SeriesDetailView: View {
         guard let playlist = seriesPlaylist,
               let media = PlayableMedia.from(episode: episode, playlist: playlist) else { return }
         #if os(macOS)
-        openWindow(id: "player", value: media)
+            openWindow(id: "player", value: media)
         #else
-        playingMedia = media
+            playingMedia = media
         #endif
     }
 
@@ -452,7 +451,7 @@ private struct EpisodeCard: View {
         ZStack {
             AsyncImage(url: URL(string: episode.movieImage ?? "")) { phase in
                 switch phase {
-                case .success(let image):
+                case let .success(image):
                     image.resizable().aspectRatio(contentMode: .fill)
                 case .empty where episode.movieImage != nil:
                     Rectangle().fill(Color.gray.opacity(0.25)).overlay { ProgressView() }

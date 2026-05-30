@@ -1,7 +1,6 @@
 import XCTest
 
 final class SettingsTests: XCTestCase {
-
     private var app: XCUIApplication!
 
     override func setUpWithError() throws {
@@ -11,7 +10,7 @@ final class SettingsTests: XCTestCase {
         app.launch()
     }
 
-    func testSettingsTabNavigatesToSettings() throws {
+    func testSettingsTabNavigatesToSettings() {
         let settingsTab = app.tabBars.buttons["Settings"]
         XCTAssertTrue(settingsTab.waitForExistence(timeout: 5))
         settingsTab.tap()
@@ -20,7 +19,7 @@ final class SettingsTests: XCTestCase {
         XCTAssertTrue(settingsTitle.waitForExistence(timeout: 3))
     }
 
-    func testPlaylistsSectionShowsPlaylist() throws {
+    func testPlaylistsSectionShowsPlaylist() {
         let settingsTab = app.tabBars.buttons["Settings"]
         XCTAssertTrue(settingsTab.waitForExistence(timeout: 5))
         settingsTab.tap()
@@ -29,7 +28,7 @@ final class SettingsTests: XCTestCase {
         XCTAssertTrue(playlistName.waitForExistence(timeout: 3))
     }
 
-    func testPlayerEnginePickerExists() throws {
+    func testPlayerEnginePickerExists() {
         let settingsTab = app.tabBars.buttons["Settings"]
         XCTAssertTrue(settingsTab.waitForExistence(timeout: 5))
         settingsTab.tap()
@@ -38,7 +37,7 @@ final class SettingsTests: XCTestCase {
         XCTAssertTrue(engineLabel.waitForExistence(timeout: 3))
     }
 
-    func testAddPlaylistButtonExists() throws {
+    func testAddPlaylistButtonExists() {
         let settingsTab = app.tabBars.buttons["Settings"]
         XCTAssertTrue(settingsTab.waitForExistence(timeout: 5))
         settingsTab.tap()
@@ -47,7 +46,7 @@ final class SettingsTests: XCTestCase {
         XCTAssertTrue(addButton.waitForExistence(timeout: 3))
     }
 
-    func testPlaylistDetailNavigation() throws {
+    func testPlaylistDetailNavigation() {
         let settingsTab = app.tabBars.buttons["Settings"]
         XCTAssertTrue(settingsTab.waitForExistence(timeout: 5))
         settingsTab.tap()

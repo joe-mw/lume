@@ -21,7 +21,7 @@ struct SeriesCardView: View {
                         .overlay {
                             ProgressView()
                         }
-                case .success(let image):
+                case let .success(image):
                     image
                         .resizable()
                         .aspectRatio(contentMode: .fill)

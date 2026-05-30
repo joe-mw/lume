@@ -6,13 +6,13 @@
 //  for the selected category are loaded lazily via @Query.
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 struct LiveTVView: View {
     @Environment(\.modelContext) private var modelContext
     #if os(macOS)
-    @Environment(\.openWindow) private var openWindow
+        @Environment(\.openWindow) private var openWindow
     #endif
     @Query private var playlists: [Playlist]
     @Query(filter: #Predicate<Category> { $0.typeRaw == "live" && $0.isHidden == false })
@@ -138,9 +138,9 @@ struct LiveTVView: View {
         guard let playlist = activePlaylist,
               let media = PlayableMedia.from(stream: stream, playlist: playlist) else { return }
         #if os(macOS)
-        openWindow(id: "player", value: media)
+            openWindow(id: "player", value: media)
         #else
-        playingMedia = media
+            playingMedia = media
         #endif
     }
 }

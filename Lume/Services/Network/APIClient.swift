@@ -30,7 +30,7 @@ extension APIClient {
             throw NetworkError.invalidResponse
         }
 
-        guard (200...299).contains(httpResponse.statusCode) else {
+        guard (200 ... 299).contains(httpResponse.statusCode) else {
             if httpResponse.statusCode == 401 || httpResponse.statusCode == 403 {
                 throw NetworkError.authenticationFailed
             }
@@ -160,11 +160,11 @@ enum NetworkError: LocalizedError {
             return "Invalid response from server"
         case .authenticationFailed:
             return "Authentication failed. Please check your credentials."
-        case .rateLimited(let retryAfter):
+        case let .rateLimited(retryAfter):
             return "Too many requests. Please try again in \(Int(retryAfter)) seconds."
-        case .serverError(let code):
+        case let .serverError(code):
             return "Server error (code: \(code))"
-        case .decodingError(let error):
+        case let .decodingError(error):
             return "Failed to decode response: \(error.localizedDescription)"
         case .unknown:
             return "An unknown error occurred"
@@ -175,7 +175,7 @@ enum NetworkError: LocalizedError {
         switch self {
         case .noConnection, .timeout:
             return true
-        case .serverError(let code):
+        case let .serverError(code):
             // Retry on 5xx server errors
             return code >= 500
         case .rateLimited:

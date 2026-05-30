@@ -6,8 +6,8 @@
 //  SyncProgress, and renders each step's status, detail, and per-step progress.
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 struct SyncProgressView: View {
     let playlist: Playlist
@@ -54,23 +54,22 @@ struct SyncProgressView: View {
             }
             .navigationTitle("Sync Playlist")
             #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
+                .navigationBarTitleDisplayMode(.inline)
             #endif
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        isPresented = false
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") {
+                            isPresented = false
+                        }
+                        .disabled(phase == .syncing)
                     }
-                    .disabled(phase == .syncing)
                 }
-            }
         }
         .interactiveDismissDisabled(phase == .syncing)
     }
 
     // MARK: - Header
 
-    @ViewBuilder
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {

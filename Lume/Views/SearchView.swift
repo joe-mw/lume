@@ -5,8 +5,8 @@
 //  Global search across all content
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 struct SearchView: View {
     @Namespace private var animationNamespace
@@ -47,17 +47,17 @@ struct SearchView: View {
                         Section {
                             ForEach(filteredResults) { result in
                                 switch result {
-                                case .movie(let movie):
+                                case let .movie(movie):
                                     NavigationLink(value: movie) {
                                         SearchResultRow(result: result)
                                             .matchedTransitionSourceIfAvailable(id: movie.id, in: animationNamespace)
                                     }
-                                case .series(let series):
+                                case let .series(series):
                                     NavigationLink(value: series) {
                                         SearchResultRow(result: result)
                                             .matchedTransitionSourceIfAvailable(id: series.id, in: animationNamespace)
                                     }
-                                case .liveStream(let stream):
+                                case let .liveStream(stream):
                                     NavigationLink(value: stream) {
                                         SearchResultRow(result: result)
                                     }
@@ -72,32 +72,32 @@ struct SearchView: View {
             .navigationTitle("Search")
             .searchable(text: $searchText, prompt: "Movies, Series, Live TV...")
             #if os(iOS)
-            .searchToolbarBehavior(.minimize)
+                .searchToolbarBehavior(.minimize)
             #endif
-            .navigationDestination(for: Movie.self) { movie in
-                MovieDetailView(movie: movie, animationNamespace: animationNamespace)
+                .navigationDestination(for: Movie.self) { movie in
+                    MovieDetailView(movie: movie, animationNamespace: animationNamespace)
                     #if os(iOS)
-                    .navigationTransition(.zoom(sourceID: movie.id, in: animationNamespace))
+                        .navigationTransition(.zoom(sourceID: movie.id, in: animationNamespace))
                     #endif
-            }
-            .navigationDestination(for: Series.self) { series in
-                SeriesDetailView(series: series, animationNamespace: animationNamespace)
-                    #if os(iOS)
-                    .navigationTransition(.zoom(sourceID: series.id, in: animationNamespace))
-                    #endif
-            }
-            .navigationDestination(for: LiveStream.self) { stream in
-                Text("Live Stream: \(stream.name)")
-                    // TODO: Live stream detail view
-            }
-            .onChange(of: searchText) { _, newValue in
-                searchTask?.cancel()
-                searchTask = Task {
-                    try? await Task.sleep(for: .milliseconds(500))
-                    guard !Task.isCancelled else { return }
-                    debouncedSearchText = newValue
                 }
-            }
+                .navigationDestination(for: Series.self) { series in
+                    SeriesDetailView(series: series, animationNamespace: animationNamespace)
+                    #if os(iOS)
+                        .navigationTransition(.zoom(sourceID: series.id, in: animationNamespace))
+                    #endif
+                }
+                .navigationDestination(for: LiveStream.self) { stream in
+                    Text("Live Stream: \(stream.name)")
+                    // TODO: Live stream detail view
+                }
+                .onChange(of: searchText) { _, newValue in
+                    searchTask?.cancel()
+                    searchTask = Task {
+                        try? await Task.sleep(for: .milliseconds(500))
+                        guard !Task.isCancelled else { return }
+                        debouncedSearchText = newValue
+                    }
+                }
         }
     }
 
@@ -142,7 +142,9 @@ enum ContentFilter: String, CaseIterable, Identifiable {
     case series = "Series"
     case liveTV = "Live TV"
 
-    var id: String { rawValue }
+    var id: String {
+        rawValue
+    }
 }
 
 // MARK: - Search Result
@@ -154,11 +156,11 @@ enum SearchResult: Identifiable, Hashable {
 
     var id: String {
         switch self {
-        case .movie(let movie):
+        case let .movie(movie):
             return "movie-\(movie.id)"
-        case .series(let series):
+        case let .series(series):
             return "series-\(series.id)"
-        case .liveStream(let stream):
+        case let .liveStream(stream):
             return "live-\(stream.id)"
         }
     }
@@ -188,7 +190,7 @@ struct SearchResultRow: View {
                         .overlay {
                             ProgressView()
                         }
-                case .success(let image):
+                case let .success(image):
                     image
                         .resizable()
                         .aspectRatio(contentMode: .fill)
@@ -229,31 +231,31 @@ struct SearchResultRow: View {
 
     private var thumbnailURL: URL? {
         switch result {
-        case .movie(let movie):
+        case let .movie(movie):
             return URL(string: movie.streamIcon ?? "")
-        case .series(let series):
+        case let .series(series):
             return URL(string: series.cover ?? "")
-        case .liveStream(let stream):
+        case let .liveStream(stream):
             return URL(string: stream.streamIcon ?? "")
         }
     }
 
     private var title: String {
         switch result {
-        case .movie(let movie):
+        case let .movie(movie):
             return movie.name
-        case .series(let series):
+        case let .series(series):
             return series.name
-        case .liveStream(let stream):
+        case let .liveStream(stream):
             return stream.name
         }
     }
 
     private var subtitle: String {
         switch result {
-        case .movie(let movie):
+        case let .movie(movie):
             return movie.genre ?? movie.releaseDate ?? ""
-        case .series(let series):
+        case let .series(series):
             return series.genre ?? series.releaseDate ?? ""
         case .liveStream:
             return "Live"

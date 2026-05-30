@@ -22,13 +22,13 @@ enum XtreamError: LocalizedError {
             return "The server URL is invalid."
         case .authenticationFailed:
             return "Authentication failed. The provider rejected the request (this can also happen when the account's connection limit is reached)."
-        case .networkError(let error):
+        case let .networkError(error):
             return "Network error: \(error.localizedDescription)"
-        case .decodingError(let error):
+        case let .decodingError(error):
             return "Failed to read the server response: \(error.localizedDescription)"
         case .invalidResponse:
             return "Received an invalid response from the server."
-        case .serverError(let code):
+        case let .serverError(code):
             return "Server error (HTTP \(code))."
         }
     }
@@ -43,7 +43,7 @@ enum XtreamError: LocalizedError {
         case .networkError:
             // Timeouts, connection reset (RST), lost connection — transient.
             return true
-        case .serverError(let code):
+        case let .serverError(code):
             return code >= 500
         case .invalidURL, .authenticationFailed, .decodingError, .invalidResponse:
             return false
@@ -78,10 +78,10 @@ class XtreamClient: APIClient {
 
     init(configuration: Configuration, urlSession: URLSession? = nil) {
         self.configuration = configuration
-        self.session = urlSession ?? Self.makeSession(timeout: configuration.timeout)
+        session = urlSession ?? Self.makeSession(timeout: configuration.timeout)
     }
 
-    // Convenience initializer for backward compatibility
+    /// Convenience initializer for backward compatibility
     convenience init(urlSession: URLSession? = nil) {
         let config = Configuration(
             serverURL: "",
@@ -112,7 +112,7 @@ class XtreamClient: APIClient {
     private func buildURL(serverURL: String, path: String, queryItems: [URLQueryItem]) -> URL? {
         var components = URLComponents(string: serverURL)
         // Ensure the path is appended properly
-        if !(components?.path.hasSuffix("/") ?? false) && !path.hasPrefix("/") {
+        if !(components?.path.hasSuffix("/") ?? false), !path.hasPrefix("/") {
             components?.path.append("/")
         }
         components?.path.append(path)
@@ -173,7 +173,7 @@ class XtreamClient: APIClient {
             throw XtreamError.authenticationFailed
         }
 
-        guard (200...299).contains(httpResponse.statusCode) else {
+        guard (200 ... 299).contains(httpResponse.statusCode) else {
             throw XtreamError.serverError(httpResponse.statusCode)
         }
 
@@ -191,7 +191,7 @@ class XtreamClient: APIClient {
     func getInfo(playlist: Playlist) async throws -> XtreamAuthResponse {
         let queryItems = [
             URLQueryItem(name: "username", value: playlist.username),
-            URLQueryItem(name: "password", value: playlist.password)
+            URLQueryItem(name: "password", value: playlist.password),
         ]
 
         guard let url = buildURL(serverURL: playlist.serverURL, path: "player_api.php", queryItems: queryItems) else {
@@ -207,7 +207,7 @@ class XtreamClient: APIClient {
         let queryItems = [
             URLQueryItem(name: "username", value: playlist.username),
             URLQueryItem(name: "password", value: playlist.password),
-            URLQueryItem(name: "action", value: "get_live_categories")
+            URLQueryItem(name: "action", value: "get_live_categories"),
         ]
 
         guard let url = buildURL(serverURL: playlist.serverURL, path: "player_api.php", queryItems: queryItems) else {
@@ -222,7 +222,7 @@ class XtreamClient: APIClient {
         var queryItems = [
             URLQueryItem(name: "username", value: playlist.username),
             URLQueryItem(name: "password", value: playlist.password),
-            URLQueryItem(name: "action", value: "get_live_streams")
+            URLQueryItem(name: "action", value: "get_live_streams"),
         ]
         if let categoryId = categoryId {
             queryItems.append(URLQueryItem(name: "category_id", value: categoryId))
@@ -240,7 +240,7 @@ class XtreamClient: APIClient {
         let queryItems = [
             URLQueryItem(name: "username", value: playlist.username),
             URLQueryItem(name: "password", value: playlist.password),
-            URLQueryItem(name: "action", value: "get_vod_categories")
+            URLQueryItem(name: "action", value: "get_vod_categories"),
         ]
 
         guard let url = buildURL(serverURL: playlist.serverURL, path: "player_api.php", queryItems: queryItems) else {
@@ -255,7 +255,7 @@ class XtreamClient: APIClient {
         var queryItems = [
             URLQueryItem(name: "username", value: playlist.username),
             URLQueryItem(name: "password", value: playlist.password),
-            URLQueryItem(name: "action", value: "get_vod_streams")
+            URLQueryItem(name: "action", value: "get_vod_streams"),
         ]
         if let categoryId = categoryId {
             queryItems.append(URLQueryItem(name: "category_id", value: categoryId))
@@ -274,7 +274,7 @@ class XtreamClient: APIClient {
             URLQueryItem(name: "username", value: playlist.username),
             URLQueryItem(name: "password", value: playlist.password),
             URLQueryItem(name: "action", value: "get_vod_info"),
-            URLQueryItem(name: "vod_id", value: String(vodId))
+            URLQueryItem(name: "vod_id", value: String(vodId)),
         ]
 
         guard let url = buildURL(serverURL: playlist.serverURL, path: "player_api.php", queryItems: queryItems) else {
@@ -289,7 +289,7 @@ class XtreamClient: APIClient {
         let queryItems = [
             URLQueryItem(name: "username", value: playlist.username),
             URLQueryItem(name: "password", value: playlist.password),
-            URLQueryItem(name: "action", value: "get_series_categories")
+            URLQueryItem(name: "action", value: "get_series_categories"),
         ]
 
         guard let url = buildURL(serverURL: playlist.serverURL, path: "player_api.php", queryItems: queryItems) else {
@@ -304,7 +304,7 @@ class XtreamClient: APIClient {
         var queryItems = [
             URLQueryItem(name: "username", value: playlist.username),
             URLQueryItem(name: "password", value: playlist.password),
-            URLQueryItem(name: "action", value: "get_series")
+            URLQueryItem(name: "action", value: "get_series"),
         ]
         if let categoryId = categoryId {
             queryItems.append(URLQueryItem(name: "category_id", value: categoryId))
@@ -323,7 +323,7 @@ class XtreamClient: APIClient {
             URLQueryItem(name: "username", value: playlist.username),
             URLQueryItem(name: "password", value: playlist.password),
             URLQueryItem(name: "action", value: "get_series_info"),
-            URLQueryItem(name: "series_id", value: String(seriesId))
+            URLQueryItem(name: "series_id", value: String(seriesId)),
         ]
 
         guard let url = buildURL(serverURL: playlist.serverURL, path: "player_api.php", queryItems: queryItems) else {
@@ -339,7 +339,7 @@ class XtreamClient: APIClient {
             URLQueryItem(name: "username", value: playlist.username),
             URLQueryItem(name: "password", value: playlist.password),
             URLQueryItem(name: "action", value: "get_short_epg"),
-            URLQueryItem(name: "stream_id", value: String(streamId))
+            URLQueryItem(name: "stream_id", value: String(streamId)),
         ]
         if let limit = limit {
             queryItems.append(URLQueryItem(name: "limit", value: String(limit)))

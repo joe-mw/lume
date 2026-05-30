@@ -1,9 +1,8 @@
-import Testing
 import Foundation
 @testable import Lume
+import Testing
 
 struct PlayerSettingsTests {
-
     @Test func engineKindAllCases() {
         #expect(PlayerEngineKind.allCases.count == 2)
         #expect(PlayerEngineKind.ksPlayer.rawValue == "ksPlayer")

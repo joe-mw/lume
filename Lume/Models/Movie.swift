@@ -24,6 +24,7 @@ final class Movie {
     var youtubeTrailer: String?
 
     // MARK: TMDB enrichment (lazy-fetched on the detail screen)
+
     /// Wide landscape artwork path used for the detail hero (e.g. `/abc.jpg`).
     var backdropPath: String?
     var tagline: String?

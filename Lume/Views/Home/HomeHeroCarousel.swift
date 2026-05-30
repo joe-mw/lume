@@ -24,7 +24,9 @@ struct HeroMovie: Identifiable, Hashable {
     let backdropURL: URL?
     let overview: String
 
-    var id: String { movie.id }
+    var id: String {
+        movie.id
+    }
 
     /// Prefer the wide TMDB backdrop; fall back to the provider poster so a
     /// title without a backdrop still renders something.
@@ -45,9 +47,9 @@ struct HomeHeroCarousel: View {
     private let compactWidthThreshold: CGFloat = 600
 
     #if os(macOS)
-    private let heroHeight: CGFloat = 800
+        private let heroHeight: CGFloat = 800
     #else
-    private let heroHeight: CGFloat = 800
+        private let heroHeight: CGFloat = 800
     #endif
 
     private var currentHero: HeroMovie? {
@@ -96,7 +98,6 @@ struct HomeHeroCarousel: View {
 
     // MARK: - Scrolling artwork
 
-    @ViewBuilder
     private var artwork: some View {
         GeometryReader { proxy in
             let width = proxy.size.width
@@ -154,7 +155,8 @@ struct HomeHeroCarousel: View {
 
     private func advance() {
         guard let currentID,
-              let index = movies.firstIndex(where: { $0.id == currentID }) else {
+              let index = movies.firstIndex(where: { $0.id == currentID })
+        else {
             withAnimation(.easeInOut) { self.currentID = movies.first?.id }
             return
         }
@@ -187,7 +189,7 @@ struct HomeHeroCarousel: View {
             movie: Movie(id: "preview-hero-3", streamId: 3, name: "The Dark Knight"),
             backdropURL: nil,
             overview: "When the menace known as the Joker wreaks havoc on Gotham."
-        )
+        ),
     ]
     HomeHeroCarousel(movies: movies, onPlay: { _ in })
 }
@@ -209,7 +211,7 @@ private struct HeroBackdrop: View {
                     Rectangle()
                         .fill(Color.gray.opacity(0.25))
                         .overlay { ProgressView() }
-                case .success(let image):
+                case let .success(image):
                     image
                         .resizable()
                         .aspectRatio(contentMode: .fill)

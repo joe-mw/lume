@@ -6,8 +6,8 @@
 //  "Show All" navigates to the full category view.
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 struct SeriesView: View {
     @Namespace private var animationNamespace
@@ -88,9 +88,9 @@ struct SeriesView: View {
             }
             .navigationDestination(for: Series.self) { series in
                 SeriesDetailView(series: series, animationNamespace: animationNamespace)
-                    #if os(iOS)
+                #if os(iOS)
                     .navigationTransition(.zoom(sourceID: series.id, in: animationNamespace))
-                    #endif
+                #endif
             }
         }
     }

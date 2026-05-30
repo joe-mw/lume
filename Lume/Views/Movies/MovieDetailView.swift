@@ -8,13 +8,13 @@
 //  fetched lazily on appear and persisted, so revisits are instant.
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 #if canImport(UIKit)
-import UIKit
+    import UIKit
 #endif
 #if canImport(AppKit)
-import AppKit
+    import AppKit
 #endif
 
 struct MovieDetailView: View {
@@ -24,13 +24,13 @@ struct MovieDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     #if os(macOS)
-    @Environment(\.openWindow) private var openWindow
+        @Environment(\.openWindow) private var openWindow
     #endif
     @Query private var playlists: [Playlist]
 
     @State private var playingMedia: PlayableMedia?
     @State private var similar: [HomeMediaItem] = []
-    @State private var refreshToken: UUID = UUID()
+    @State private var refreshToken: UUID = .init()
 
     var body: some View {
         GeometryReader { proxy in
@@ -87,27 +87,26 @@ struct MovieDetailView: View {
         }
         .background(backgroundColor)
         #if os(iOS)
-        .toolbar(.hidden, for: .tabBar)
-        .navigationBarBackButtonHidden(true)
-        .toolbarBackground(.hidden, for: .navigationBar)
+            .toolbar(.hidden, for: .tabBar)
+            .navigationBarBackButtonHidden(true)
+            .toolbarBackground(.hidden, for: .navigationBar)
         #endif
-        .toolbar { toolbarContent }
-        .task(id: movie.id) {
-            await enrichIfNeeded()
-            resolveSimilar()
-        }
-        .onChange(of: movie.similarTMDBIds) { resolveSimilar() }
-        .onChange(of: refreshToken) { resolveSimilar() }
+            .toolbar { toolbarContent }
+            .task(id: movie.id) {
+                await enrichIfNeeded()
+                resolveSimilar()
+            }
+            .onChange(of: movie.similarTMDBIds) { resolveSimilar() }
+            .onChange(of: refreshToken) { resolveSimilar() }
         #if os(iOS)
-        .fullScreenCover(item: $playingMedia) { media in
-            FullScreenPlayerView(media: media)
-        }
+            .fullScreenCover(item: $playingMedia) { media in
+                FullScreenPlayerView(media: media)
+            }
         #endif
     }
 
     // MARK: - Sections
 
-    @ViewBuilder
     private func section<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             DetailSectionHeader(title: title)
@@ -162,42 +161,42 @@ struct MovieDetailView: View {
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         #if os(iOS)
-        ToolbarItem(placement: .topBarLeading) {
-            GlassIconButton(systemImage: "chevron.left", accessibilityLabel: "Back") {
-                dismiss()
+            ToolbarItem(placement: .topBarLeading) {
+                GlassIconButton(systemImage: "chevron.left", accessibilityLabel: "Back") {
+                    dismiss()
+                }
             }
-        }
-        ToolbarItem(placement: .topBarTrailing) {
-            HStack(spacing: 10) {
-                GlassIconButton(
-                    systemImage: movie.isWatched ? "checkmark.circle.fill" : "checkmark.circle",
-                    accessibilityLabel: movie.isWatched ? "Mark as unwatched" : "Mark as watched"
-                ) { toggleWatched() }
+            ToolbarItem(placement: .topBarTrailing) {
+                HStack(spacing: 10) {
+                    GlassIconButton(
+                        systemImage: movie.isWatched ? "checkmark.circle.fill" : "checkmark.circle",
+                        accessibilityLabel: movie.isWatched ? "Mark as unwatched" : "Mark as watched"
+                    ) { toggleWatched() }
 
-                GlassIconButton(
-                    systemImage: movie.isFavorite ? "heart.fill" : "heart",
-                    accessibilityLabel: movie.isFavorite ? "Remove from favorites" : "Add to favorites"
-                ) { toggleFavorite() }
+                    GlassIconButton(
+                        systemImage: movie.isFavorite ? "heart.fill" : "heart",
+                        accessibilityLabel: movie.isFavorite ? "Remove from favorites" : "Add to favorites"
+                    ) { toggleFavorite() }
+                }
             }
-        }
         #else
-        ToolbarItem(placement: .primaryAction) {
-            Button {
-                toggleWatched()
-            } label: {
-                Image(systemName: movie.isWatched ? "checkmark.circle.fill" : "checkmark.circle")
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    toggleWatched()
+                } label: {
+                    Image(systemName: movie.isWatched ? "checkmark.circle.fill" : "checkmark.circle")
+                }
+                .help(movie.isWatched ? "Mark as Unwatched" : "Mark as Watched")
             }
-            .help(movie.isWatched ? "Mark as Unwatched" : "Mark as Watched")
-        }
-        ToolbarItem(placement: .primaryAction) {
-            Button {
-                toggleFavorite()
-            } label: {
-                Image(systemName: movie.isFavorite ? "heart.fill" : "heart")
-                    .foregroundStyle(movie.isFavorite ? .red : .primary)
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    toggleFavorite()
+                } label: {
+                    Image(systemName: movie.isFavorite ? "heart.fill" : "heart")
+                        .foregroundStyle(movie.isFavorite ? .red : .primary)
+                }
+                .help(movie.isFavorite ? "Remove from Favorites" : "Add to Favorites")
             }
-            .help(movie.isFavorite ? "Remove from Favorites" : "Add to Favorites")
-        }
         #endif
     }
 
@@ -216,9 +215,9 @@ struct MovieDetailView: View {
 
     private var backgroundColor: Color {
         #if os(macOS)
-        Color(nsColor: .windowBackgroundColor)
+            Color(nsColor: .windowBackgroundColor)
         #else
-        Color(uiColor: .systemBackground)
+            Color(uiColor: .systemBackground)
         #endif
     }
 
@@ -234,7 +233,8 @@ struct MovieDetailView: View {
         guard let tmdbId = movie.tmdbId else { return }
         // Skip if enriched recently; backdrop/cast/similar rarely change.
         if let enrichedAt = movie.tmdbEnrichedAt,
-           Date().timeIntervalSince(enrichedAt) < 14 * 24 * 3600 {
+           Date().timeIntervalSince(enrichedAt) < 14 * 24 * 3600
+        {
             return
         }
         let manager = ContentSyncManager(modelContainer: modelContext.container)
@@ -283,18 +283,18 @@ struct MovieDetailView: View {
         guard let playlist = moviePlaylist,
               let media = PlayableMedia.from(movie: movie, playlist: playlist) else { return }
         #if os(macOS)
-        openWindow(id: "player", value: media)
+            openWindow(id: "player", value: media)
         #else
-        playingMedia = media
+            playingMedia = media
         #endif
     }
 
     private func openTrailer(_ trailer: String) {
         guard let url = URL(string: "https://www.youtube.com/watch?v=\(trailer)") else { return }
         #if os(iOS)
-        UIApplication.shared.open(url)
+            UIApplication.shared.open(url)
         #elseif os(macOS)
-        NSWorkspace.shared.open(url)
+            NSWorkspace.shared.open(url)
         #endif
     }
 

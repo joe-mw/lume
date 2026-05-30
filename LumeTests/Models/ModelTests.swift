@@ -1,10 +1,9 @@
-import Testing
 import Foundation
-import SwiftData
 @testable import Lume
+import SwiftData
+import Testing
 
 struct ModelTests {
-
     // MARK: - ModelContainer Setup
 
     @Test func modelContainerCreatesSuccessfully() throws {
@@ -56,7 +55,7 @@ struct ModelTests {
         let ctx2 = ModelContext(container)
         ctx2.autosaveEnabled = false
         let cat2 = Lume.Category(apiId: "1", name: "Updated", parentId: 0, type: .vod, playlist: playlist)
-        cat2.id = cat.id  // Same unique ID
+        cat2.id = cat.id // Same unique ID
         ctx2.insert(cat2)
         try ctx2.save()
 
@@ -139,7 +138,7 @@ struct ModelTests {
         let playlist = Playlist(name: "Test", serverURL: "http://x.com", username: "u", password: "p")
         #expect(playlist.syncEnabled == true)
         #expect(playlist.categories.isEmpty)
-        #expect(playlist.addedAt.timeIntervalSinceNow < 1)  // Created recently
+        #expect(playlist.addedAt.timeIntervalSinceNow < 1) // Created recently
     }
 
     // MARK: - Series

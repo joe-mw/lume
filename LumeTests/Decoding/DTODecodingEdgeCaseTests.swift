@@ -1,9 +1,8 @@
-import Testing
 import Foundation
 @testable import Lume
+import Testing
 
 struct DTODecodingEdgeCaseTests {
-
     // MARK: - XtreamEpisode ID/Season coercion
 
     @Test func episodeDecodesStringID() throws {
@@ -266,7 +265,7 @@ struct DTODecodingEdgeCaseTests {
         #expect(server.httpsPort == "443")
         #expect(server.serverProtocol == "http")
         #expect(server.timezone == "UTC")
-        #expect(server.timestampNow == 1700000000)
+        #expect(server.timestampNow == 1_700_000_000)
         #expect(server.timeNow == "2024-01-01 00:00:00")
     }
 }

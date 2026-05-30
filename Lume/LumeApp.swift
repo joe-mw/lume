@@ -5,8 +5,8 @@
 //  Created by Philipp Bischoff on 09.04.26.
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 @main
 struct LumeApp: App {
@@ -37,15 +37,15 @@ struct LumeApp: App {
         .modelContainer(sharedModelContainer)
 
         #if os(macOS)
-        WindowGroup(id: "player", for: PlayableMedia.self) { $media in
-            if let media {
-                FullScreenPlayerView(media: media)
-                    .frame(minWidth: 800, minHeight: 450)
+            WindowGroup(id: "player", for: PlayableMedia.self) { $media in
+                if let media {
+                    FullScreenPlayerView(media: media)
+                        .frame(minWidth: 800, minHeight: 450)
+                }
             }
-        }
-        .modelContainer(sharedModelContainer)
-        .windowStyle(.hiddenTitleBar)
-        .windowResizability(.contentMinSize)
+            .modelContainer(sharedModelContainer)
+            .windowStyle(.hiddenTitleBar)
+            .windowResizability(.contentMinSize)
         #endif
     }
 }

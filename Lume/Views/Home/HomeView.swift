@@ -11,14 +11,14 @@
 //  gracefully to a friendly empty state.
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 struct HomeView: View {
     @Namespace private var animationNamespace
     @Environment(\.modelContext) private var modelContext
     #if os(macOS)
-    @Environment(\.openWindow) private var openWindow
+        @Environment(\.openWindow) private var openWindow
     #endif
 
     @Query private var playlists: [Playlist]
@@ -128,37 +128,37 @@ struct HomeView: View {
             }
             .navigationTitle("Home")
             #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.hidden, for: .navigationBar)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbarBackground(.hidden, for: .navigationBar)
             #endif
-            .libraryToolbar(
-                playlists: playlists,
-                selectedPlaylistID: $selectedPlaylistID,
-                categorySortRaw: $categorySortRaw,
-                contentSortRaw: $contentSortRaw,
-                showingSync: $showingSync,
-                showingSettings: $showingSettings,
-                activePlaylist: activePlaylist
-            )
-            .navigationDestination(for: Movie.self) { movie in
-                MovieDetailView(movie: movie, animationNamespace: animationNamespace)
+                .libraryToolbar(
+                    playlists: playlists,
+                    selectedPlaylistID: $selectedPlaylistID,
+                    categorySortRaw: $categorySortRaw,
+                    contentSortRaw: $contentSortRaw,
+                    showingSync: $showingSync,
+                    showingSettings: $showingSettings,
+                    activePlaylist: activePlaylist
+                )
+                .navigationDestination(for: Movie.self) { movie in
+                    MovieDetailView(movie: movie, animationNamespace: animationNamespace)
                     #if os(iOS)
-                    .navigationTransition(.zoom(sourceID: movie.id, in: animationNamespace))
+                        .navigationTransition(.zoom(sourceID: movie.id, in: animationNamespace))
                     #endif
-            }
-            .navigationDestination(for: Series.self) { series in
-                SeriesDetailView(series: series, animationNamespace: animationNamespace)
+                }
+                .navigationDestination(for: Series.self) { series in
+                    SeriesDetailView(series: series, animationNamespace: animationNamespace)
                     #if os(iOS)
-                    .navigationTransition(.zoom(sourceID: series.id, in: animationNamespace))
+                        .navigationTransition(.zoom(sourceID: series.id, in: animationNamespace))
                     #endif
-            }
-            .task(id: "\(playlists.count)-\(selectedPlaylistID)") {
-                await loadTrending()
-            }
+                }
+                .task(id: "\(playlists.count)-\(selectedPlaylistID)") {
+                    await loadTrending()
+                }
             #if os(iOS)
-            .fullScreenCover(item: $playingMedia) { media in
-                FullScreenPlayerView(media: media)
-            }
+                .fullScreenCover(item: $playingMedia) { media in
+                    FullScreenPlayerView(media: media)
+                }
             #endif
         }
     }
@@ -267,9 +267,9 @@ struct HomeView: View {
         guard let playlist = activePlaylist,
               let media = PlayableMedia.from(stream: stream, playlist: playlist) else { return }
         #if os(macOS)
-        openWindow(id: "player", value: media)
+            openWindow(id: "player", value: media)
         #else
-        playingMedia = media
+            playingMedia = media
         #endif
     }
 
@@ -277,9 +277,9 @@ struct HomeView: View {
         guard let playlist = activePlaylist,
               let media = PlayableMedia.from(movie: movie, playlist: playlist) else { return }
         #if os(macOS)
-        openWindow(id: "player", value: media)
+            openWindow(id: "player", value: media)
         #else
-        playingMedia = media
+            playingMedia = media
         #endif
     }
 }
@@ -311,33 +311,33 @@ enum HomeMediaItem: Identifiable, Hashable {
 
     var id: String {
         switch self {
-        case .movie(let movie): return "movie-\(movie.id)"
-        case .series(let series): return "series-\(series.id)"
-        case .live(let stream): return "live-\(stream.id)"
+        case let .movie(movie): return "movie-\(movie.id)"
+        case let .series(series): return "series-\(series.id)"
+        case let .live(stream): return "live-\(stream.id)"
         }
     }
 
     var title: String {
         switch self {
-        case .movie(let movie): return movie.name
-        case .series(let series): return series.name
-        case .live(let stream): return stream.name
+        case let .movie(movie): return movie.name
+        case let .series(series): return series.name
+        case let .live(stream): return stream.name
         }
     }
 
     var imageURL: URL? {
         switch self {
-        case .movie(let movie): return URL(string: movie.streamIcon ?? "")
-        case .series(let series): return URL(string: series.cover ?? "")
-        case .live(let stream): return URL(string: stream.streamIcon ?? "")
+        case let .movie(movie): return URL(string: movie.streamIcon ?? "")
+        case let .series(series): return URL(string: series.cover ?? "")
+        case let .live(stream): return URL(string: stream.streamIcon ?? "")
         }
     }
 
     var lastWatchedDate: Date? {
         switch self {
-        case .movie(let movie): return movie.lastWatchedDate
-        case .series(let series): return series.lastWatchedDate
-        case .live(let stream): return stream.lastWatchedDate
+        case let .movie(movie): return movie.lastWatchedDate
+        case let .series(series): return series.lastWatchedDate
+        case let .live(stream): return stream.lastWatchedDate
         }
     }
 
@@ -348,7 +348,7 @@ enum HomeMediaItem: Identifiable, Hashable {
 
     /// Resume fraction for partially-watched movies (0...1), otherwise nil.
     var progress: Double? {
-        guard case .movie(let movie) = self,
+        guard case let .movie(movie) = self,
               let duration = movie.durationSecs, duration > 0,
               movie.watchProgress > 0, !movie.isWatched else { return nil }
         return min(movie.watchProgress / Double(duration), 1)
@@ -390,19 +390,19 @@ private struct HomeItemCell: View {
 
     var body: some View {
         switch item {
-        case .movie(let movie):
+        case let .movie(movie):
             NavigationLink(value: movie) {
                 HomePosterCard(title: item.title, imageURL: item.imageURL, progress: item.progress)
                     .matchedTransitionSourceIfAvailable(id: movie.id, in: animationNamespace)
             }
             .buttonStyle(.plain)
-        case .series(let series):
+        case let .series(series):
             NavigationLink(value: series) {
                 HomePosterCard(title: item.title, imageURL: item.imageURL)
                     .matchedTransitionSourceIfAvailable(id: series.id, in: animationNamespace)
             }
             .buttonStyle(.plain)
-        case .live(let stream):
+        case let .live(stream):
             Button {
                 onPlayLive(stream)
             } label: {
@@ -432,7 +432,7 @@ private struct HomePosterCard: View {
                         Rectangle()
                             .fill(Color.gray.opacity(0.3))
                             .overlay { ProgressView() }
-                    case .success(let image):
+                    case let .success(image):
                         image
                             .resizable()
                             .aspectRatio(contentMode: isLive ? .fit : .fill)

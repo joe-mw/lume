@@ -1,6 +1,6 @@
-import SwiftUI
-import AVKit
 import AVFoundation
+import AVKit
+import SwiftUI
 
 /// AVPlayer-backed video host.
 ///
@@ -15,9 +15,9 @@ struct AVPlayerEngineView: View {
 
     var body: some View {
         #if os(iOS) || os(visionOS) || targetEnvironment(macCatalyst)
-        AVPlayerControllerHost(media: media, currentTime: $currentTime, duration: $duration)
+            AVPlayerControllerHost(media: media, currentTime: $currentTime, duration: $duration)
         #else
-        AVPlayerVideoHost(media: media, currentTime: $currentTime, duration: $duration)
+            AVPlayerVideoHost(media: media, currentTime: $currentTime, duration: $duration)
         #endif
     }
 }
@@ -46,8 +46,8 @@ final class PlayerObservation {
         let item = AVPlayerItem(asset: asset)
         item.preferredForwardBufferDuration = media.isLive ? 4 : 8
         self.item = item
-        self.isLive = media.isLive
-        self.startTime = media.startTime
+        isLive = media.isLive
+        startTime = media.startTime
 
         let player = AVPlayer(playerItem: item)
         player.automaticallyWaitsToMinimizeStalling = true
@@ -123,79 +123,79 @@ final class PlayerObservation {
 // MARK: - iOS / visionOS / Mac Catalyst
 
 #if os(iOS) || os(visionOS) || targetEnvironment(macCatalyst)
-private struct AVPlayerControllerHost: UIViewControllerRepresentable {
-    let media: PlayableMedia
-    @Binding var currentTime: TimeInterval
-    @Binding var duration: TimeInterval
+    private struct AVPlayerControllerHost: UIViewControllerRepresentable {
+        let media: PlayableMedia
+        @Binding var currentTime: TimeInterval
+        @Binding var duration: TimeInterval
 
-    func makeCoordinator() -> Coordinator {
-        Coordinator(media: media)
-    }
-
-    func makeUIViewController(context: Context) -> AVPlayerViewController {
-        let controller = AVPlayerViewController()
-        controller.allowsPictureInPicturePlayback = true
-        controller.canStartPictureInPictureAutomaticallyFromInline = true
-        controller.entersFullScreenWhenPlaybackBegins = false
-        controller.exitsFullScreenWhenPlaybackEnds = false
-        controller.showsPlaybackControls = true
-        controller.videoGravity = .resizeAspect
-        controller.updatesNowPlayingInfoCenter = true
-        controller.player = context.coordinator.observation.player
-
-        context.coordinator.observation.onTime = { currentTime = $0 }
-        context.coordinator.observation.onDuration = { duration = $0 }
-        context.coordinator.observation.startPlayback()
-        return controller
-    }
-
-    func updateUIViewController(_ uiViewController: AVPlayerViewController, context: Context) {}
-
-    static func dismantleUIViewController(_ controller: AVPlayerViewController, coordinator: Coordinator) {
-        MainActor.assumeIsolated {
-            coordinator.observation.tearDown()
+        func makeCoordinator() -> Coordinator {
+            Coordinator(media: media)
         }
-        controller.player = nil
-    }
 
-    final class Coordinator {
-        let observation: PlayerObservation
-        init(media: PlayableMedia) {
-            self.observation = PlayerObservation(media: media)
+        func makeUIViewController(context: Context) -> AVPlayerViewController {
+            let controller = AVPlayerViewController()
+            controller.allowsPictureInPicturePlayback = true
+            controller.canStartPictureInPictureAutomaticallyFromInline = true
+            controller.entersFullScreenWhenPlaybackBegins = false
+            controller.exitsFullScreenWhenPlaybackEnds = false
+            controller.showsPlaybackControls = true
+            controller.videoGravity = .resizeAspect
+            controller.updatesNowPlayingInfoCenter = true
+            controller.player = context.coordinator.observation.player
+
+            context.coordinator.observation.onTime = { currentTime = $0 }
+            context.coordinator.observation.onDuration = { duration = $0 }
+            context.coordinator.observation.startPlayback()
+            return controller
+        }
+
+        func updateUIViewController(_: AVPlayerViewController, context _: Context) {}
+
+        static func dismantleUIViewController(_ controller: AVPlayerViewController, coordinator: Coordinator) {
+            MainActor.assumeIsolated {
+                coordinator.observation.tearDown()
+            }
+            controller.player = nil
+        }
+
+        final class Coordinator {
+            let observation: PlayerObservation
+            init(media: PlayableMedia) {
+                observation = PlayerObservation(media: media)
+            }
         }
     }
-}
 #endif
 
 // MARK: - AppKit macOS fallback
 
 #if os(macOS) && !targetEnvironment(macCatalyst)
-private struct AVPlayerVideoHost: View {
-    let media: PlayableMedia
-    @Binding var currentTime: TimeInterval
-    @Binding var duration: TimeInterval
+    private struct AVPlayerVideoHost: View {
+        let media: PlayableMedia
+        @Binding var currentTime: TimeInterval
+        @Binding var duration: TimeInterval
 
-    @State private var observation: PlayerObservation
+        @State private var observation: PlayerObservation
 
-    init(media: PlayableMedia, currentTime: Binding<TimeInterval>, duration: Binding<TimeInterval>) {
-        self.media = media
-        self._currentTime = currentTime
-        self._duration = duration
-        self._observation = State(initialValue: PlayerObservation(media: media))
+        init(media: PlayableMedia, currentTime: Binding<TimeInterval>, duration: Binding<TimeInterval>) {
+            self.media = media
+            _currentTime = currentTime
+            _duration = duration
+            _observation = State(initialValue: PlayerObservation(media: media))
+        }
+
+        var body: some View {
+            VideoPlayer(player: observation.player)
+                .onAppear {
+                    observation.onTime = { currentTime = $0 }
+                    observation.onDuration = { duration = $0 }
+                    observation.startPlayback()
+                }
+                .onDisappear {
+                    observation.tearDown()
+                }
+        }
     }
-
-    var body: some View {
-        VideoPlayer(player: observation.player)
-            .onAppear {
-                observation.onTime = { currentTime = $0 }
-                observation.onDuration = { duration = $0 }
-                observation.startPlayback()
-            }
-            .onDisappear {
-                observation.tearDown()
-            }
-    }
-}
 #endif
 
 #Preview {

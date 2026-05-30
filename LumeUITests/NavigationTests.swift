@@ -1,7 +1,6 @@
 import XCTest
 
 final class NavigationTests: XCTestCase {
-
     private var app: XCUIApplication!
 
     override func setUpWithError() throws {
@@ -11,12 +10,12 @@ final class NavigationTests: XCTestCase {
         app.launch()
     }
 
-    func testTabBarExists() throws {
+    func testTabBarExists() {
         let tabBar = app.tabBars.firstMatch
         XCTAssertTrue(tabBar.waitForExistence(timeout: 5))
     }
 
-    func testNavigationToMovies() throws {
+    func testNavigationToMovies() {
         let moviesTab = app.tabBars.buttons["Movies"]
         XCTAssertTrue(moviesTab.waitForExistence(timeout: 5))
         moviesTab.tap()
@@ -25,7 +24,7 @@ final class NavigationTests: XCTestCase {
         XCTAssertTrue(moviesTitle.waitForExistence(timeout: 3))
     }
 
-    func testNavigationToSeries() throws {
+    func testNavigationToSeries() {
         let seriesTab = app.tabBars.buttons["Series"]
         XCTAssertTrue(seriesTab.waitForExistence(timeout: 5))
         seriesTab.tap()
@@ -34,7 +33,7 @@ final class NavigationTests: XCTestCase {
         XCTAssertTrue(seriesTitle.waitForExistence(timeout: 3))
     }
 
-    func testNavigationToLiveTV() throws {
+    func testNavigationToLiveTV() {
         let liveTab = app.tabBars.buttons["Live TV"]
         XCTAssertTrue(liveTab.waitForExistence(timeout: 5))
         liveTab.tap()
@@ -43,7 +42,7 @@ final class NavigationTests: XCTestCase {
         XCTAssertTrue(liveTitle.waitForExistence(timeout: 3))
     }
 
-    func testNavigationToSettings() throws {
+    func testNavigationToSettings() {
         let settingsTab = app.tabBars.buttons["Settings"]
         XCTAssertTrue(settingsTab.waitForExistence(timeout: 5))
         settingsTab.tap()
@@ -52,7 +51,7 @@ final class NavigationTests: XCTestCase {
         XCTAssertTrue(settingsTitle.waitForExistence(timeout: 3))
     }
 
-    func testAllTabsAreAccessible() throws {
+    func testAllTabsAreAccessible() {
         let tabs = app.tabBars.buttons
         XCTAssertTrue(tabs["Movies"].exists)
         XCTAssertTrue(tabs["Series"].exists)

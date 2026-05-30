@@ -20,8 +20,7 @@ enum TMDBError: Error {
     case decodingError(Error)
 }
 
-/// Read-only TMDB API client. Only the endpoints the home screen needs are
-/// implemented (trending). Mirrors `XtreamClient`'s direct async/await style.
+/// Read-only TMDB API client. Only the endpoints the home screen needs are implemented (trending)
 struct TMDBClient {
     static let shared = TMDBClient()
 
@@ -125,7 +124,7 @@ struct TMDBClient {
         guard let http = response as? HTTPURLResponse else {
             throw TMDBError.invalidResponse
         }
-        guard (200...299).contains(http.statusCode) else {
+        guard (200 ... 299).contains(http.statusCode) else {
             throw TMDBError.serverError(http.statusCode)
         }
 
@@ -140,7 +139,7 @@ struct TMDBClient {
 // MARK: - Public types
 
 /// A trending title with the metadata the home hero carousel renders.
-struct TrendingTitle: Sendable, Identifiable, Hashable {
+struct TrendingTitle: Identifiable, Hashable {
     let id: Int
     let title: String
     let overview: String
@@ -150,7 +149,7 @@ struct TrendingTitle: Sendable, Identifiable, Hashable {
 /// Normalized TMDB detail payload shared by movies and series. Empty/absent
 /// fields are represented as nil / empty arrays so callers can fill gaps in
 /// provider metadata without special-casing the media type.
-struct TMDBTitleDetails: Sendable {
+struct TMDBTitleDetails {
     var backdropPath: String?
     var tagline: String?
     var overview: String?
@@ -163,7 +162,7 @@ struct TMDBTitleDetails: Sendable {
 }
 
 /// One billed performer from TMDB credits.
-struct TMDBCastMember: Sendable, Hashable {
+struct TMDBCastMember: Hashable {
     let tmdbPersonId: Int
     let name: String
     let character: String?
@@ -186,6 +185,7 @@ private struct TrendingResponse: Decodable {
             case backdropPath = "backdrop_path"
         }
     }
+
     let results: [Item]
 }
 
@@ -197,12 +197,12 @@ private struct TitleDetailsResponse: Decodable {
     let tagline: String?
     let overview: String?
     let voteAverage: Double?
-    let runtime: Int?               // movies
-    let episodeRunTime: [Int]?      // tv
+    let runtime: Int? // movies
+    let episodeRunTime: [Int]? // tv
     let genres: [Genre]?
     let credits: Credits?
     let similar: Similar?
-    let releaseDates: Results<ReleaseDatesEntry>?   // movies
+    let releaseDates: Results<ReleaseDatesEntry>? // movies
     let contentRatings: Results<ContentRatingEntry>? // tv
 
     struct Genre: Decodable { let name: String }
@@ -218,10 +218,12 @@ private struct TitleDetailsResponse: Decodable {
             case profilePath = "profile_path"
         }
     }
+
     struct Similar: Decodable {
         struct Item: Decodable { let id: Int }
         let results: [Item]
     }
+
     struct Results<Entry: Decodable>: Decodable { let results: [Entry] }
     struct ReleaseDatesEntry: Decodable {
         let iso3166_1: String
@@ -232,6 +234,7 @@ private struct TitleDetailsResponse: Decodable {
             case releaseDates = "release_dates"
         }
     }
+
     struct ContentRatingEntry: Decodable {
         let iso3166_1: String
         let rating: String?

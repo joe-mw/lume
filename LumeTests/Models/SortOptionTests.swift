@@ -1,9 +1,8 @@
-import Testing
 import Foundation
 @testable import Lume
+import Testing
 
 struct SortOptionTests {
-
     // MARK: - CategorySortOption
 
     @Test func categorySortPlaylistOrder() {
@@ -49,9 +48,9 @@ struct SortOptionTests {
     @Test func movieSortPlaylistOrder() {
         let movies = makeUnsortedMovies()
         let sorted = movies.sorted(using: ContentSortOption.playlist.movieDescriptors)
-        #expect(sorted[0].streamId == 2)  // num=1
-        #expect(sorted[1].streamId == 1)  // num=2
-        #expect(sorted[2].streamId == 3)  // num=3
+        #expect(sorted[0].streamId == 2) // num=1
+        #expect(sorted[1].streamId == 1) // num=2
+        #expect(sorted[2].streamId == 3) // num=3
     }
 
     @Test func movieSortNameAscending() {
@@ -89,7 +88,7 @@ struct SortOptionTests {
     @Test func seriesSortPlaylistOrder() {
         let series = makeUnsortedSeries()
         let sorted = series.sorted(using: ContentSortOption.playlist.seriesDescriptors)
-        #expect(sorted[0].name == "First")     // num=0
+        #expect(sorted[0].name == "First") // num=0
         #expect(sorted[1].name == "Alpha Series") // num=1, name before "Second"
     }
 

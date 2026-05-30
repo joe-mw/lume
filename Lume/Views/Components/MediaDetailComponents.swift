@@ -15,7 +15,7 @@ extension View {
     @ViewBuilder
     func matchedTransitionSourceIfAvailable(id: some Hashable, in namespace: Namespace.ID?) -> some View {
         if let ns = namespace {
-            self.matchedTransitionSource(id: id, in: ns)
+            matchedTransitionSource(id: id, in: ns)
         } else {
             self
         }
@@ -34,10 +34,10 @@ enum DetailMetrics {
     /// the whole screen.
     static func heroHeight(for size: CGSize) -> CGFloat {
         #if os(macOS)
-        return min(max(size.height * 0.58, 360), 620)
+            return min(max(size.height * 0.58, 360), 620)
         #else
-        // Roughly 58% of the screen, but never so tall the synopsis is offscreen.
-        return min(size.height * 0.58, size.width * 1.25)
+            // Roughly 58% of the screen, but never so tall the synopsis is offscreen.
+            return min(size.height * 0.58, size.width * 1.25)
         #endif
     }
 }
@@ -57,7 +57,7 @@ struct BackdropImage: View {
                 case .empty:
                     Rectangle().fill(Color.gray.opacity(0.25))
                         .overlay { ProgressView() }
-                case .success(let image):
+                case let .success(image):
                     image.resizable().aspectRatio(contentMode: .fill)
                         .frame(width: geo.size.width, height: geo.size.height)
                         .clipped()
@@ -267,7 +267,9 @@ struct ExpandableText: View {
 
     @State private var isExpanded = false
 
-    private var isExpandable: Bool { text.count > 160 }
+    private var isExpandable: Bool {
+        text.count > 160
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -313,7 +315,7 @@ private struct CastCard: View {
         VStack(spacing: 8) {
             AsyncImage(url: TMDBClient.profileURL(member.profilePath)) { phase in
                 switch phase {
-                case .success(let image):
+                case let .success(image):
                     image.resizable().aspectRatio(contentMode: .fill)
                 case .empty where member.profilePath != nil:
                     Rectangle().fill(Color.gray.opacity(0.25)).overlay { ProgressView() }
@@ -360,13 +362,13 @@ struct SimilarRow: View {
             HStack(spacing: 16) {
                 ForEach(items) { item in
                     switch item {
-                    case .movie(let movie):
+                    case let .movie(movie):
                         NavigationLink(value: movie) {
                             DetailPosterCard(title: item.title, imageURL: item.imageURL)
                                 .matchedTransitionSourceIfAvailable(id: movie.id, in: animationNamespace)
                         }
                         .buttonStyle(.plain)
-                    case .series(let series):
+                    case let .series(series):
                         NavigationLink(value: series) {
                             DetailPosterCard(title: item.title, imageURL: item.imageURL)
                                 .matchedTransitionSourceIfAvailable(id: series.id, in: animationNamespace)
@@ -393,7 +395,7 @@ struct DetailPosterCard: View {
                 switch phase {
                 case .empty:
                     Rectangle().fill(Color.gray.opacity(0.3)).overlay { ProgressView() }
-                case .success(let image):
+                case let .success(image):
                     image.resizable().aspectRatio(contentMode: .fill)
                 case .failure:
                     Rectangle().fill(Color.gray.opacity(0.3))

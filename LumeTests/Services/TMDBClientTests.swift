@@ -1,9 +1,8 @@
-import Testing
 import Foundation
 @testable import Lume
+import Testing
 
 struct TMDBClientTests {
-
     // MARK: - isConfigured
 
     @Test func notConfiguredWhenTokenIsNil() {

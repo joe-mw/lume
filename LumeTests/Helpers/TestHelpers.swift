@@ -1,6 +1,6 @@
 import Foundation
-import SwiftData
 @testable import Lume
+import SwiftData
 
 func makeTestContainer() throws -> ModelContainer {
     let schema = Schema([

@@ -12,7 +12,7 @@ import Observation
 
 // MARK: - Sync Steps
 
-enum SyncStep: Int, CaseIterable, Identifiable, Sendable {
+enum SyncStep: Int, CaseIterable, Identifiable {
     case authenticating
     case movieCategories
     case seriesCategories
@@ -21,7 +21,9 @@ enum SyncStep: Int, CaseIterable, Identifiable, Sendable {
     case series
     case liveStreams
 
-    var id: Int { rawValue }
+    var id: Int {
+        rawValue
+    }
 
     var title: String {
         switch self {
@@ -50,7 +52,7 @@ enum SyncStep: Int, CaseIterable, Identifiable, Sendable {
 
 // MARK: - Step state
 
-enum SyncStepState: Sendable {
+enum SyncStepState {
     case pending
     case active
     case completed

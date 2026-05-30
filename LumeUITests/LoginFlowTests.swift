@@ -3,7 +3,6 @@ import XCTest
 /// Tests the initial state when the app launches with a seeded playlist.
 /// The login form is bypassed via the -ui-testing launch argument.
 final class LoginFlowTests: XCTestCase {
-
     private var app: XCUIApplication!
 
     override func setUpWithError() throws {
@@ -13,13 +12,13 @@ final class LoginFlowTests: XCTestCase {
         app.launch()
     }
 
-    func testAppShowsSeededPlaylist() throws {
+    func testAppShowsSeededPlaylist() {
         let addPlaylistButton = app.buttons["Add Playlist"]
         // The seeded playlist means the main tabs appear, not the login form
         XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 5))
     }
 
-    func testTabBarShowsAllTabs() throws {
+    func testTabBarShowsAllTabs() {
         XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 3))
         XCTAssertTrue(app.tabBars.buttons["Movies"].exists)
         XCTAssertTrue(app.tabBars.buttons["Series"].exists)
@@ -27,19 +26,19 @@ final class LoginFlowTests: XCTestCase {
         XCTAssertTrue(app.tabBars.buttons["Settings"].exists)
     }
 
-    func testAddPlaylistButtonAvailableInSettings() throws {
+    func testAddPlaylistButtonAvailableInSettings() {
         app.tabBars.buttons["Settings"].tap()
         let addButton = app.buttons["Add Playlist"]
         XCTAssertTrue(addButton.waitForExistence(timeout: 3))
     }
 
-    func testSeededPlaylistNameVisible() throws {
+    func testSeededPlaylistNameVisible() {
         app.tabBars.buttons["Settings"].tap()
         let playlistName = app.staticTexts["Test Playlist"]
         XCTAssertTrue(playlistName.waitForExistence(timeout: 3))
     }
 
-    func testPlaylistCanBeDeleted() throws {
+    func testPlaylistCanBeDeleted() {
         app.tabBars.buttons["Settings"].tap()
         let playlistName = app.staticTexts["Test Playlist"]
         XCTAssertTrue(playlistName.waitForExistence(timeout: 3))
@@ -48,7 +47,7 @@ final class LoginFlowTests: XCTestCase {
         XCTAssertTrue(deleteButton.waitForExistence(timeout: 2))
     }
 
-    func testServerConnectionNotVisibleWithSeededData() throws {
+    func testServerConnectionNotVisibleWithSeededData() {
         let header = app.staticTexts["Server Connection"]
         XCTAssertFalse(header.waitForExistence(timeout: 2))
     }

@@ -1,5 +1,5 @@
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 struct PlaylistDetailView: View {
     @Environment(\.modelContext) private var modelContext
@@ -53,36 +53,35 @@ struct PlaylistDetailView: View {
         #endif
         .navigationTitle(playlist.name)
         #if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.inline)
         #endif
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                if isEditing {
-                    Button("Done") { saveChanges() }
-                } else {
-                    Button("Edit") { startEditing() }
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    if isEditing {
+                        Button("Done") { saveChanges() }
+                    } else {
+                        Button("Edit") { startEditing() }
+                    }
+                }
+                ToolbarItem(placement: .cancellationAction) {
+                    if isEditing {
+                        Button("Cancel") { cancelEditing() }
+                    }
                 }
             }
-            ToolbarItem(placement: .cancellationAction) {
-                if isEditing {
-                    Button("Cancel") { cancelEditing() }
-                }
+            .alert("Delete Playlist", isPresented: $showDeleteConfirmation) {
+                Button("Cancel", role: .cancel) {}
+                Button("Delete", role: .destructive) { deletePlaylist() }
+            } message: {
+                Text("All synced content for this playlist will also be removed.")
             }
-        }
-        .alert("Delete Playlist", isPresented: $showDeleteConfirmation) {
-            Button("Cancel", role: .cancel) { }
-            Button("Delete", role: .destructive) { deletePlaylist() }
-        } message: {
-            Text("All synced content for this playlist will also be removed.")
-        }
-        .sheet(isPresented: $showSync) {
-            SyncProgressView(playlist: playlist, isPresented: $showSync)
-        }
+            .sheet(isPresented: $showSync) {
+                SyncProgressView(playlist: playlist, isPresented: $showSync)
+            }
     }
 
     // MARK: - Server Section (Read-only)
 
-    @ViewBuilder
     private var readOnlySection: some View {
         Section("Server") {
             LabeledContent("Name", value: playlist.name)
@@ -106,21 +105,20 @@ struct PlaylistDetailView: View {
 
     // MARK: - Server Section (Editing)
 
-    @ViewBuilder
     private var editingSection: some View {
         Section("Server") {
             TextField("Name", text: $editName)
             TextField("Server URL", text: $editServerURL)
-                #if os(iOS)
+            #if os(iOS)
                 .textInputAutocapitalization(.never)
                 .keyboardType(.URL)
-                #endif
+            #endif
                 .autocorrectionDisabled()
                 .textContentType(.URL)
             TextField("Username", text: $editUsername)
-                #if os(iOS)
+            #if os(iOS)
                 .textInputAutocapitalization(.never)
-                #endif
+            #endif
                 .autocorrectionDisabled()
                 .textContentType(.username)
             SecureField("Password", text: $editPassword)
@@ -130,7 +128,6 @@ struct PlaylistDetailView: View {
 
     // MARK: - Sync Section
 
-    @ViewBuilder
     private var syncSection: some View {
         Section("Sync") {
             Toggle("Sync Enabled", isOn: $playlist.syncEnabled)

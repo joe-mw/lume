@@ -5,13 +5,12 @@
 //  Tests that content sync processes large datasets with bounded memory and speed.
 //
 
-import Testing
 import Foundation
-import SwiftData
 @testable import Lume
+import SwiftData
+import Testing
 
 struct ContentSyncTests {
-
     private func makeContainer() throws -> ModelContainer {
         let schema = Schema([
             Playlist.self,
@@ -28,7 +27,7 @@ struct ContentSyncTests {
 
     // MARK: - Large Dataset Performance
 
-    @Test func syncMoviesFromExampleJSON() async throws {
+    @Test func syncMoviesFromExampleJSON() throws {
         let movies: [XtreamVODStream] = try loadExampleJSON("Movies.json")
         #expect(movies.count > 10000, "Expected at least 10,000 movies in example data, got \(movies.count)")
 
@@ -48,7 +47,7 @@ struct ContentSyncTests {
         for batchStart in stride(from: 0, to: totalCount, by: batchSize) {
             try autoreleasepool {
                 let batchEnd = min(batchStart + batchSize, totalCount)
-                let batch = movies[batchStart..<batchEnd]
+                let batch = movies[batchStart ..< batchEnd]
 
                 let context = ModelContext(container)
                 context.autosaveEnabled = false
@@ -95,13 +94,13 @@ struct ContentSyncTests {
 
     // MARK: - Upsert
 
-    @Test func syncMoviesUpsertDoesNotDuplicate() async throws {
+    @Test func syncMoviesUpsertDoesNotDuplicate() throws {
         let container = try makeContainer()
         let playlistId = UUID()
 
         let ctx1 = ModelContext(container)
         ctx1.autosaveEnabled = false
-        for i in 0..<100 {
+        for i in 0 ..< 100 {
             let movie = Movie(id: "\(playlistId)-movie-\(i)", streamId: i, name: "Movie \(i)")
             ctx1.insert(movie)
         }
@@ -109,7 +108,7 @@ struct ContentSyncTests {
 
         let ctx2 = ModelContext(container)
         ctx2.autosaveEnabled = false
-        for i in 0..<100 {
+        for i in 0 ..< 100 {
             let movie = Movie(id: "\(playlistId)-movie-\(i)", streamId: i, name: "Updated Movie \(i)")
             ctx2.insert(movie)
         }
@@ -122,7 +121,7 @@ struct ContentSyncTests {
 
     // MARK: - Batch Edge Cases
 
-    @Test func emptyDatasetHandledGracefully() async throws {
+    @Test func emptyDatasetHandledGracefully() throws {
         let container = try makeContainer()
         let context = ModelContext(container)
         let playlist = Playlist(name: "Test", serverURL: "http://x.com", username: "u", password: "p")
@@ -133,7 +132,7 @@ struct ContentSyncTests {
         #expect(count == 0)
     }
 
-    @Test func singleItemInBatch() async throws {
+    @Test func singleItemInBatch() throws {
         let container = try makeContainer()
         let context = ModelContext(container)
         let playlist = Playlist(name: "Test", serverURL: "http://x.com", username: "u", password: "p")
@@ -150,7 +149,7 @@ struct ContentSyncTests {
 
     // MARK: - ID Construction
 
-    @Test func movieIDUsesPlaylistPrefix() throws {
+    @Test func movieIDUsesPlaylistPrefix() {
         let playlistId = UUID()
         let streamId = 12345
         let movieId = "\(playlistId.uuidString)-movie-\(streamId)"
@@ -158,7 +157,7 @@ struct ContentSyncTests {
         #expect(movieId.hasSuffix("-movie-12345"))
     }
 
-    @Test func categoryIDMatchesContentSyncManagerPattern() throws {
+    @Test func categoryIDMatchesContentSyncManagerPattern() {
         let playlistId = UUID()
         let categoryId = "117"
         let expected = "\(playlistId.uuidString)-vod-\(categoryId)"
@@ -167,7 +166,7 @@ struct ContentSyncTests {
 
     // MARK: - Playlist State Transitions
 
-    @Test func playlistSyncStatusTransitions() async throws {
+    @Test func playlistSyncStatusTransitions() throws {
         let container = try makeContainer()
         let context = ModelContext(container)
         let playlist = Playlist(name: "Test", serverURL: "http://x.com", username: "u", password: "p")
@@ -185,7 +184,7 @@ struct ContentSyncTests {
         #expect(playlist.lastSyncDate != nil)
     }
 
-    @Test func playlistErrorStatusPersists() async throws {
+    @Test func playlistErrorStatusPersists() throws {
         let container = try makeContainer()
         let context = ModelContext(container)
         let playlist = Playlist(name: "Test", serverURL: "http://x.com", username: "u", password: "p")

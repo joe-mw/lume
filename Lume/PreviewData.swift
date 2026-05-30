@@ -3,7 +3,6 @@ import SwiftData
 import SwiftUI
 
 enum PreviewData {
-
     static let samplePlaylistID = "E621E1F8-C36C-495A-93FC-0C247A3E6E5F"
 
     // MARK: - Playlist
@@ -74,7 +73,7 @@ func previewContainer() -> ModelContainer {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
     let container = try! ModelContainer(
         for: Playlist.self, Movie.self, Series.self, LiveStream.self,
-            Category.self, Episode.self, CastMember.self,
+        Category.self, Episode.self, CastMember.self,
         configurations: config
     )
 
@@ -174,8 +173,8 @@ func previewContainer() -> ModelContainer {
 
     let seriesCast = [
         CastMember(id: "\(seriesTMDB.id)-cast-0", tmdbPersonId: 17419, name: "Bryan Cranston", role: "Walter White", profilePath: nil, order: 0, series: seriesTMDB),
-        CastMember(id: "\(seriesTMDB.id)-cast-1", tmdbPersonId: 234989, name: "Aaron Paul", role: "Jesse Pinkman", profilePath: nil, order: 1, series: seriesTMDB),
-        CastMember(id: "\(seriesTMDB.id)-cast-2", tmdbPersonId: 1215295, name: "Anna Gunn", role: "Skyler White", profilePath: nil, order: 2, series: seriesTMDB),
+        CastMember(id: "\(seriesTMDB.id)-cast-1", tmdbPersonId: 234_989, name: "Aaron Paul", role: "Jesse Pinkman", profilePath: nil, order: 1, series: seriesTMDB),
+        CastMember(id: "\(seriesTMDB.id)-cast-2", tmdbPersonId: 1_215_295, name: "Anna Gunn", role: "Skyler White", profilePath: nil, order: 2, series: seriesTMDB),
     ]
     seriesTMDB.castMembers = seriesCast
     for cast in seriesCast {

@@ -6,8 +6,8 @@
 //  "Show All" navigates to the full category view.
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 struct MoviesView: View {
     @Namespace private var animationNamespace
@@ -90,9 +90,9 @@ struct MoviesView: View {
             }
             .navigationDestination(for: Movie.self) { movie in
                 MovieDetailView(movie: movie, animationNamespace: animationNamespace)
-                    #if os(iOS)
+                #if os(iOS)
                     .navigationTransition(.zoom(sourceID: movie.id, in: animationNamespace))
-                    #endif
+                #endif
             }
         }
     }

@@ -17,7 +17,9 @@ enum CategorySortOption: String, CaseIterable, Identifiable {
     case nameAscending
     case nameDescending
 
-    var id: String { rawValue }
+    var id: String {
+        rawValue
+    }
 
     var label: String {
         switch self {
@@ -64,7 +66,9 @@ enum ContentSortOption: String, CaseIterable, Identifiable {
     case newest
     case oldest
 
-    var id: String { rawValue }
+    var id: String {
+        rawValue
+    }
 
     var label: String {
         switch self {
@@ -87,6 +91,7 @@ enum ContentSortOption: String, CaseIterable, Identifiable {
     }
 
     // MARK: SortDescriptor builders
+
     //
     // Each model has its own "added" field (Movie/LiveStream: `added`;
     // Series: `lastModified`). The Xtream API ships these as Unix timestamp

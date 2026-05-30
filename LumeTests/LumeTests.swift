@@ -1,9 +1,8 @@
-import Testing
 import SwiftData
+import Testing
 
 struct LumeTests {
-
-    @Test func testTargetLoads() async throws {
+    @Test func targetLoads() throws {
         // Verify the test target loads correctly by checking that
         // shared test helpers are accessible.
         let container = try makeTestContainer()

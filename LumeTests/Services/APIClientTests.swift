@@ -1,9 +1,8 @@
-import Testing
 import Foundation
 @testable import Lume
+import Testing
 
 struct APIClientTests {
-
     // MARK: - HTTPMethod
 
     @Test func httpMethodRawValues() {
@@ -17,8 +16,8 @@ struct APIClientTests {
     // MARK: - Endpoint asURLRequest
 
     @Test func endpointBuildsBasicURL() throws {
-        let endpoint = TestEndpoint(
-            baseURL: URL(string: "http://example.com")!,
+        let endpoint = try TestEndpoint(
+            baseURL: #require(URL(string: "http://example.com")),
             path: "/api/test",
             method: .get
         )
@@ -28,8 +27,8 @@ struct APIClientTests {
     }
 
     @Test func endpointWithoutLeadingSlash() throws {
-        let endpoint = TestEndpoint(
-            baseURL: URL(string: "http://example.com/api")!,
+        let endpoint = try TestEndpoint(
+            baseURL: #require(URL(string: "http://example.com/api")),
             path: "test",
             method: .get
         )
@@ -38,8 +37,8 @@ struct APIClientTests {
     }
 
     @Test func endpointWithTrailingSlashOnBase() throws {
-        let endpoint = TestEndpoint(
-            baseURL: URL(string: "http://example.com/api/")!,
+        let endpoint = try TestEndpoint(
+            baseURL: #require(URL(string: "http://example.com/api/")),
             path: "/test",
             method: .get
         )
@@ -48,13 +47,13 @@ struct APIClientTests {
     }
 
     @Test func endpointWithQueryItems() throws {
-        let endpoint = TestEndpoint(
-            baseURL: URL(string: "http://example.com")!,
+        let endpoint = try TestEndpoint(
+            baseURL: #require(URL(string: "http://example.com")),
             path: "/search",
             method: .get,
             queryItems: [
                 URLQueryItem(name: "q", value: "test"),
-                URLQueryItem(name: "limit", value: "10")
+                URLQueryItem(name: "limit", value: "10"),
             ]
         )
         let request = try endpoint.asURLRequest()
@@ -64,8 +63,8 @@ struct APIClientTests {
     }
 
     @Test func endpointWithHeaders() throws {
-        let endpoint = TestEndpoint(
-            baseURL: URL(string: "http://example.com")!,
+        let endpoint = try TestEndpoint(
+            baseURL: #require(URL(string: "http://example.com")),
             path: "/auth",
             method: .get,
             headers: ["Authorization": "Bearer token123"]
@@ -76,8 +75,8 @@ struct APIClientTests {
 
     @Test func endpointWithBody() throws {
         let body = try JSONSerialization.data(withJSONObject: ["key": "value"])
-        let endpoint = TestEndpoint(
-            baseURL: URL(string: "http://example.com")!,
+        let endpoint = try TestEndpoint(
+            baseURL: #require(URL(string: "http://example.com")),
             path: "/submit",
             method: .post,
             body: body
@@ -87,8 +86,8 @@ struct APIClientTests {
     }
 
     @Test func endpointDefaultTimeout() throws {
-        let endpoint = TestEndpoint(
-            baseURL: URL(string: "http://example.com")!,
+        let endpoint = try TestEndpoint(
+            baseURL: #require(URL(string: "http://example.com")),
             path: "/test",
             method: .get
         )
@@ -97,8 +96,8 @@ struct APIClientTests {
     }
 
     @Test func endpointCustomTimeout() throws {
-        let endpoint = TestEndpoint(
-            baseURL: URL(string: "http://example.com")!,
+        let endpoint = try TestEndpoint(
+            baseURL: #require(URL(string: "http://example.com")),
             path: "/test",
             method: .get,
             timeout: 120

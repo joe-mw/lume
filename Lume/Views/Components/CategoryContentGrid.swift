@@ -6,8 +6,8 @@
 //  category views, minimising duplication between the two.
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 // MARK: - Full Category Content Grid ("Show All")
 

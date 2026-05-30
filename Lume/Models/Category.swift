@@ -22,7 +22,7 @@ final class Category {
     var lastRefreshed: Date?
 
     init(apiId: String, name: String, parentId: Int, typeRaw: String, playlist: Playlist? = nil) {
-        self.id = "\(playlist?.id.uuidString ?? "unknown")-\(typeRaw)-\(apiId)"
+        id = "\(playlist?.id.uuidString ?? "unknown")-\(typeRaw)-\(apiId)"
         self.apiId = apiId
         self.name = name
         self.parentId = parentId

@@ -24,7 +24,9 @@ struct PlayableMedia: Identifiable, Hashable, Codable {
     let startTime: TimeInterval
     let contentRef: ContentRef
 
-    var isLive: Bool { kind == .live }
+    var isLive: Bool {
+        kind == .live
+    }
 }
 
 extension PlayableMedia {
