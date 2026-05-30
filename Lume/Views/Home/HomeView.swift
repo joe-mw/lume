@@ -22,6 +22,8 @@ struct HomeView: View {
 
     @Query private var playlists: [Playlist]
     @AppStorage(PlaylistSelectionStore.key) private var selectedPlaylistID: String = ""
+    @AppStorage(SortStorageKey.movieCategories) private var categorySortRaw: String = CategorySortOption.playlist.rawValue
+    @AppStorage(SortStorageKey.movieContent) private var contentSortRaw: String = ContentSortOption.playlist.rawValue
 
     // Recently watched (capped — watch history is naturally bounded).
     @Query private var watchedMovies: [Movie]
@@ -37,6 +39,7 @@ struct HomeView: View {
     @State private var heroMovies: [HeroMovie] = []
     @State private var trendingState: LoadState = .idle
     @State private var playingMedia: PlayableMedia?
+    @State private var showingSync = false
 
     init() {
         // Recently watched: non-nil lastWatchedDate, newest first.
@@ -115,14 +118,48 @@ struct HomeView: View {
                                 HomeRow(title: "Favorites", items: favorites, onPlayLive: playChannel)
                             }
                         }
-                        .padding(.vertical)
+                        .padding(.bottom)
                     }
+                    .scrollIndicators(.hidden)
+                    .ignoresSafeArea(edges: .top)
                 }
             }
             .navigationTitle("Home")
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.hidden, for: .navigationBar)
+            #endif
             .toolbar {
                 ToolbarItem(placement: .automatic) {
                     PlaylistSwitcher(playlists: playlists, selectedPlaylistID: $selectedPlaylistID)
+                }
+
+                ToolbarItem(placement: .automatic) {
+                    SortMenu(
+                        categorySortRaw: $categorySortRaw,
+                        contentSortRaw: $contentSortRaw
+                    )
+                }
+
+                ToolbarItem(placement: .automatic) {
+                    HStack {
+                        Button {
+                            showingSync = true
+                        } label: {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                        }
+
+                        Button {
+                            // Search action
+                        } label: {
+                            Image(systemName: "magnifyingglass")
+                        }
+                    }
+                }
+            }
+            .sheet(isPresented: $showingSync) {
+                if let activePlaylist {
+                    SyncProgressView(playlist: activePlaylist, isPresented: $showingSync)
                 }
             }
             .navigationDestination(for: Movie.self) { movie in

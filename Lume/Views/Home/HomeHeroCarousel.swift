@@ -45,9 +45,9 @@ struct HomeHeroCarousel: View {
     private let compactWidthThreshold: CGFloat = 600
 
     #if os(macOS)
-    private let heroHeight: CGFloat = 460
+    private let heroHeight: CGFloat = 600
     #else
-    private let heroHeight: CGFloat = 440
+    private let heroHeight: CGFloat = 800
     #endif
 
     private var currentHero: HeroMovie? {
@@ -169,30 +169,33 @@ private struct HeroBackdrop: View {
     let url: URL?
 
     var body: some View {
-        AsyncImage(url: url) { phase in
-            switch phase {
-            case .empty:
-                Rectangle()
-                    .fill(Color.gray.opacity(0.25))
-                    .overlay { ProgressView() }
-            case .success(let image):
-                image
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            case .failure:
-                Rectangle()
-                    .fill(Color.gray.opacity(0.25))
-                    .overlay {
-                        Image(systemName: "film")
-                            .font(.largeTitle)
-                            .foregroundStyle(.secondary)
-                    }
-            @unknown default:
-                EmptyView()
+        GeometryReader { geo in
+            AsyncImage(url: url) { phase in
+                switch phase {
+                case .empty:
+                    Rectangle()
+                        .fill(Color.gray.opacity(0.25))
+                        .overlay { ProgressView() }
+                case .success(let image):
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: geo.size.width, height: geo.size.height)
+                        .clipped()
+                case .failure:
+                    Rectangle()
+                        .fill(Color.gray.opacity(0.25))
+                        .overlay {
+                            Image(systemName: "film")
+                                .font(.largeTitle)
+                                .foregroundStyle(.secondary)
+                        }
+                @unknown default:
+                    EmptyView()
+                }
             }
+            .frame(width: geo.size.width, height: geo.size.height)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .clipped()
     }
 }
 
