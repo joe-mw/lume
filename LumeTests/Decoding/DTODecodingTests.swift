@@ -177,8 +177,8 @@ struct DTODecodingTests {
     @Test func seriesCategoryIdTypeCoercion() throws {
         let series: [XtreamSeries] = try loadExampleJSON("Series.json")
         // All category_id values in the real data should be strings
-        for s in series.prefix(100) {
-            #expect(s.categoryId != nil)
+        for serie in series.prefix(100) {
+            #expect(serie.categoryId != nil)
         }
     }
 

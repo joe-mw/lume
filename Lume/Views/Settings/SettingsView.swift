@@ -143,10 +143,10 @@ struct SettingsView: View {
     SettingsView()
         .modelContainer(for: Playlist.self, inMemory: true) { result in
             if case let .success(container) = result {
-                let p = Playlist(name: "My IPTV", serverURL: "http://example.com:8080", username: "user", password: "pass")
-                let p2 = Playlist(name: "Backup", serverURL: "http://backup.com:8080", username: "user2", password: "pass2")
-                container.mainContext.insert(p)
-                container.mainContext.insert(p2)
+                let playlist = Playlist(name: "My IPTV", serverURL: "http://example.com:8080", username: "user", password: "pass")
+                let backup = Playlist(name: "Backup", serverURL: "http://backup.com:8080", username: "user2", password: "pass2")
+                container.mainContext.insert(playlist)
+                container.mainContext.insert(backup)
             }
         }
 }

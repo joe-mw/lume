@@ -100,16 +100,16 @@ struct ContentSyncTests {
 
         let ctx1 = ModelContext(container)
         ctx1.autosaveEnabled = false
-        for i in 0 ..< 100 {
-            let movie = Movie(id: "\(playlistId)-movie-\(i)", streamId: i, name: "Movie \(i)")
+        for index in 0 ..< 100 {
+            let movie = Movie(id: "\(playlistId)-movie-\(index)", streamId: index, name: "Movie \(index)")
             ctx1.insert(movie)
         }
         try ctx1.save()
 
         let ctx2 = ModelContext(container)
         ctx2.autosaveEnabled = false
-        for i in 0 ..< 100 {
-            let movie = Movie(id: "\(playlistId)-movie-\(i)", streamId: i, name: "Updated Movie \(i)")
+        for index in 0 ..< 100 {
+            let movie = Movie(id: "\(playlistId)-movie-\(index)", streamId: index, name: "Updated Movie \(index)")
             ctx2.insert(movie)
         }
         try ctx2.save()

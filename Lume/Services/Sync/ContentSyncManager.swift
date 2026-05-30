@@ -42,7 +42,7 @@ actor ContentSyncManager {
             do {
                 let statusContext = ModelContext(modelContainer)
                 statusContext.autosaveEnabled = false
-                guard let pl = try statusContext.fetch(
+                guard let playlist = try statusContext.fetch(
                     FetchDescriptor<Playlist>(predicate: #Predicate { $0.id == playlistId })
                 ).first else {
                     // The playlist isn't visible in this context's view of the
@@ -52,25 +52,25 @@ actor ContentSyncManager {
                     throw SyncError.playlistNotFound
                 }
 
-                pl.syncStatus = .syncing
+                playlist.syncStatus = .syncing
                 try statusContext.save()
 
                 await progress?.start(.authenticating)
-                let authResponse = try await xtreamClient.getInfo(playlist: pl)
+                let authResponse = try await xtreamClient.getInfo(playlist: playlist)
                 updatePlaylistInfo(playlistId, with: authResponse)
                 await progress?.complete(.authenticating)
 
-                try await syncAllCategories(for: pl, playlistId: playlistId, progress: progress, full: full)
+                try await syncAllCategories(for: playlist, playlistId: playlistId, progress: progress, full: full)
 
-                try await syncMovies(for: pl, playlistId: playlistId, progress: progress)
+                try await syncMovies(for: playlist, playlistId: playlistId, progress: progress)
                 // Brief pause so the provider can release the connection slot
                 // used by the large movie transfer before the next heavy fetch.
                 // Many Xtream accounts cap concurrent connections and otherwise
                 // reject the immediately-following get_series with 401/403.
                 try await Task.sleep(for: .seconds(2))
-                try await syncSeries(for: pl, playlistId: playlistId, progress: progress)
+                try await syncSeries(for: playlist, playlistId: playlistId, progress: progress)
                 try await Task.sleep(for: .seconds(2))
-                try await syncLiveStreams(for: pl, playlistId: playlistId, progress: progress)
+                try await syncLiveStreams(for: playlist, playlistId: playlistId, progress: progress)
 
                 let doneContext = ModelContext(modelContainer)
                 doneContext.autosaveEnabled = false
@@ -407,7 +407,36 @@ actor ContentSyncManager {
         await progress?.complete(.liveStreams)
     }
 
-    // MARK: - TMDB Enrichment
+}
+
+// MARK: - Sync Error
+
+enum SyncError: LocalizedError {
+    case syncInProgress
+    case playlistNotFound
+    case invalidCredentials
+    case networkError(Error)
+    case databaseError(Error)
+
+    var errorDescription: String? {
+        switch self {
+        case .syncInProgress:
+            return "A sync is already in progress for this playlist"
+        case .playlistNotFound:
+            return "The playlist could not be found"
+        case .invalidCredentials:
+            return "Invalid username or password"
+        case let .networkError(error):
+            return "Network error: \(error.localizedDescription)"
+        case let .databaseError(error):
+            return "Database error: \(error.localizedDescription)"
+        }
+    }
+}
+
+// MARK: - TMDB Enrichment
+
+extension ContentSyncManager {
 
     /// Enriches a movie with TMDB detail data (backdrop, tagline, content
     /// rating, billed cast and similar titles), filling any gaps the Xtream
@@ -429,7 +458,6 @@ actor ContentSyncManager {
         movie.contentRating = details.contentRating ?? movie.contentRating
         movie.similarTMDBIds = details.similarIDs
 
-        // Fill gaps only — never clobber what the provider already supplied.
         if (movie.plot ?? "").isEmpty, let overview = details.overview {
             movie.plot = overview
         }
@@ -516,8 +544,11 @@ actor ContentSyncManager {
             assign(castMember)
         }
     }
+}
 
-    // MARK: - Helper Methods
+// MARK: - Helper Methods
+
+extension ContentSyncManager {
 
     private func updatePlaylistInfo(_ playlistId: UUID, with authResponse: XtreamAuthResponse) {
         let context = ModelContext(modelContainer)
@@ -548,30 +579,5 @@ actor ContentSyncManager {
             lookup[category.apiId] = category
         }
         return lookup
-    }
-}
-
-// MARK: - Sync Error
-
-enum SyncError: LocalizedError {
-    case syncInProgress
-    case playlistNotFound
-    case invalidCredentials
-    case networkError(Error)
-    case databaseError(Error)
-
-    var errorDescription: String? {
-        switch self {
-        case .syncInProgress:
-            return "A sync is already in progress for this playlist"
-        case .playlistNotFound:
-            return "The playlist could not be found"
-        case .invalidCredentials:
-            return "Invalid username or password"
-        case let .networkError(error):
-            return "Network error: \(error.localizedDescription)"
-        case let .databaseError(error):
-            return "Database error: \(error.localizedDescription)"
-        }
     }
 }

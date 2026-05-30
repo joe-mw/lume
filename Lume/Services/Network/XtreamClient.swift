@@ -350,12 +350,12 @@ class XtreamClient: APIClient {
         }
 
         struct ShortEPGResponse: Decodable {
-            let epg_listings: [XtreamShortEPG]
+            let epgListings: [XtreamShortEPG]
         }
 
         do {
             let response: ShortEPGResponse = try await request(url)
-            return response.epg_listings
+            return response.epgListings
         } catch {
             // Try array fallback if not wrapped
             if let arrayResponse: [XtreamShortEPG] = try? await request(url) {
@@ -396,5 +396,5 @@ class XtreamClient: APIClient {
 
 enum StreamFormat: String {
     case m3u8
-    case ts
+    case tsStream = "ts"
 }

@@ -8,16 +8,16 @@ enum PreviewData {
     // MARK: - Playlist
 
     static var samplePlaylist: Playlist {
-        let p = Playlist(name: "My IPTV", serverURL: "http://example.com:8080", username: "demo", password: "\u{2022}\u{2022}\u{2022}\u{2022}\u{2022}\u{2022}\u{2022}\u{2022}")
-        p.id = UUID(uuidString: samplePlaylistID)!
-        p.userStatus = "Active"
-        p.expDate = "1893456000"
-        p.maxConnections = "1"
-        p.activeConnections = "0"
-        p.lastSyncDate = Date().addingTimeInterval(-86400)
-        p.serverVersion = "1.0.0"
-        p.serverTimezone = "Europe/London"
-        return p
+        let playlist = Playlist(name: "My IPTV", serverURL: "http://example.com:8080", username: "demo", password: "\u{2022}\u{2022}\u{2022}\u{2022}\u{2022}\u{2022}\u{2022}\u{2022}")
+        playlist.id = UUID(uuidString: samplePlaylistID)!
+        playlist.userStatus = "Active"
+        playlist.expDate = "1893456000"
+        playlist.maxConnections = "1"
+        playlist.activeConnections = "0"
+        playlist.lastSyncDate = Date().addingTimeInterval(-86400)
+        playlist.serverVersion = "1.0.0"
+        playlist.serverTimezone = "Europe/London"
+        return playlist
     }
 
     static var sampleMovie: Movie {
@@ -71,11 +71,11 @@ enum PreviewData {
 
 func previewContainer() -> ModelContainer {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
-    let container = try! ModelContainer(
+    guard let container = try? ModelContainer(
         for: Playlist.self, Movie.self, Series.self, LiveStream.self,
         Category.self, Episode.self, CastMember.self,
         configurations: config
-    )
+    ) else { fatalError("Failed to create ModelContainer") }
 
     let playlist = PreviewData.samplePlaylist
     container.mainContext.insert(playlist)
@@ -90,6 +90,15 @@ func previewContainer() -> ModelContainer {
         container.mainContext.insert(cat)
     }
 
+    insertMovies(into: container, categories: categories)
+    insertSeries(into: container, categories: categories)
+    insertLiveStreams(into: container, categories: categories)
+
+    try? container.mainContext.save()
+    return container
+}
+
+private func insertMovies(into container: ModelContainer, categories: [Category]) {
     let movie = PreviewData.sampleMovie
     movie.plot = "A computer hacker learns about the true nature of reality and his role in the war against its controllers."
     movie.genre = "Action, Sci-Fi"
@@ -152,7 +161,9 @@ func previewContainer() -> ModelContainer {
     movieWatched.isFavorite = false
     movieWatched.categoryId = categories[0].id
     container.mainContext.insert(movieWatched)
+}
 
+private func insertSeries(into container: ModelContainer, categories: [Category]) {
     let series = PreviewData.sampleSeries
     series.categoryId = categories[3].id
     container.mainContext.insert(series)
@@ -188,8 +199,8 @@ func previewContainer() -> ModelContainer {
         Episode(id: "\(seriesTMDB.id)-ep-4", episodeId: "4", title: "Cancer Man", containerExtension: "mp4", seasonNum: 1, episodeNum: 4, series: seriesTMDB),
     ]
     seriesTMDB.episodes = episodes
-    for ep in episodes {
-        container.mainContext.insert(ep)
+    for episode in episodes {
+        container.mainContext.insert(episode)
     }
     container.mainContext.insert(seriesTMDB)
 
@@ -201,7 +212,9 @@ func previewContainer() -> ModelContainer {
     seriesNoEp.isFavorite = false
     seriesNoEp.categoryId = categories[3].id
     container.mainContext.insert(seriesNoEp)
+}
 
+private func insertLiveStreams(into container: ModelContainer, categories: [Category]) {
     let live = PreviewData.sampleLiveStream
     live.categoryId = categories[2].id
     container.mainContext.insert(live)
@@ -215,7 +228,4 @@ func previewContainer() -> ModelContainer {
     liveArchive.isFavorite = true
     liveArchive.categoryId = categories[2].id
     container.mainContext.insert(liveArchive)
-
-    try! container.mainContext.save()
-    return container
 }

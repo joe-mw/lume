@@ -116,8 +116,8 @@ struct SearchView: View {
 
         // Series
         if selectedFilter == .all || selectedFilter == .series {
-            let matchingSeries = series.filter { s in
-                s.name.lowercased().contains(query)
+            let matchingSeries = series.filter { entry in
+                entry.name.lowercased().contains(query)
             }
             results.append(contentsOf: matchingSeries.map { .series($0) })
         }

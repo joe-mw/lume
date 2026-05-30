@@ -77,8 +77,8 @@ struct MainTabView: View {
     MainTabView()
         .modelContainer(for: Playlist.self, inMemory: true) { result in
             if case let .success(container) = result {
-                let p = Playlist(name: "My IPTV", serverURL: "http://example.com:8080", username: "user", password: "pass")
-                container.mainContext.insert(p)
+                let playlist = Playlist(name: "My IPTV", serverURL: "http://example.com:8080", username: "user", password: "pass")
+                container.mainContext.insert(playlist)
             }
         }
 }

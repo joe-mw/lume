@@ -240,7 +240,7 @@ struct SeriesCategoryPreview: View {
 
 #Preview("Movie Category Grid") {
     let container = previewContainer()
-    let categories = try! container.mainContext.fetch(FetchDescriptor<Category>())
+    let categories = (try? container.mainContext.fetch(FetchDescriptor<Category>())) ?? []
     let category = categories.first { $0.typeRaw == "vod" } ?? categories[0]
     return NavigationStack {
         MovieCategoryView(category: category, animationNamespace: nil)
@@ -259,7 +259,7 @@ struct SeriesCategoryPreview: View {
 
 #Preview("Series Category Grid") {
     let container = previewContainer()
-    let categories = try! container.mainContext.fetch(FetchDescriptor<Category>())
+    let categories = (try? container.mainContext.fetch(FetchDescriptor<Category>())) ?? []
     let category = categories.first { $0.typeRaw == "series" } ?? categories[0]
     return NavigationStack {
         SeriesCategoryView(category: category, animationNamespace: nil)

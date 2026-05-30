@@ -26,7 +26,7 @@ struct TMDBClient {
 
     enum MediaType: String {
         case movie
-        case tv
+        case tvShow = "tv"
     }
 
     enum TimeWindow: String {
@@ -226,20 +226,20 @@ private struct TitleDetailsResponse: Decodable {
 
     struct Results<Entry: Decodable>: Decodable { let results: [Entry] }
     struct ReleaseDatesEntry: Decodable {
-        let iso3166_1: String
+        let countryCode: String
         let releaseDates: [ReleaseDate]
         struct ReleaseDate: Decodable { let certification: String? }
         enum CodingKeys: String, CodingKey {
-            case iso3166_1 = "iso_3166_1"
+            case countryCode = "iso_3166_1"
             case releaseDates = "release_dates"
         }
     }
 
     struct ContentRatingEntry: Decodable {
-        let iso3166_1: String
+        let countryCode: String
         let rating: String?
         enum CodingKeys: String, CodingKey {
-            case iso3166_1 = "iso_3166_1"
+            case countryCode = "iso_3166_1"
             case rating
         }
     }
@@ -284,14 +284,14 @@ private struct TitleDetailsResponse: Decodable {
     private func movieCertification() -> String? {
         let entries = releaseDates?.results ?? []
         func cert(for code: String) -> String? {
-            entries.first { $0.iso3166_1 == code }?
+            entries.first { $0.countryCode == code }?
                 .releaseDates.compactMap { $0.certification }
                 .first { !$0.isEmpty }
         }
-        if let us = cert(for: "US") { return us }
+        if let usCert = cert(for: "US") { return usCert }
         for entry in entries {
-            if let c = entry.releaseDates.compactMap({ $0.certification }).first(where: { !$0.isEmpty }) {
-                return c
+            if let cert = entry.releaseDates.compactMap({ $0.certification }).first(where: { !$0.isEmpty }) {
+                return cert
             }
         }
         return nil
@@ -299,7 +299,7 @@ private struct TitleDetailsResponse: Decodable {
 
     private func tvRating() -> String? {
         let entries = contentRatings?.results ?? []
-        if let us = entries.first(where: { $0.iso3166_1 == "US" })?.rating, !us.isEmpty { return us }
+        if let usRating = entries.first(where: { $0.countryCode == "US" })?.rating, !usRating.isEmpty { return usRating }
         return entries.compactMap { $0.rating }.first { !$0.isEmpty }
     }
 }

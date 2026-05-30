@@ -190,8 +190,8 @@ struct SortOptionTests {
             Lume.Category(apiId: "2", name: "B Category", parentId: 0, type: .vod, playlist: playlist),
             Lume.Category(apiId: "1", name: "A Category", parentId: 0, type: .vod, playlist: playlist),
             Lume.Category(apiId: "4", name: "D Category", parentId: 0, type: .vod, playlist: playlist),
-            Lume.Category(apiId: "3", name: "C Category", parentId: 0, type: .vod, playlist: playlist),
-        ].enumerated().map { i, c in c.sortOrder = i * 2; return c }
+            Lume.Category(apiId: "3", name: "C Category", parentId: 0, type: .vod, playlist: playlist)
+        ].enumerated().map { idx, cat in cat.sortOrder = idx * 2; return cat }
     }
 
     private func makeDuplicateNameCategories() -> [Lume.Category] {
@@ -199,8 +199,8 @@ struct SortOptionTests {
         return [
             Lume.Category(apiId: "1", name: "Same Name", parentId: 0, type: .vod, playlist: playlist),
             Lume.Category(apiId: "2", name: "Same Name", parentId: 0, type: .vod, playlist: playlist),
-            Lume.Category(apiId: "3", name: "Z Alone", parentId: 0, type: .vod, playlist: playlist),
-        ].enumerated().map { i, c in c.sortOrder = i; return c }
+            Lume.Category(apiId: "3", name: "Z Alone", parentId: 0, type: .vod, playlist: playlist)
+        ].enumerated().map { idx, cat in cat.sortOrder = idx; return cat }
     }
 
     private func makeUnsortedMovies() -> [Movie] {

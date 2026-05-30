@@ -9,26 +9,26 @@ struct DTODecodingEdgeCaseTests {
         let json = """
         {"id": "129902", "episode_num": 1, "season": 1}
         """.data(using: .utf8)!
-        let ep = try JSONDecoder().decode(XtreamEpisode.self, from: json)
-        #expect(ep.id == "129902")
-        #expect(ep.season == 1)
+        let episode = try JSONDecoder().decode(XtreamEpisode.self, from: json)
+        #expect(episode.id == "129902")
+        #expect(episode.season == 1)
     }
 
     @Test func episodeDecodesIntID() throws {
         let json = """
         {"id": 12345, "episode_num": 2, "season": "2"}
         """.data(using: .utf8)!
-        let ep = try JSONDecoder().decode(XtreamEpisode.self, from: json)
-        #expect(ep.id == "12345")
-        #expect(ep.season == 2)
+        let episode = try JSONDecoder().decode(XtreamEpisode.self, from: json)
+        #expect(episode.id == "12345")
+        #expect(episode.season == 2)
     }
 
     @Test func episodeMissingID() throws {
         let json = """
         {"episode_num": 1}
         """.data(using: .utf8)!
-        let ep = try JSONDecoder().decode(XtreamEpisode.self, from: json)
-        #expect(ep.id == nil)
+        let episode = try JSONDecoder().decode(XtreamEpisode.self, from: json)
+        #expect(episode.id == nil)
     }
 
     @Test func episodeDecodesWithInfo() throws {
@@ -46,12 +46,12 @@ struct DTODecodingEdgeCaseTests {
             }
         }
         """.data(using: .utf8)!
-        let ep = try JSONDecoder().decode(XtreamEpisode.self, from: json)
-        #expect(ep.id == "1")
-        #expect(ep.title == "Pilot")
-        #expect(ep.containerExtension == "mp4")
+        let episode = try JSONDecoder().decode(XtreamEpisode.self, from: json)
+        #expect(episode.id == "1")
+        #expect(episode.title == "Pilot")
+        #expect(episode.containerExtension == "mp4")
 
-        let info = try #require(ep.info)
+        let info = try #require(episode.info)
         #expect(info.airDate == "2024-01-15")
         #expect(info.movieImage == "http://example.com/ep.jpg")
         #expect(info.durationSecs == 3600)
@@ -66,8 +66,8 @@ struct DTODecodingEdgeCaseTests {
             "info": {"rating": "8.2"}
         }
         """.data(using: .utf8)!
-        let ep = try JSONDecoder().decode(XtreamEpisode.self, from: json)
-        #expect(ep.info?.rating == 8.2)
+        let episode = try JSONDecoder().decode(XtreamEpisode.self, from: json)
+        #expect(episode.info?.rating == 8.2)
     }
 
     @Test func episodeInfoDurationAsString() throws {
@@ -78,18 +78,18 @@ struct DTODecodingEdgeCaseTests {
             "info": {"duration_secs": "1800"}
         }
         """.data(using: .utf8)!
-        let ep = try JSONDecoder().decode(XtreamEpisode.self, from: json)
-        #expect(ep.info?.durationSecs == 1800)
+        let episode = try JSONDecoder().decode(XtreamEpisode.self, from: json)
+        #expect(episode.info?.durationSecs == 1800)
     }
 
     @Test func episodeInfoMissingFields() throws {
         let json = """
         {"id": "1", "episode_num": 1, "info": {}}
         """.data(using: .utf8)!
-        let ep = try JSONDecoder().decode(XtreamEpisode.self, from: json)
-        #expect(ep.info?.airDate == nil)
-        #expect(ep.info?.durationSecs == nil)
-        #expect(ep.info?.rating == nil)
+        let episode = try JSONDecoder().decode(XtreamEpisode.self, from: json)
+        #expect(episode.info?.airDate == nil)
+        #expect(episode.info?.durationSecs == nil)
+        #expect(episode.info?.rating == nil)
     }
 
     // MARK: - XtreamShortEPG

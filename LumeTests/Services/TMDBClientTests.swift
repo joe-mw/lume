@@ -68,7 +68,7 @@ struct TMDBClientTests {
 
     @Test func mediaTypeRawValues() {
         #expect(TMDBClient.MediaType.movie.rawValue == "movie")
-        #expect(TMDBClient.MediaType.tv.rawValue == "tv")
+        #expect(TMDBClient.MediaType.tvShow.rawValue == "tv")
     }
 
     @Test func timeWindowRawValues() {
@@ -92,11 +92,11 @@ struct TMDBClientTests {
     }
 
     @Test func trendingTitleHashable() {
-        let a = TrendingTitle(id: 1, title: "A", overview: "", backdropPath: nil)
-        let b = TrendingTitle(id: 1, title: "A", overview: "", backdropPath: nil)
-        let c = TrendingTitle(id: 2, title: "C", overview: "", backdropPath: nil)
-        #expect(a == b)
-        #expect(a != c)
+        let titleA = TrendingTitle(id: 1, title: "A", overview: "", backdropPath: nil)
+        let titleB = TrendingTitle(id: 1, title: "A", overview: "", backdropPath: nil)
+        let titleC = TrendingTitle(id: 2, title: "C", overview: "", backdropPath: nil)
+        #expect(titleA == titleB)
+        #expect(titleA != titleC)
     }
 
     // MARK: - TMDBTitleDetails
@@ -170,11 +170,11 @@ struct TMDBClientTests {
     }
 
     @Test func tmdbCastMemberHashable() {
-        let a = TMDBCastMember(tmdbPersonId: 1, name: "A", character: nil, profilePath: nil, order: 0)
-        let b = TMDBCastMember(tmdbPersonId: 1, name: "A", character: nil, profilePath: nil, order: 0)
-        let c = TMDBCastMember(tmdbPersonId: 2, name: "B", character: nil, profilePath: nil, order: 0)
-        #expect(a == b)
-        #expect(a != c)
+        let memberA = TMDBCastMember(tmdbPersonId: 1, name: "A", character: nil, profilePath: nil, order: 0)
+        let memberB = TMDBCastMember(tmdbPersonId: 1, name: "A", character: nil, profilePath: nil, order: 0)
+        let memberC = TMDBCastMember(tmdbPersonId: 2, name: "B", character: nil, profilePath: nil, order: 0)
+        #expect(memberA == memberB)
+        #expect(memberA != memberC)
     }
 
     // MARK: - TMDBError

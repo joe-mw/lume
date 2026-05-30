@@ -221,8 +221,8 @@ struct HomeView: View {
         trendingState = .loading
         do {
             async let movieTitles = client.trending(.movie)
-            async let tvIDs = client.trendingIDs(.tv)
-            let (movies, tv) = try await (movieTitles, tvIDs)
+            async let tvIDs = client.trendingIDs(.tvShow)
+            let (movies, tvSeries) = try await (movieTitles, tvIDs)
 
             var items: [HomeMediaItem] = []
             var heroes: [HeroMovie] = []
@@ -236,7 +236,7 @@ struct HomeView: View {
                     ))
                 }
             }
-            for id in tv {
+            for id in tvSeries {
                 if let series = fetchSeries(tmdbId: id) {
                     items.append(.series(series))
                 }
