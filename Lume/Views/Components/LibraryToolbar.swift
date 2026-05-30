@@ -8,13 +8,14 @@ struct LibraryToolbarModifier: ViewModifier {
     @Binding var showingSync: Bool
     @Binding var showingSettings: Bool
     let activePlaylist: Playlist?
-    var settingsIcon: String
 
     func body(content: Content) -> some View {
         content
             .toolbar {
-                ToolbarItem(placement: .automatic) {
-                    PlaylistSwitcher(playlists: playlists, selectedPlaylistID: $selectedPlaylistID)
+                if playlists.count > 1 {
+                    ToolbarItem(placement: .automatic) {
+                        PlaylistSwitcher(playlists: playlists, selectedPlaylistID: $selectedPlaylistID)
+                    }
                 }
 
                 ToolbarItem(placement: .automatic) {
@@ -32,7 +33,7 @@ struct LibraryToolbarModifier: ViewModifier {
                         Button {
                             showingSettings = true
                         } label: {
-                            Image(systemName: settingsIcon)
+                            Image(systemName: "gear")
                         }
                     }
                 }
@@ -56,8 +57,7 @@ extension View {
         contentSortRaw: Binding<String>,
         showingSync: Binding<Bool>,
         showingSettings: Binding<Bool>,
-        activePlaylist: Playlist?,
-        settingsIcon: String = "gear"
+        activePlaylist: Playlist?
     ) -> some View {
         modifier(LibraryToolbarModifier(
             playlists: playlists,
@@ -66,8 +66,7 @@ extension View {
             contentSortRaw: contentSortRaw,
             showingSync: showingSync,
             showingSettings: showingSettings,
-            activePlaylist: activePlaylist,
-            settingsIcon: settingsIcon
+            activePlaylist: activePlaylist
         ))
     }
 }

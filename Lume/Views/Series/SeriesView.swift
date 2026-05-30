@@ -81,8 +81,7 @@ struct SeriesView: View {
                 contentSortRaw: $contentSortRaw,
                 showingSync: $showingSync,
                 showingSettings: $showingSettings,
-                activePlaylist: activePlaylist,
-                settingsIcon: "magnifyingglass"
+                activePlaylist: activePlaylist
             )
             .navigationDestination(for: Category.self) { category in
                 SeriesCategoryView(category: category, sort: contentSort, animationNamespace: animationNamespace)
