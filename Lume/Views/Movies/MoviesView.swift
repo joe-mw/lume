@@ -18,6 +18,7 @@ struct MoviesView: View {
 
     @AppStorage(PlaylistSelectionStore.key) private var selectedPlaylistID: String = ""
     @State private var showingSync = false
+    @State private var showingSearch = false
 
     @AppStorage(SortStorageKey.movieCategories) private var categorySortRaw: String = CategorySortOption.playlist.rawValue
     @AppStorage(SortStorageKey.movieContent) private var contentSortRaw: String = ContentSortOption.playlist.rawValue
@@ -96,7 +97,7 @@ struct MoviesView: View {
                         }
 
                         Button {
-                            // Search action
+                            showingSearch = true
                         } label: {
                             Image(systemName: "magnifyingglass")
                         }
@@ -107,6 +108,9 @@ struct MoviesView: View {
                 if let playlist = activePlaylist {
                     SyncProgressView(playlist: playlist, isPresented: $showingSync)
                 }
+            }
+            .sheet(isPresented: $showingSearch) {
+                SearchView()
             }
             .navigationDestination(for: Category.self) { category in
                 MovieCategoryView(category: category, sort: contentSort, animationNamespace: animationNamespace)

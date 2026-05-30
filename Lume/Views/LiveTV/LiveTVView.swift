@@ -21,6 +21,7 @@ struct LiveTVView: View {
     @AppStorage(PlaylistSelectionStore.key) private var selectedPlaylistID: String = ""
     @State private var selectedCategory: Category?
     @State private var showingSync = false
+    @State private var showingSearch = false
     @State private var playingMedia: PlayableMedia?
 
     @AppStorage(SortStorageKey.liveCategories) private var categorySortRaw: String = CategorySortOption.playlist.rawValue
@@ -111,7 +112,7 @@ struct LiveTVView: View {
                         }
 
                         Button {
-                            // Search action
+                            showingSearch = true
                         } label: {
                             Image(systemName: "magnifyingglass")
                         }
@@ -133,6 +134,9 @@ struct LiveTVView: View {
                 if let playlist = activePlaylist {
                     SyncProgressView(playlist: playlist, isPresented: $showingSync)
                 }
+            }
+            .sheet(isPresented: $showingSearch) {
+                SearchView()
             }
             #if os(iOS)
             .fullScreenCover(item: $playingMedia) { media in
