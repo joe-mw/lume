@@ -190,7 +190,7 @@ struct SortOptionTests {
             Lume.Category(apiId: "2", name: "B Category", parentId: 0, type: .vod, playlist: playlist),
             Lume.Category(apiId: "1", name: "A Category", parentId: 0, type: .vod, playlist: playlist),
             Lume.Category(apiId: "4", name: "D Category", parentId: 0, type: .vod, playlist: playlist),
-            Lume.Category(apiId: "3", name: "C Category", parentId: 0, type: .vod, playlist: playlist)
+            Lume.Category(apiId: "3", name: "C Category", parentId: 0, type: .vod, playlist: playlist),
         ].enumerated().map { idx, cat in cat.sortOrder = idx * 2; return cat }
     }
 
@@ -199,7 +199,7 @@ struct SortOptionTests {
         return [
             Lume.Category(apiId: "1", name: "Same Name", parentId: 0, type: .vod, playlist: playlist),
             Lume.Category(apiId: "2", name: "Same Name", parentId: 0, type: .vod, playlist: playlist),
-            Lume.Category(apiId: "3", name: "Z Alone", parentId: 0, type: .vod, playlist: playlist)
+            Lume.Category(apiId: "3", name: "Z Alone", parentId: 0, type: .vod, playlist: playlist),
         ].enumerated().map { idx, cat in cat.sortOrder = idx; return cat }
     }
 

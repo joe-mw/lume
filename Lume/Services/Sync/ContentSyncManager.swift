@@ -191,6 +191,7 @@ actor ContentSyncManager {
         await progress?.start(.movies)
         let movieDTOs = try await xtreamClient.getVODStreams(playlist: playlist)
         let totalCount = movieDTOs.count
+        // swiftformat:disable:next self
         Logger.database.info("Fetched \(totalCount) movies, syncing in batches of \(batchSize)")
         await progress?.update(detail: "0 of \(totalCount)", fraction: 0)
 
@@ -249,6 +250,7 @@ actor ContentSyncManager {
         await progress?.start(.series)
         let seriesDTOs = try await xtreamClient.getSeries(playlist: playlist)
         let totalCount = seriesDTOs.count
+        // swiftformat:disable:next self
         Logger.database.info("Fetched \(totalCount) series, syncing in batches of \(batchSize)")
         await progress?.update(detail: "0 of \(totalCount)", fraction: 0)
 
@@ -359,6 +361,7 @@ actor ContentSyncManager {
         await progress?.start(.liveStreams)
         let streamDTOs = try await xtreamClient.getLiveStreams(playlist: playlist)
         let totalCount = streamDTOs.count
+        // swiftformat:disable:next self
         Logger.database.info("Fetched \(totalCount) live streams, syncing in batches of \(batchSize)")
         await progress?.update(detail: "0 of \(totalCount)", fraction: 0)
 
@@ -406,7 +409,6 @@ actor ContentSyncManager {
         Logger.database.info("Completed syncing \(totalCount) live streams")
         await progress?.complete(.liveStreams)
     }
-
 }
 
 // MARK: - Sync Error
@@ -437,7 +439,6 @@ enum SyncError: LocalizedError {
 // MARK: - TMDB Enrichment
 
 extension ContentSyncManager {
-
     /// Enriches a movie with TMDB detail data (backdrop, tagline, content
     /// rating, billed cast and similar titles), filling any gaps the Xtream
     /// provider left in the core metadata. Writes on a background context;
@@ -549,7 +550,6 @@ extension ContentSyncManager {
 // MARK: - Helper Methods
 
 extension ContentSyncManager {
-
     private func updatePlaylistInfo(_ playlistId: UUID, with authResponse: XtreamAuthResponse) {
         let context = ModelContext(modelContainer)
         context.autosaveEnabled = false
