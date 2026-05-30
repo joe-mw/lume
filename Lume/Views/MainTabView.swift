@@ -51,7 +51,8 @@ struct MainTabView: View {
                 Label("Settings", systemImage: "gear")
             }
         }
-        .task(id: playlists.count) {
+    .tabBarMinimizeBehavior(.onScrollDown)
+    .task(id: playlists.count) {
             startPendingInitialSyncs()
         }
     }
