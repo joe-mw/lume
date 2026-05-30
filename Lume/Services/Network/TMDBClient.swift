@@ -79,8 +79,8 @@ struct TMDBClient {
     }
 
     /// Builds a full image URL from a TMDB relative path (e.g. `/abc.jpg`).
-    /// `w1280` is the widescreen backdrop size used by the hero carousel.
-    static func backdropURL(_ path: String?, size: String = "w1280") -> URL? {
+    /// `w1920` is the widescreen backdrop size used by the hero carousel.
+    static func backdropURL(_ path: String?, size: String = "w1920") -> URL? {
         guard let path, !path.isEmpty else { return nil }
         return URL(string: imageBaseURL + size + path)
     }
