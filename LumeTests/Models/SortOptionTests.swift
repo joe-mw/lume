@@ -100,6 +100,48 @@ struct SortOptionTests {
         #expect(sorted[1].name == "Beta Series")
     }
 
+    @Test func seriesSortNewestFirst() {
+        let series = makeUnsortedSeries()
+        let sorted = series.sorted(using: ContentSortOption.newest.seriesDescriptors)
+        #expect(sorted[0].lastModified == "300")
+        #expect(sorted[1].lastModified == "200")
+    }
+
+    @Test func seriesSortOldestFirst() {
+        let series = makeUnsortedSeries()
+        let sorted = series.sorted(using: ContentSortOption.oldest.seriesDescriptors)
+        #expect(sorted[0].lastModified == "100")
+        #expect(sorted[1].lastModified == "200")
+    }
+
+    @Test func liveStreamSortNameAscending() {
+        let streams = makeUnsortedStreams()
+        let sorted = streams.sorted(using: ContentSortOption.nameAscending.liveStreamDescriptors)
+        #expect(sorted[0].name == "A Channel")
+        #expect(sorted[1].name == "Z Channel")
+    }
+
+    @Test func liveStreamSortNameDescending() {
+        let streams = makeUnsortedStreams()
+        let sorted = streams.sorted(using: ContentSortOption.nameDescending.liveStreamDescriptors)
+        #expect(sorted[0].name == "Z Channel")
+        #expect(sorted[1].name == "A Channel")
+    }
+
+    @Test func liveStreamSortNewestFirst() {
+        let streams = makeUnsortedStreams()
+        let sorted = streams.sorted(using: ContentSortOption.newest.liveStreamDescriptors)
+        #expect(sorted[0].added == "200")
+        #expect(sorted[1].added == "100")
+    }
+
+    @Test func liveStreamSortOldestFirst() {
+        let streams = makeUnsortedStreams()
+        let sorted = streams.sorted(using: ContentSortOption.oldest.liveStreamDescriptors)
+        #expect(sorted[0].added == "100")
+        #expect(sorted[1].added == "200")
+    }
+
     // MARK: - ContentSortOption - LiveStream Descriptors
 
     @Test func liveStreamSortPlaylistOrder() {
@@ -134,8 +176,11 @@ struct SortOptionTests {
 
     @Test func storageKeyConstants() {
         #expect(SortStorageKey.liveCategories == "lume.sort.live.categories")
+        #expect(SortStorageKey.liveContent == "lume.sort.live.content")
+        #expect(SortStorageKey.movieCategories == "lume.sort.movies.categories")
         #expect(SortStorageKey.movieContent == "lume.sort.movies.content")
         #expect(SortStorageKey.seriesCategories == "lume.sort.series.categories")
+        #expect(SortStorageKey.seriesContent == "lume.sort.series.content")
     }
 
     // MARK: - Helpers
@@ -169,17 +214,17 @@ struct SortOptionTests {
 
     private func makeUnsortedSeries() -> [Series] {
         [
-            Series(id: "s-1", seriesId: 2, name: "Beta Series", num: 2),
-            Series(id: "s-2", seriesId: 1, name: "Alpha Series", num: 1),
-            Series(id: "s-3", seriesId: 3, name: "Second", num: 1),
-            Series(id: "s-4", seriesId: 4, name: "First", num: 0),
+            Series(id: "s-1", seriesId: 2, name: "Beta Series", lastModified: "200", num: 2),
+            Series(id: "s-2", seriesId: 1, name: "Alpha Series", lastModified: "100", num: 1),
+            Series(id: "s-3", seriesId: 3, name: "Second", lastModified: "300", num: 1),
+            Series(id: "s-4", seriesId: 4, name: "First", lastModified: "200", num: 0),
         ]
     }
 
     private func makeUnsortedStreams() -> [LiveStream] {
         [
-            LiveStream(id: "l-1", streamId: 2, name: "A Channel", num: 2),
-            LiveStream(id: "l-2", streamId: 1, name: "Z Channel", num: 1),
+            LiveStream(id: "l-1", streamId: 2, name: "A Channel", added: "100", num: 2),
+            LiveStream(id: "l-2", streamId: 1, name: "Z Channel", added: "200", num: 1),
         ]
     }
 }

@@ -45,7 +45,7 @@ struct HomeHeroCarousel: View {
     private let compactWidthThreshold: CGFloat = 600
 
     #if os(macOS)
-    private let heroHeight: CGFloat = 600
+    private let heroHeight: CGFloat = 800
     #else
     private let heroHeight: CGFloat = 800
     #endif

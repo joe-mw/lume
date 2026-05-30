@@ -1,0 +1,272 @@
+import Testing
+import Foundation
+@testable import Lume
+
+struct DTODecodingEdgeCaseTests {
+
+    // MARK: - XtreamEpisode ID/Season coercion
+
+    @Test func episodeDecodesStringID() throws {
+        let json = """
+        {"id": "129902", "episode_num": 1, "season": 1}
+        """.data(using: .utf8)!
+        let ep = try JSONDecoder().decode(XtreamEpisode.self, from: json)
+        #expect(ep.id == "129902")
+        #expect(ep.season == 1)
+    }
+
+    @Test func episodeDecodesIntID() throws {
+        let json = """
+        {"id": 12345, "episode_num": 2, "season": "2"}
+        """.data(using: .utf8)!
+        let ep = try JSONDecoder().decode(XtreamEpisode.self, from: json)
+        #expect(ep.id == "12345")
+        #expect(ep.season == 2)
+    }
+
+    @Test func episodeMissingID() throws {
+        let json = """
+        {"episode_num": 1}
+        """.data(using: .utf8)!
+        let ep = try JSONDecoder().decode(XtreamEpisode.self, from: json)
+        #expect(ep.id == nil)
+    }
+
+    @Test func episodeDecodesWithInfo() throws {
+        let json = """
+        {
+            "id": "1",
+            "episode_num": 1,
+            "title": "Pilot",
+            "container_extension": "mp4",
+            "info": {
+                "air_date": "2024-01-15",
+                "movie_image": "http://example.com/ep.jpg",
+                "duration_secs": "3600",
+                "rating": "7.5"
+            }
+        }
+        """.data(using: .utf8)!
+        let ep = try JSONDecoder().decode(XtreamEpisode.self, from: json)
+        #expect(ep.id == "1")
+        #expect(ep.title == "Pilot")
+        #expect(ep.containerExtension == "mp4")
+
+        let info = try #require(ep.info)
+        #expect(info.airDate == "2024-01-15")
+        #expect(info.movieImage == "http://example.com/ep.jpg")
+        #expect(info.durationSecs == 3600)
+        #expect(info.rating == 7.5)
+    }
+
+    @Test func episodeInfoRatingAsString() throws {
+        let json = """
+        {
+            "id": "1",
+            "episode_num": 1,
+            "info": {"rating": "8.2"}
+        }
+        """.data(using: .utf8)!
+        let ep = try JSONDecoder().decode(XtreamEpisode.self, from: json)
+        #expect(ep.info?.rating == 8.2)
+    }
+
+    @Test func episodeInfoDurationAsString() throws {
+        let json = """
+        {
+            "id": "1",
+            "episode_num": 1,
+            "info": {"duration_secs": "1800"}
+        }
+        """.data(using: .utf8)!
+        let ep = try JSONDecoder().decode(XtreamEpisode.self, from: json)
+        #expect(ep.info?.durationSecs == 1800)
+    }
+
+    @Test func episodeInfoMissingFields() throws {
+        let json = """
+        {"id": "1", "episode_num": 1, "info": {}}
+        """.data(using: .utf8)!
+        let ep = try JSONDecoder().decode(XtreamEpisode.self, from: json)
+        #expect(ep.info?.airDate == nil)
+        #expect(ep.info?.durationSecs == nil)
+        #expect(ep.info?.rating == nil)
+    }
+
+    // MARK: - XtreamShortEPG
+
+    @Test func shortEPGDecodes() throws {
+        let json = """
+        {"start": "1700000000", "end": "1700003600", "title": "News", "description": "News program"}
+        """.data(using: .utf8)!
+        let epg = try JSONDecoder().decode(XtreamShortEPG.self, from: json)
+        #expect(epg.title == "News")
+        #expect(epg.description == "News program")
+        #expect(epg.start == "1700000000")
+        #expect(epg.end == "1700003600")
+    }
+
+    @Test func shortEPGWithNilFields() throws {
+        let json = """
+        {"start": null, "end": null, "title": null, "description": null}
+        """.data(using: .utf8)!
+        let epg = try JSONDecoder().decode(XtreamShortEPG.self, from: json)
+        #expect(epg.title == nil)
+        #expect(epg.description == nil)
+    }
+
+    // MARK: - XtreamLiveStream coercion variants
+
+    @Test func liveStreamCategoryIDAsInt() throws {
+        let json = """
+        {"stream_id": 1, "category_id": 42}
+        """.data(using: .utf8)!
+        let stream = try JSONDecoder().decode(XtreamLiveStream.self, from: json)
+        #expect(stream.categoryId == "42")
+    }
+
+    @Test func liveStreamCategoryIDAsString() throws {
+        let json = """
+        {"stream_id": 1, "category_id": "42"}
+        """.data(using: .utf8)!
+        let stream = try JSONDecoder().decode(XtreamLiveStream.self, from: json)
+        #expect(stream.categoryId == "42")
+    }
+
+    @Test func liveStreamIsAdultCoercion() throws {
+        let json = """
+        {"stream_id": 1, "is_adult": "1"}
+        """.data(using: .utf8)!
+        let stream = try JSONDecoder().decode(XtreamLiveStream.self, from: json)
+        #expect(stream.isAdult == 1)
+    }
+
+    @Test func liveStreamTvArchiveCoercion() throws {
+        let json = """
+        {"stream_id": 1, "tv_archive": "1", "tv_archive_duration": "7"}
+        """.data(using: .utf8)!
+        let stream = try JSONDecoder().decode(XtreamLiveStream.self, from: json)
+        #expect(stream.tvArchive == 1)
+        #expect(stream.tvArchiveDuration == 7)
+    }
+
+    // MARK: - XtreamVODStream rating coercion edge cases
+
+    @Test func vodStreamRatingAsDouble() throws {
+        let json = """
+        {"stream_id": 1, "rating": 6.5, "rating_5based": 3.2}
+        """.data(using: .utf8)!
+        let stream = try JSONDecoder().decode(XtreamVODStream.self, from: json)
+        #expect(stream.rating == 6.5)
+        #expect(stream.rating5Based == 3.2)
+    }
+
+    @Test func vodStreamRatingAsString() throws {
+        let json = """
+        {"stream_id": 1, "rating": "7.0", "rating_5based": "3.5"}
+        """.data(using: .utf8)!
+        let stream = try JSONDecoder().decode(XtreamVODStream.self, from: json)
+        #expect(stream.rating == 7.0)
+        #expect(stream.rating5Based == 3.5)
+    }
+
+    @Test func vodStreamMissingRatingDefaultsToZero() throws {
+        let json = """
+        {"stream_id": 1}
+        """.data(using: .utf8)!
+        let stream = try JSONDecoder().decode(XtreamVODStream.self, from: json)
+        #expect(stream.rating == 0.0)
+        #expect(stream.rating5Based == 0.0)
+    }
+
+    @Test func vodStreamIsAdultIntCoercion() throws {
+        let json = """
+        {"stream_id": 1, "is_adult": "1"}
+        """.data(using: .utf8)!
+        let stream = try JSONDecoder().decode(XtreamVODStream.self, from: json)
+        #expect(stream.isAdult == 1)
+    }
+
+    @Test func vodStreamCategoryIDAsInt() throws {
+        let json = """
+        {"stream_id": 1, "category_id": 99}
+        """.data(using: .utf8)!
+        let stream = try JSONDecoder().decode(XtreamVODStream.self, from: json)
+        #expect(stream.categoryId == "99")
+    }
+
+    // MARK: - XtreamVODMetadata duration coercion
+
+    @Test func vodMetadataDurationAsString() throws {
+        let json = """
+        {"duration_secs": "3600"}
+        """.data(using: .utf8)!
+        let meta = try JSONDecoder().decode(XtreamVODMetadata.self, from: json)
+        #expect(meta.durationSecs == 3600)
+    }
+
+    @Test func vodMetadataTmdbAsInt() throws {
+        let json = """
+        {"tmdb_id": 12345}
+        """.data(using: .utf8)!
+        let meta = try JSONDecoder().decode(XtreamVODMetadata.self, from: json)
+        #expect(meta.tmdbId == "12345")
+    }
+
+    // MARK: - XtreamSeries category_id coercion
+
+    @Test func seriesCategoryIDAsInt() throws {
+        let json = """
+        {"series_id": 1, "category_id": 42}
+        """.data(using: .utf8)!
+        let series = try JSONDecoder().decode(XtreamSeries.self, from: json)
+        #expect(series.categoryId == "42")
+    }
+
+    @Test func seriesCategoryIDAsString() throws {
+        let json = """
+        {"series_id": 1, "category_id": "42"}
+        """.data(using: .utf8)!
+        let series = try JSONDecoder().decode(XtreamSeries.self, from: json)
+        #expect(series.categoryId == "42")
+    }
+
+    // MARK: - XtreamAuthResponse
+
+    @Test func authResponseDecodesPartialData() throws {
+        let json = """
+        {
+            "user_info": {"username": "test"},
+            "server_info": {"url": "example.com"}
+        }
+        """.data(using: .utf8)!
+        let response = try JSONDecoder().decode(XtreamAuthResponse.self, from: json)
+        #expect(response.userInfo.username == "test")
+        #expect(response.serverInfo.url == "example.com")
+    }
+
+    @Test func serverInfoProperties() throws {
+        let json = """
+        {
+            "user_info": {},
+            "server_info": {
+                "url": "example.com",
+                "port": "8080",
+                "https_port": "443",
+                "server_protocol": "http",
+                "timezone": "UTC",
+                "timestamp_now": 1700000000,
+                "time_now": "2024-01-01 00:00:00"
+            }
+        }
+        """.data(using: .utf8)!
+        let response = try JSONDecoder().decode(XtreamAuthResponse.self, from: json)
+        let server = response.serverInfo
+        #expect(server.port == "8080")
+        #expect(server.httpsPort == "443")
+        #expect(server.serverProtocol == "http")
+        #expect(server.timezone == "UTC")
+        #expect(server.timestampNow == 1700000000)
+        #expect(server.timeNow == "2024-01-01 00:00:00")
+    }
+}

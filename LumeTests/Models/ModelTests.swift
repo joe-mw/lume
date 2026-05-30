@@ -150,6 +150,115 @@ struct ModelTests {
         #expect(series.episodes.isEmpty)
     }
 
+    // MARK: - EPGListing
+
+    @Test func epgListingCreation() {
+        let start = Date()
+        let end = start.addingTimeInterval(3600)
+        let listing = EPGListing(
+            id: "epg-1",
+            epgId: "channel-1",
+            title: "News at Six",
+            listingDescription: "The evening news broadcast",
+            start: start,
+            end: end
+        )
+        #expect(listing.id == "epg-1")
+        #expect(listing.epgId == "channel-1")
+        #expect(listing.title == "News at Six")
+        #expect(listing.listingDescription == "The evening news broadcast")
+        #expect(listing.start == start)
+        #expect(listing.end == end)
+        #expect(listing.liveStream == nil)
+    }
+
+    @Test func epgListingLinksToLiveStream() {
+        let stream = LiveStream(id: "l-1", streamId: 1, name: "Channel")
+        let listing = EPGListing(
+            id: "epg-1",
+            epgId: "channel-1",
+            title: "News",
+            listingDescription: "",
+            start: Date(),
+            end: Date().addingTimeInterval(3600),
+            liveStream: stream
+        )
+        #expect(listing.liveStream?.id == "l-1")
+    }
+
+    // MARK: - CastMember
+
+    @Test func castMemberCreation() {
+        let movie = Movie(id: "m-1", streamId: 1, name: "Film")
+        let cast = CastMember(
+            id: "m-1-cast-0",
+            tmdbPersonId: 123,
+            name: "Actor Name",
+            role: "Lead Role",
+            profilePath: "/abc.jpg",
+            order: 0,
+            movie: movie
+        )
+        #expect(cast.id == "m-1-cast-0")
+        #expect(cast.tmdbPersonId == 123)
+        #expect(cast.name == "Actor Name")
+        #expect(cast.role == "Lead Role")
+        #expect(cast.profilePath == "/abc.jpg")
+        #expect(cast.order == 0)
+        #expect(cast.movie?.id == "m-1")
+        #expect(cast.series == nil)
+    }
+
+    @Test func castMemberDefaultValues() {
+        let cast = CastMember(
+            id: "s-1-cast-0",
+            tmdbPersonId: 456,
+            name: "Another Actor"
+        )
+        #expect(cast.role == nil)
+        #expect(cast.profilePath == nil)
+        #expect(cast.order == 0)
+        #expect(cast.movie == nil)
+        #expect(cast.series == nil)
+    }
+
+    @Test func castMemberCanBelongToSeries() {
+        let series = Series(id: "s-1", seriesId: 1, name: "Show")
+        let cast = CastMember(
+            id: "s-1-cast-0",
+            tmdbPersonId: 789,
+            name: "TV Actor",
+            role: "Main Character",
+            order: 1,
+            series: series
+        )
+        #expect(cast.series?.id == "s-1")
+        #expect(cast.movie == nil)
+        #expect(cast.order == 1)
+    }
+
+    // MARK: - Movie Ordered Cast
+
+    @Test func movieOrderedCastSortsByOrder() {
+        let movie = Movie(id: "m-1", streamId: 1, name: "Film")
+        let cast1 = CastMember(id: "m-1-cast-0", tmdbPersonId: 1, name: "Second", order: 1, movie: movie)
+        let cast2 = CastMember(id: "m-1-cast-1", tmdbPersonId: 2, name: "First", order: 0, movie: movie)
+        movie.castMembers = [cast1, cast2]
+        let ordered = movie.orderedCast
+        #expect(ordered[0].name == "First")
+        #expect(ordered[1].name == "Second")
+    }
+
+    @Test func seriesOrderedCastSortsByOrder() {
+        let series = Series(id: "s-1", seriesId: 1, name: "Show")
+        let cast1 = CastMember(id: "s-1-cast-0", tmdbPersonId: 1, name: "Second", order: 1, series: series)
+        let cast2 = CastMember(id: "s-1-cast-1", tmdbPersonId: 2, name: "First", order: 0, series: series)
+        series.castMembers = [cast1, cast2]
+        let ordered = series.orderedCast
+        #expect(ordered[0].name == "First")
+        #expect(ordered[1].name == "Second")
+    }
+
     // MARK: - LiveStream
 
     @Test func liveStreamDefaultValues() {

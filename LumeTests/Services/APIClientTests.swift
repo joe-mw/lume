@@ -161,6 +161,20 @@ struct APIClientTests {
         #expect(backoff.delay(for: 4) == 16)
     }
 
+    // MARK: - RetryBackoff additional
+
+    @Test func exponentialBackoffIncreases() {
+        let backoff = RetryBackoff.exponential
+        #expect(backoff.delay(for: 1) < backoff.delay(for: 2))
+        #expect(backoff.delay(for: 2) < backoff.delay(for: 3))
+    }
+
+    @Test func linearBackoffIncreases() {
+        let backoff = RetryBackoff.linear
+        #expect(backoff.delay(for: 1) < backoff.delay(for: 2))
+        #expect(backoff.delay(for: 2) < backoff.delay(for: 3))
+    }
+
     // MARK: - Test Endpoint
 
     private struct TestEndpoint: Endpoint {

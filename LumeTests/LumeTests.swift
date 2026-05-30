@@ -1,13 +1,19 @@
 import Testing
+import SwiftData
 
 struct LumeTests {
 
-    @Test func placeholder() async throws {
-        // Tests are organized in subdirectories:
-        //   Decoding/   — DTO decoding from ExampleData
-        //   Models/     — Model upsert, computed properties, sort options
-        //   Services/   — URL building, sync, progress, playable media, settings
-        //   Helpers/    — Test utilities
-        #expect(true)
+    @Test func testTargetLoads() async throws {
+        // Verify the test target loads correctly by checking that
+        // shared test helpers are accessible.
+        let container = try makeTestContainer()
+        let entityNames = container.schema.entities.map(\.name)
+        #expect(entityNames.contains("Playlist"))
+        #expect(entityNames.contains("Category"))
+        #expect(entityNames.contains("Movie"))
+        #expect(entityNames.contains("Series"))
+        #expect(entityNames.contains("Episode"))
+        #expect(entityNames.contains("LiveStream"))
+        #expect(entityNames.contains("EPGListing"))
     }
 }
