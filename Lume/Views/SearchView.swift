@@ -16,12 +16,14 @@ struct SearchView: View {
     @Query private var liveStreams: [LiveStream]
 
     @State private var searchText = ""
+    @State private var debouncedSearchText = ""
     @State private var selectedFilter: ContentFilter = .all
+    @State private var searchTask: Task<Void, Never>?
 
     var body: some View {
         NavigationStack {
             List {
-                if searchText.isEmpty {
+                if debouncedSearchText.isEmpty {
                     ContentUnavailableView(
                         "Search",
                         systemImage: "magnifyingglass",
@@ -81,13 +83,21 @@ struct SearchView: View {
                 Text("Live Stream: \(stream.name)")
                     // TODO: Live stream detail view
             }
+            .onChange(of: searchText) { _, newValue in
+                searchTask?.cancel()
+                searchTask = Task {
+                    try? await Task.sleep(for: .milliseconds(500))
+                    guard !Task.isCancelled else { return }
+                    debouncedSearchText = newValue
+                }
+            }
         }
     }
 
     private var filteredResults: [SearchResult] {
         var results: [SearchResult] = []
 
-        let query = searchText.lowercased()
+        let query = debouncedSearchText.lowercased()
 
         // Movies
         if selectedFilter == .all || selectedFilter == .movies {
