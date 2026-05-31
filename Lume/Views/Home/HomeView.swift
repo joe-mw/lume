@@ -2,10 +2,11 @@
 //  HomeView.swift
 //  Lume
 //
-//  Default landing screen. Surfaces three rows:
+//  Default landing screen. Surfaces four rows:
 //    1. Recently Watched — movies, series and live TV ordered by lastWatchedDate.
-//    2. Trending — TMDB-trending titles the user actually owns (matched by tmdbId).
-//    3. Favorites — everything the user has marked as a favorite.
+//    2. Trending Movies — TMDB-trending movies the user actually owns.
+//    3. Trending Series — TMDB-trending series the user actually owns.
+//    4. Favorites — everything the user has marked as a favorite.
 //
 //  Each row only renders when it has content, so a fresh library degrades
 //  gracefully to a friendly empty state.
@@ -36,8 +37,9 @@ struct HomeView: View {
     @Query private var favoriteSeries: [Series]
     @Query private var favoriteStreams: [LiveStream]
 
-    @State private var trending: [HomeMediaItem] = []
-    @State private var heroMovies: [HeroMovie] = []
+    @State private var trendingMovies: [HomeMediaItem] = []
+    @State private var trendingSeries: [HomeMediaItem] = []
+    @State private var heroItems: [HeroItem] = []
     @State private var trendingState: LoadState = .idle
     @State private var playingMedia: PlayableMedia?
     @State private var showingSync = false
@@ -107,14 +109,17 @@ struct HomeView: View {
                 } else {
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 28) {
-                            if !heroMovies.isEmpty {
-                                HomeHeroCarousel(movies: heroMovies, onPlay: playMovie)
+                            if !heroItems.isEmpty {
+                                HomeHeroCarousel(items: heroItems, onPlayMovie: playMovie)
                             }
                             if !recentlyWatched.isEmpty {
                                 HomeRow(title: "Recently Watched", items: recentlyWatched, onPlayLive: playChannel, animationNamespace: animationNamespace)
                             }
-                            if !trending.isEmpty {
-                                HomeRow(title: "Trending", items: trending, onPlayLive: playChannel, animationNamespace: animationNamespace)
+                            if !trendingMovies.isEmpty {
+                                HomeRow(title: "Trending Movies", items: trendingMovies, onPlayLive: playChannel, animationNamespace: animationNamespace)
+                            }
+                            if !trendingSeries.isEmpty {
+                                HomeRow(title: "Trending Series", items: trendingSeries, onPlayLive: playChannel, animationNamespace: animationNamespace)
                             }
                             if !favorites.isEmpty {
                                 HomeRow(title: "Favorites", items: favorites, onPlayLive: playChannel, animationNamespace: animationNamespace)
@@ -206,7 +211,8 @@ struct HomeView: View {
     private var isEmpty: Bool {
         recentlyWatched.isEmpty
             && favorites.isEmpty
-            && trending.isEmpty
+            && trendingMovies.isEmpty
+            && trendingSeries.isEmpty
             && trendingState.isSettled
     }
 
@@ -221,28 +227,40 @@ struct HomeView: View {
         trendingState = .loading
         do {
             async let movieTitles = client.trending(.movie)
-            async let tvIDs = client.trendingIDs(.tvShow)
-            let (movies, tvSeries) = try await (movieTitles, tvIDs)
+            async let tvTitles = client.trending(.tvShow)
+            let (movies, tvSeries) = try await (movieTitles, tvTitles)
 
-            var items: [HomeMediaItem] = []
-            var heroes: [HeroMovie] = []
-            for title in movies {
-                if let movie = fetchMovie(tmdbId: title.id) {
-                    items.append(.movie(movie))
-                    heroes.append(HeroMovie(
-                        movie: movie,
-                        backdropURL: TMDBClient.backdropURL(title.backdropPath),
-                        overview: title.overview
-                    ))
+            var movieItems: [HomeMediaItem] = []
+            var seriesItems: [HomeMediaItem] = []
+            var heroes: [HeroItem] = []
+            let maxCount = max(movies.count, tvSeries.count)
+            for i in 0..<maxCount {
+                if i < movies.count {
+                    let title = movies[i]
+                    if let movie = fetchMovie(tmdbId: title.id) {
+                        movieItems.append(.movie(movie))
+                        heroes.append(.movie(
+                            movie,
+                            backdropURL: TMDBClient.backdropURL(title.backdropPath),
+                            overview: title.overview
+                        ))
+                    }
+                }
+                if i < tvSeries.count {
+                    let title = tvSeries[i]
+                    if let series = fetchSeries(tmdbId: title.id) {
+                        seriesItems.append(.series(series))
+                        heroes.append(.series(
+                            series,
+                            backdropURL: TMDBClient.backdropURL(title.backdropPath),
+                            overview: title.overview
+                        ))
+                    }
                 }
             }
-            for id in tvSeries {
-                if let series = fetchSeries(tmdbId: id) {
-                    items.append(.series(series))
-                }
-            }
-            trending = Array(items.prefix(20))
-            heroMovies = Array(heroes.prefix(6))
+            trendingMovies = Array(movieItems.prefix(20))
+            trendingSeries = Array(seriesItems.prefix(20))
+            heroItems = Array(heroes.prefix(6))
             trendingState = .loaded
         } catch {
             trendingState = .failed

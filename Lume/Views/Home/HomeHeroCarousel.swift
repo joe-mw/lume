@@ -17,27 +17,56 @@
 
 import SwiftUI
 
-/// One featured movie in the hero carousel: the owned `Movie` plus the
-/// TMDB-sourced wide artwork and copy that make it look cinematic.
-struct HeroMovie: Identifiable, Hashable {
-    let movie: Movie
-    let backdropURL: URL?
-    let overview: String
+/// One featured item in the hero carousel: a Movie or Series the user owns,
+/// plus the TMDB-sourced wide artwork and copy that make it look cinematic.
+enum HeroItem: Identifiable, Hashable {
+    case movie(Movie, backdropURL: URL?, overview: String)
+    case series(Series, backdropURL: URL?, overview: String)
 
     var id: String {
-        movie.id
+        switch self {
+        case .movie(let m, _, _): return "movie-\(m.id)"
+        case .series(let s, _, _): return "series-\(s.id)"
+        }
     }
 
-    /// Prefer the wide TMDB backdrop; fall back to the provider poster so a
-    /// title without a backdrop still renders something.
+    var title: String {
+        switch self {
+        case .movie(let m, _, _): return m.name
+        case .series(let s, _, _): return s.name
+        }
+    }
+
+    var overview: String {
+        switch self {
+        case .movie(_, _, let o): return o
+        case .series(_, _, let o): return o
+        }
+    }
+
     var imageURL: URL? {
-        backdropURL ?? URL(string: movie.streamIcon ?? "")
+        switch self {
+        case .movie(let m, let backdrop, _):
+            return backdrop ?? URL(string: m.streamIcon ?? "")
+        case .series(let s, let backdrop, _):
+            return backdrop ?? URL(string: s.cover ?? "")
+        }
+    }
+
+    var movie: Movie? {
+        if case .movie(let m, _, _) = self { return m }
+        return nil
+    }
+
+    var series: Series? {
+        if case .series(let s, _, _) = self { return s }
+        return nil
     }
 }
 
 struct HomeHeroCarousel: View {
-    let movies: [HeroMovie]
-    let onPlay: (Movie) -> Void
+    let items: [HeroItem]
+    let onPlayMovie: (Movie) -> Void
 
     @State private var currentID: String?
     @State private var isInteracting = false
@@ -52,8 +81,8 @@ struct HomeHeroCarousel: View {
         private let heroHeight: CGFloat = 800
     #endif
 
-    private var currentHero: HeroMovie? {
-        movies.first { $0.id == currentID } ?? movies.first
+    private var currentHero: HeroItem? {
+        items.first { $0.id == currentID } ?? items.first
     }
 
     var body: some View {
@@ -74,7 +103,7 @@ struct HomeHeroCarousel: View {
 
                 if let hero = currentHero {
                     // Fixed overlay in normal layout — text wraps to `width`.
-                    HeroInfo(hero: hero, isCompact: isCompact, onPlay: onPlay)
+                    HeroInfo(hero: hero, isCompact: isCompact, onPlayMovie: onPlayMovie)
                         .id(hero.id)
                         .transition(.opacity)
                 }
@@ -89,9 +118,9 @@ struct HomeHeroCarousel: View {
         }
         .frame(height: heroHeight)
         .onAppear {
-            if currentID == nil { currentID = movies.first?.id }
+            if currentID == nil { currentID = items.first?.id }
         }
-        .task(id: movies.count) {
+        .task(id: items.count) {
             await autoAdvance()
         }
     }
@@ -103,7 +132,7 @@ struct HomeHeroCarousel: View {
             let width = proxy.size.width
             ScrollView(.horizontal) {
                 LazyHStack(spacing: 0) {
-                    ForEach(movies) { hero in
+                    ForEach(items) { hero in
                         HeroBackdrop(url: hero.imageURL)
                             .frame(width: width, height: heroHeight)
                             .id(hero.id)
@@ -124,9 +153,9 @@ struct HomeHeroCarousel: View {
 
     @ViewBuilder
     private var pageIndicator: some View {
-        if movies.count > 1 {
+        if items.count > 1 {
             HStack(spacing: 8) {
-                ForEach(movies) { hero in
+                ForEach(items) { hero in
                     Circle()
                         .fill(hero.id == currentID ? Color.white : Color.white.opacity(0.4))
                         .frame(width: 7, height: 7)
@@ -143,7 +172,7 @@ struct HomeHeroCarousel: View {
     // MARK: - Auto-advance
 
     private func autoAdvance() async {
-        guard movies.count > 1 else { return }
+        guard items.count > 1 else { return }
         while !Task.isCancelled {
             try? await Task.sleep(for: autoAdvanceInterval)
             if Task.isCancelled { return }
@@ -155,47 +184,52 @@ struct HomeHeroCarousel: View {
 
     private func advance() {
         guard let currentID,
-              let index = movies.firstIndex(where: { $0.id == currentID })
+              let index = items.firstIndex(where: { $0.id == currentID })
         else {
-            withAnimation(.easeInOut) { self.currentID = movies.first?.id }
+            withAnimation(.easeInOut) { self.currentID = items.first?.id }
             return
         }
-        let next = movies[(index + 1) % movies.count].id
+        let next = items[(index + 1) % items.count].id
         withAnimation(.easeInOut(duration: 0.6)) { self.currentID = next }
     }
 }
 
 // MARK: - Preview
 
-#Preview("Multiple Movies") {
-    let movies = [
-        HeroMovie(
-            movie: Movie(id: "preview-hero-1", streamId: 1, name: "The Matrix"),
+#Preview("Multiple Items") {
+    let items = [
+        HeroItem.movie(
+            Movie(id: "preview-hero-1", streamId: 1, name: "The Matrix"),
             backdropURL: URL(string: "https://image.tmdb.org/t/p/w1280/fNG7i7RqM1T0sP1vQmRIqRnW.jpg"),
             overview: "A computer hacker learns about the true nature of reality."
         ),
-        HeroMovie(
-            movie: Movie(id: "preview-hero-2", streamId: 2, name: "Inception"),
+        HeroItem.series(
+            Series(id: "preview-series-1", seriesId: 1, name: "Breaking Bad", num: 1),
+            backdropURL: nil,
+            overview: "A high school chemistry teacher diagnosed with inoperable cancer."
+        ),
+        HeroItem.movie(
+            Movie(id: "preview-hero-2", streamId: 2, name: "Inception"),
             backdropURL: nil,
             overview: "A thief who steals corporate secrets through dream-sharing technology."
         ),
     ]
-    HomeHeroCarousel(movies: movies, onPlay: { _ in })
+    HomeHeroCarousel(items: items, onPlayMovie: { _ in })
 }
 
-#Preview("Single Movie") {
-    let movies = [
-        HeroMovie(
-            movie: Movie(id: "preview-hero-3", streamId: 3, name: "The Dark Knight"),
+#Preview("Single Item") {
+    let items = [
+        HeroItem.movie(
+            Movie(id: "preview-hero-3", streamId: 3, name: "The Dark Knight"),
             backdropURL: nil,
             overview: "When the menace known as the Joker wreaks havoc on Gotham."
         ),
     ]
-    HomeHeroCarousel(movies: movies, onPlay: { _ in })
+    HomeHeroCarousel(items: items, onPlayMovie: { _ in })
 }
 
 #Preview("Empty") {
-    HomeHeroCarousel(movies: [], onPlay: { _ in })
+    HomeHeroCarousel(items: [], onPlayMovie: { _ in })
 }
 
 // MARK: - Backdrop image
@@ -237,13 +271,13 @@ private struct HeroBackdrop: View {
 // MARK: - Title / overview / buttons
 
 private struct HeroInfo: View {
-    let hero: HeroMovie
+    let hero: HeroItem
     let isCompact: Bool
-    let onPlay: (Movie) -> Void
+    let onPlayMovie: (Movie) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(hero.movie.name)
+            Text(hero.title)
                 .font(isCompact ? .title2.weight(.bold) : .largeTitle.weight(.bold))
                 .lineLimit(2)
                 .shadow(radius: 6)
@@ -288,26 +322,49 @@ private struct HeroInfo: View {
         }
     }
 
+    @ViewBuilder
     private func playButton(fullWidth: Bool) -> some View {
-        Button {
-            onPlay(hero.movie)
-        } label: {
-            Label("Play", systemImage: "play.fill")
-                .fontWeight(.semibold)
-                .foregroundStyle(.black)
-                .frame(maxWidth: fullWidth ? .infinity : nil)
+        if let movie = hero.movie {
+            Button {
+                onPlayMovie(movie)
+            } label: {
+                Label("Play", systemImage: "play.fill")
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.black)
+                    .frame(maxWidth: fullWidth ? .infinity : nil)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.white)
+        } else if let series = hero.series {
+            NavigationLink(value: series) {
+                Label("Play", systemImage: "play.fill")
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.black)
+                    .frame(maxWidth: fullWidth ? .infinity : nil)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.white)
         }
-        .buttonStyle(.borderedProminent)
-        .tint(.white)
     }
 
+    @ViewBuilder
     private func detailsButton(fullWidth: Bool) -> some View {
-        NavigationLink(value: hero.movie) {
-            Label("Details", systemImage: "info.circle")
-                .fontWeight(.semibold)
-                .frame(maxWidth: fullWidth ? .infinity : nil)
+        if let movie = hero.movie {
+            NavigationLink(value: movie) {
+                Label("Details", systemImage: "info.circle")
+                    .fontWeight(.semibold)
+                    .frame(maxWidth: fullWidth ? .infinity : nil)
+            }
+            .buttonStyle(.bordered)
+            .tint(.white)
+        } else if let series = hero.series {
+            NavigationLink(value: series) {
+                Label("Details", systemImage: "info.circle")
+                    .fontWeight(.semibold)
+                    .frame(maxWidth: fullWidth ? .infinity : nil)
+            }
+            .buttonStyle(.bordered)
+            .tint(.white)
         }
-        .buttonStyle(.bordered)
-        .tint(.white)
     }
 }
