@@ -19,43 +19,35 @@ final class NavigationTests: XCTestCase {
         let moviesTab = app.tabBars.buttons["Movies"]
         XCTAssertTrue(moviesTab.waitForExistence(timeout: 5))
         moviesTab.tap()
-
-        let moviesTitle = app.staticTexts["Movies"]
-        XCTAssertTrue(moviesTitle.waitForExistence(timeout: 3))
+        XCTAssertTrue(app.navigationBars["Movies"].waitForExistence(timeout: 3))
     }
 
     func testNavigationToSeries() {
         let seriesTab = app.tabBars.buttons["Series"]
         XCTAssertTrue(seriesTab.waitForExistence(timeout: 5))
         seriesTab.tap()
-
-        let seriesTitle = app.staticTexts["Series"]
-        XCTAssertTrue(seriesTitle.waitForExistence(timeout: 3))
+        XCTAssertTrue(app.navigationBars["Series"].waitForExistence(timeout: 3))
     }
 
     func testNavigationToLiveTV() {
         let liveTab = app.tabBars.buttons["Live TV"]
         XCTAssertTrue(liveTab.waitForExistence(timeout: 5))
         liveTab.tap()
-
-        let liveTitle = app.staticTexts["Live TV"]
-        XCTAssertTrue(liveTitle.waitForExistence(timeout: 3))
+        XCTAssertTrue(app.navigationBars["Live TV"].waitForExistence(timeout: 3))
     }
 
-    func testNavigationToSettings() {
-        let settingsTab = app.tabBars.buttons["Settings"]
-        XCTAssertTrue(settingsTab.waitForExistence(timeout: 5))
-        settingsTab.tap()
-
-        let settingsTitle = app.staticTexts["Settings"]
-        XCTAssertTrue(settingsTitle.waitForExistence(timeout: 3))
+    func testNavigationToHome() {
+        let homeTab = app.tabBars.buttons["Home"]
+        XCTAssertTrue(homeTab.waitForExistence(timeout: 5))
+        homeTab.tap()
+        XCTAssertTrue(app.navigationBars["Home"].waitForExistence(timeout: 3))
     }
 
     func testAllTabsAreAccessible() {
         let tabs = app.tabBars.buttons
+        XCTAssertTrue(tabs["Home"].exists)
         XCTAssertTrue(tabs["Movies"].exists)
         XCTAssertTrue(tabs["Series"].exists)
         XCTAssertTrue(tabs["Live TV"].exists)
-        XCTAssertTrue(tabs["Settings"].exists)
     }
 }

@@ -10,51 +10,39 @@ final class SettingsTests: XCTestCase {
         app.launch()
     }
 
-    func testSettingsTabNavigatesToSettings() {
-        let settingsTab = app.tabBars.buttons["Settings"]
-        XCTAssertTrue(settingsTab.waitForExistence(timeout: 5))
-        settingsTab.tap()
+    private func openSettings() {
+        app.buttons["gear"].tap()
+        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 3))
+    }
 
-        let settingsTitle = app.staticTexts["Settings"]
-        XCTAssertTrue(settingsTitle.waitForExistence(timeout: 3))
+    func testSettingsAccessibleFromToolbar() {
+        openSettings()
     }
 
     func testPlaylistsSectionShowsPlaylist() {
-        let settingsTab = app.tabBars.buttons["Settings"]
-        XCTAssertTrue(settingsTab.waitForExistence(timeout: 5))
-        settingsTab.tap()
-
+        openSettings()
         let playlistName = app.staticTexts["Test Playlist"]
         XCTAssertTrue(playlistName.waitForExistence(timeout: 3))
     }
 
     func testPlayerEnginePickerExists() {
-        let settingsTab = app.tabBars.buttons["Settings"]
-        XCTAssertTrue(settingsTab.waitForExistence(timeout: 5))
-        settingsTab.tap()
-
+        openSettings()
         let engineLabel = app.staticTexts["Engine"]
         XCTAssertTrue(engineLabel.waitForExistence(timeout: 3))
     }
 
     func testAddPlaylistButtonExists() {
-        let settingsTab = app.tabBars.buttons["Settings"]
-        XCTAssertTrue(settingsTab.waitForExistence(timeout: 5))
-        settingsTab.tap()
-
+        openSettings()
         let addButton = app.buttons["Add Playlist"]
         XCTAssertTrue(addButton.waitForExistence(timeout: 3))
     }
 
     func testPlaylistDetailNavigation() {
-        let settingsTab = app.tabBars.buttons["Settings"]
-        XCTAssertTrue(settingsTab.waitForExistence(timeout: 5))
-        settingsTab.tap()
-
+        openSettings()
         let playlistName = app.staticTexts["Test Playlist"]
         XCTAssertTrue(playlistName.waitForExistence(timeout: 3))
         playlistName.tap()
-
+        XCTAssertTrue(app.navigationBars["Test Playlist"].waitForExistence(timeout: 3))
         let nameLabel = app.staticTexts["Name"]
         XCTAssertTrue(nameLabel.waitForExistence(timeout: 3))
     }

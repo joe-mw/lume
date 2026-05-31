@@ -12,34 +12,32 @@ final class LoginFlowTests: XCTestCase {
         app.launch()
     }
 
-    func testAppShowsSeededPlaylist() {
-        let addPlaylistButton = app.buttons["Add Playlist"]
-        // The seeded playlist means the main tabs appear, not the login form
+    func testAppShowsMainTabBarWithSeededData() {
         XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 5))
     }
 
     func testTabBarShowsAllTabs() {
         XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 3))
+        XCTAssertTrue(app.tabBars.buttons["Home"].exists)
         XCTAssertTrue(app.tabBars.buttons["Movies"].exists)
         XCTAssertTrue(app.tabBars.buttons["Series"].exists)
         XCTAssertTrue(app.tabBars.buttons["Live TV"].exists)
-        XCTAssertTrue(app.tabBars.buttons["Settings"].exists)
     }
 
     func testAddPlaylistButtonAvailableInSettings() {
-        app.tabBars.buttons["Settings"].tap()
+        app.buttons["gear"].tap()
         let addButton = app.buttons["Add Playlist"]
         XCTAssertTrue(addButton.waitForExistence(timeout: 3))
     }
 
     func testSeededPlaylistNameVisible() {
-        app.tabBars.buttons["Settings"].tap()
+        app.buttons["gear"].tap()
         let playlistName = app.staticTexts["Test Playlist"]
         XCTAssertTrue(playlistName.waitForExistence(timeout: 3))
     }
 
     func testPlaylistCanBeDeleted() {
-        app.tabBars.buttons["Settings"].tap()
+        app.buttons["gear"].tap()
         let playlistName = app.staticTexts["Test Playlist"]
         XCTAssertTrue(playlistName.waitForExistence(timeout: 3))
         playlistName.swipeLeft()
