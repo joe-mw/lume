@@ -42,14 +42,14 @@ struct LiveTVView: View {
                     ContentUnavailableView(
                         "No Playlists",
                         systemImage: "antenna.radiowaves.left.and.right",
-                        description: Text("Add a playlist in Settings to start watching live TV")
+                        description: Text("Add a playlist in Settings to start watching live TV"),
                     )
                 } else if categories.isEmpty {
                     VStack(spacing: 20) {
                         ContentUnavailableView(
                             "No Channels",
                             systemImage: "antenna.radiowaves.left.and.right",
-                            description: Text("Sync your playlist to load live TV channels")
+                            description: Text("Sync your playlist to load live TV channels"),
                         )
 
                         if let playlist = activePlaylist {
@@ -65,9 +65,9 @@ struct LiveTVView: View {
                     }
                 } else {
                     #if os(iOS)
-                    iOSLayout
+                        iOSLayout
                     #else
-                    macOSLayout
+                        macOSLayout
                     #endif
                 }
             }
@@ -79,7 +79,7 @@ struct LiveTVView: View {
                 contentSortRaw: $contentSortRaw,
                 showingSync: $showingSync,
                 showingSettings: $showingSettings,
-                activePlaylist: activePlaylist
+                activePlaylist: activePlaylist,
             ))
             .task {
                 if selectedCategory == nil, let first = sortedCategories.first {
@@ -103,36 +103,34 @@ struct LiveTVView: View {
     // MARK: - Platform-specific layouts
 
     #if os(iOS)
-    @ViewBuilder
-    private var iOSLayout: some View {
-        VStack(spacing: 0) {
-            CategoryBar(
-                categories: sortedCategories,
-                selectedCategory: $selectedCategory
-            )
-
-            if let category = selectedCategory {
-                ChannelsList(category: category, sort: contentSort) { stream in
-                    playChannel(stream)
-                }
-                .id("\(category.id)-\(contentSort.rawValue)")
-            } else {
-                ContentUnavailableView(
-                    "Select a Category",
-                    systemImage: "list.bullet",
-                    description: Text("Choose a category from the list")
+        private var iOSLayout: some View {
+            VStack(spacing: 0) {
+                CategoryBar(
+                    categories: sortedCategories,
+                    selectedCategory: $selectedCategory,
                 )
+
+                if let category = selectedCategory {
+                    ChannelsList(category: category, sort: contentSort) { stream in
+                        playChannel(stream)
+                    }
+                    .id("\(category.id)-\(contentSort.rawValue)")
+                } else {
+                    ContentUnavailableView(
+                        "Select a Category",
+                        systemImage: "list.bullet",
+                        description: Text("Choose a category from the list"),
+                    )
+                }
             }
         }
-    }
     #endif
 
-    @ViewBuilder
     private var macOSLayout: some View {
         HStack(spacing: 0) {
             CategorySidebar(
                 categories: sortedCategories,
-                selectedCategory: $selectedCategory
+                selectedCategory: $selectedCategory,
             )
             .frame(width: 200)
 
@@ -147,7 +145,7 @@ struct LiveTVView: View {
                 ContentUnavailableView(
                     "Select a Category",
                     systemImage: "list.bullet",
-                    description: Text("Choose a category from the sidebar")
+                    description: Text("Choose a category from the sidebar"),
                 )
             }
         }
@@ -202,7 +200,7 @@ struct CategorySidebar: View {
             .listRowBackground(
                 selectedCategory?.id == category.id
                     ? Color.accentColor.opacity(0.15)
-                    : Color.clear
+                    : Color.clear,
             )
         }
         .listStyle(.sidebar)
@@ -212,45 +210,45 @@ struct CategorySidebar: View {
 // MARK: - iOS Category Bar
 
 #if os(iOS)
-struct CategoryBar: View {
-    let categories: [Category]
-    @Binding var selectedCategory: Category?
+    struct CategoryBar: View {
+        let categories: [Category]
+        @Binding var selectedCategory: Category?
 
-    var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(categories) { category in
-                    Button {
-                        selectedCategory = category
-                    } label: {
-                        Text(category.name)
-                            .font(.subheadline)
-                            .fontWeight(selectedCategory?.id == category.id ? .semibold : .regular)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(
-                                selectedCategory?.id == category.id
-                                    ? Color.accentColor
-                                    : Color.gray.opacity(0.15)
-                            )
-                            .foregroundStyle(
-                                selectedCategory?.id == category.id
-                                    ? .white
-                                    : .primary
-                            )
-                            .clipShape(Capsule())
+        var body: some View {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(categories) { category in
+                        Button {
+                            selectedCategory = category
+                        } label: {
+                            Text(category.name)
+                                .font(.subheadline)
+                                .fontWeight(selectedCategory?.id == category.id ? .semibold : .regular)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                                .background(
+                                    selectedCategory?.id == category.id
+                                        ? Color.accentColor
+                                        : Color.gray.opacity(0.15),
+                                )
+                                .foregroundStyle(
+                                    selectedCategory?.id == category.id
+                                        ? .white
+                                        : .primary,
+                                )
+                                .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
+                .padding(.horizontal)
+                .padding(.vertical, 8)
             }
-            .padding(.horizontal)
-            .padding(.vertical, 8)
-        }
-        .background(.bar)
+            .background(.bar)
 
-        Divider()
+            Divider()
+        }
     }
-}
 #endif
 
 // MARK: - Channels List
@@ -266,7 +264,7 @@ struct ChannelsList: View {
         let categoryId = category.id
         _streams = Query(
             filter: #Predicate<LiveStream> { $0.categoryId == categoryId },
-            sort: sort.liveStreamDescriptors
+            sort: sort.liveStreamDescriptors,
         )
     }
 
@@ -277,7 +275,7 @@ struct ChannelsList: View {
                     ContentUnavailableView(
                         "No Channels",
                         systemImage: "antenna.radiowaves.left.and.right",
-                        description: Text("This category has no channels")
+                        description: Text("This category has no channels"),
                     )
                 } else {
                     ForEach(streams) { stream in

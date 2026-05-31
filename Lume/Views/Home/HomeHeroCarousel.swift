@@ -25,41 +25,41 @@ enum HeroItem: Identifiable, Hashable {
 
     var id: String {
         switch self {
-        case .movie(let m, _, _): return "movie-\(m.id)"
-        case .series(let s, _, _): return "series-\(s.id)"
+        case let .movie(movie, _, _): "movie-\(movie.id)"
+        case let .series(series, _, _): "series-\(series.id)"
         }
     }
 
     var title: String {
         switch self {
-        case .movie(let m, _, _): return m.name
-        case .series(let s, _, _): return s.name
+        case let .movie(movie, _, _): movie.name
+        case let .series(series, _, _): series.name
         }
     }
 
     var overview: String {
         switch self {
-        case .movie(_, _, let o): return o
-        case .series(_, _, let o): return o
+        case let .movie(_, _, overview): overview
+        case let .series(_, _, overview): overview
         }
     }
 
     var imageURL: URL? {
         switch self {
-        case .movie(let m, let backdrop, _):
-            return backdrop ?? URL(string: m.streamIcon ?? "")
-        case .series(let s, let backdrop, _):
-            return backdrop ?? URL(string: s.cover ?? "")
+        case let .movie(movie, backdrop, _):
+            backdrop ?? URL(string: movie.streamIcon ?? "")
+        case let .series(series, backdrop, _):
+            backdrop ?? URL(string: series.cover ?? "")
         }
     }
 
     var movie: Movie? {
-        if case .movie(let m, _, _) = self { return m }
+        if case let .movie(movie, _, _) = self { return movie }
         return nil
     }
 
     var series: Series? {
-        if case .series(let s, _, _) = self { return s }
+        if case let .series(series, _, _) = self { return series }
         return nil
     }
 }
@@ -97,7 +97,7 @@ struct HomeHeroCarousel: View {
                 LinearGradient(
                     colors: [.clear, .black.opacity(0.15), .black.opacity(0.85)],
                     startPoint: .center,
-                    endPoint: .bottom
+                    endPoint: .bottom,
                 )
                 .allowsHitTesting(false)
 
@@ -186,7 +186,7 @@ struct HomeHeroCarousel: View {
         guard let currentID,
               let index = items.firstIndex(where: { $0.id == currentID })
         else {
-            withAnimation(.easeInOut) { self.currentID = items.first?.id }
+            withAnimation(.easeInOut) { currentID = items.first?.id }
             return
         }
         let next = items[(index + 1) % items.count].id
@@ -201,17 +201,17 @@ struct HomeHeroCarousel: View {
         HeroItem.movie(
             Movie(id: "preview-hero-1", streamId: 1, name: "The Matrix"),
             backdropURL: URL(string: "https://image.tmdb.org/t/p/w1280/fNG7i7RqM1T0sP1vQmRIqRnW.jpg"),
-            overview: "A computer hacker learns about the true nature of reality."
+            overview: "A computer hacker learns about the true nature of reality.",
         ),
         HeroItem.series(
             Series(id: "preview-series-1", seriesId: 1, name: "Breaking Bad", num: 1),
             backdropURL: nil,
-            overview: "A high school chemistry teacher diagnosed with inoperable cancer."
+            overview: "A high school chemistry teacher diagnosed with inoperable cancer.",
         ),
         HeroItem.movie(
             Movie(id: "preview-hero-2", streamId: 2, name: "Inception"),
             backdropURL: nil,
-            overview: "A thief who steals corporate secrets through dream-sharing technology."
+            overview: "A thief who steals corporate secrets through dream-sharing technology.",
         ),
     ]
     HomeHeroCarousel(items: items, onPlayMovie: { _ in })
@@ -222,7 +222,7 @@ struct HomeHeroCarousel: View {
         HeroItem.movie(
             Movie(id: "preview-hero-3", streamId: 3, name: "The Dark Knight"),
             backdropURL: nil,
-            overview: "When the menace known as the Joker wreaks havoc on Gotham."
+            overview: "When the menace known as the Joker wreaks havoc on Gotham.",
         ),
     ]
     HomeHeroCarousel(items: items, onPlayMovie: { _ in })

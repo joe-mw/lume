@@ -49,21 +49,21 @@ struct HomeView: View {
         // Recently watched: non-nil lastWatchedDate, newest first.
         var movies = FetchDescriptor<Movie>(
             predicate: #Predicate { $0.lastWatchedDate != nil },
-            sortBy: [SortDescriptor(\.lastWatchedDate, order: .reverse)]
+            sortBy: [SortDescriptor(\.lastWatchedDate, order: .reverse)],
         )
         movies.fetchLimit = 20
         _watchedMovies = Query(movies)
 
         var series = FetchDescriptor<Series>(
             predicate: #Predicate { $0.lastWatchedDate != nil },
-            sortBy: [SortDescriptor(\.lastWatchedDate, order: .reverse)]
+            sortBy: [SortDescriptor(\.lastWatchedDate, order: .reverse)],
         )
         series.fetchLimit = 20
         _watchedSeries = Query(series)
 
         var streams = FetchDescriptor<LiveStream>(
             predicate: #Predicate { $0.lastWatchedDate != nil },
-            sortBy: [SortDescriptor(\.lastWatchedDate, order: .reverse)]
+            sortBy: [SortDescriptor(\.lastWatchedDate, order: .reverse)],
         )
         streams.fetchLimit = 20
         _watchedStreams = Query(streams)
@@ -71,21 +71,21 @@ struct HomeView: View {
         // Favorites: alphabetical, capped.
         var favMovies = FetchDescriptor<Movie>(
             predicate: #Predicate { $0.isFavorite },
-            sortBy: [SortDescriptor(\.name)]
+            sortBy: [SortDescriptor(\.name)],
         )
         favMovies.fetchLimit = 30
         _favoriteMovies = Query(favMovies)
 
         var favSeries = FetchDescriptor<Series>(
             predicate: #Predicate { $0.isFavorite },
-            sortBy: [SortDescriptor(\.name)]
+            sortBy: [SortDescriptor(\.name)],
         )
         favSeries.fetchLimit = 30
         _favoriteSeries = Query(favSeries)
 
         var favStreams = FetchDescriptor<LiveStream>(
             predicate: #Predicate { $0.isFavorite },
-            sortBy: [SortDescriptor(\.name)]
+            sortBy: [SortDescriptor(\.name)],
         )
         favStreams.fetchLimit = 30
         _favoriteStreams = Query(favStreams)
@@ -98,13 +98,13 @@ struct HomeView: View {
                     ContentUnavailableView(
                         "No Playlists",
                         systemImage: "house",
-                        description: Text("Add a playlist in Settings to get started")
+                        description: Text("Add a playlist in Settings to get started"),
                     )
                 } else if isEmpty {
                     ContentUnavailableView(
                         "Nothing Here Yet",
                         systemImage: "house",
-                        description: Text("Watch something or mark titles as favorites and they'll show up here.")
+                        description: Text("Watch something or mark titles as favorites and they'll show up here."),
                     )
                 } else {
                     ScrollView {
@@ -143,7 +143,7 @@ struct HomeView: View {
                     contentSortRaw: $contentSortRaw,
                     showingSync: $showingSync,
                     showingSettings: $showingSettings,
-                    activePlaylist: activePlaylist
+                    activePlaylist: activePlaylist,
                 ))
                 .navigationDestination(for: Movie.self) { movie in
                     MovieDetailView(movie: movie, animationNamespace: animationNamespace)
@@ -197,7 +197,7 @@ struct HomeView: View {
         return items
             .sorted { ($0.lastWatchedDate ?? .distantPast) > ($1.lastWatchedDate ?? .distantPast) }
             .prefix(20)
-            .map { $0 }
+            .map(\.self)
     }
 
     private var favorites: [HomeMediaItem] {
@@ -234,26 +234,26 @@ struct HomeView: View {
             var seriesItems: [HomeMediaItem] = []
             var heroes: [HeroItem] = []
             let maxCount = max(movies.count, tvSeries.count)
-            for i in 0..<maxCount {
-                if i < movies.count {
-                    let title = movies[i]
+            for index in 0 ..< maxCount {
+                if index < movies.count {
+                    let title = movies[index]
                     if let movie = fetchMovie(tmdbId: title.id) {
                         movieItems.append(.movie(movie))
                         heroes.append(.movie(
                             movie,
                             backdropURL: TMDBClient.backdropURL(title.backdropPath),
-                            overview: title.overview
+                            overview: title.overview,
                         ))
                     }
                 }
-                if i < tvSeries.count {
-                    let title = tvSeries[i]
+                if index < tvSeries.count {
+                    let title = tvSeries[index]
                     if let series = fetchSeries(tmdbId: title.id) {
                         seriesItems.append(.series(series))
                         heroes.append(.series(
                             series,
                             backdropURL: TMDBClient.backdropURL(title.backdropPath),
-                            overview: title.overview
+                            overview: title.overview,
                         ))
                     }
                 }
@@ -312,8 +312,8 @@ private enum LoadState {
 
     var isSettled: Bool {
         switch self {
-        case .idle, .loading: return false
-        case .loaded, .failed: return true
+        case .idle, .loading: false
+        case .loaded, .failed: true
         }
     }
 }
@@ -329,33 +329,33 @@ enum HomeMediaItem: Identifiable, Hashable {
 
     var id: String {
         switch self {
-        case let .movie(movie): return "movie-\(movie.id)"
-        case let .series(series): return "series-\(series.id)"
-        case let .live(stream): return "live-\(stream.id)"
+        case let .movie(movie): "movie-\(movie.id)"
+        case let .series(series): "series-\(series.id)"
+        case let .live(stream): "live-\(stream.id)"
         }
     }
 
     var title: String {
         switch self {
-        case let .movie(movie): return movie.name
-        case let .series(series): return series.name
-        case let .live(stream): return stream.name
+        case let .movie(movie): movie.name
+        case let .series(series): series.name
+        case let .live(stream): stream.name
         }
     }
 
     var imageURL: URL? {
         switch self {
-        case let .movie(movie): return URL(string: movie.streamIcon ?? "")
-        case let .series(series): return URL(string: series.cover ?? "")
-        case let .live(stream): return URL(string: stream.streamIcon ?? "")
+        case let .movie(movie): URL(string: movie.streamIcon ?? "")
+        case let .series(series): URL(string: series.cover ?? "")
+        case let .live(stream): URL(string: stream.streamIcon ?? "")
         }
     }
 
     var lastWatchedDate: Date? {
         switch self {
-        case let .movie(movie): return movie.lastWatchedDate
-        case let .series(series): return series.lastWatchedDate
-        case let .live(stream): return stream.lastWatchedDate
+        case let .movie(movie): movie.lastWatchedDate
+        case let .series(series): series.lastWatchedDate
+        case let .live(stream): stream.lastWatchedDate
         }
     }
 
