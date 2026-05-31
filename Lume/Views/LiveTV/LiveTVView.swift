@@ -64,30 +64,11 @@ struct LiveTVView: View {
                         }
                     }
                 } else {
-                    HStack(spacing: 0) {
-                        // Category sidebar
-                        CategorySidebar(
-                            categories: sortedCategories,
-                            selectedCategory: $selectedCategory
-                        )
-                        .frame(width: 200)
-
-                        Divider()
-
-                        // Channels list (lazy-loaded by category)
-                        if let category = selectedCategory {
-                            ChannelsList(category: category, sort: contentSort) { stream in
-                                playChannel(stream)
-                            }
-                            .id("\(category.id)-\(contentSort.rawValue)")
-                        } else {
-                            ContentUnavailableView(
-                                "Select a Category",
-                                systemImage: "list.bullet",
-                                description: Text("Choose a category from the sidebar")
-                            )
-                        }
-                    }
+                    #if os(iOS)
+                    iOSLayout
+                    #else
+                    macOSLayout
+                    #endif
                 }
             }
             .navigationTitle("Live TV")
@@ -116,6 +97,59 @@ struct LiveTVView: View {
                 FullScreenPlayerView(media: media)
             }
             #endif
+        }
+    }
+
+    // MARK: - Platform-specific layouts
+
+    #if os(iOS)
+    @ViewBuilder
+    private var iOSLayout: some View {
+        VStack(spacing: 0) {
+            CategoryBar(
+                categories: sortedCategories,
+                selectedCategory: $selectedCategory
+            )
+
+            if let category = selectedCategory {
+                ChannelsList(category: category, sort: contentSort) { stream in
+                    playChannel(stream)
+                }
+                .id("\(category.id)-\(contentSort.rawValue)")
+            } else {
+                ContentUnavailableView(
+                    "Select a Category",
+                    systemImage: "list.bullet",
+                    description: Text("Choose a category from the list")
+                )
+            }
+        }
+    }
+    #endif
+
+    @ViewBuilder
+    private var macOSLayout: some View {
+        HStack(spacing: 0) {
+            CategorySidebar(
+                categories: sortedCategories,
+                selectedCategory: $selectedCategory
+            )
+            .frame(width: 200)
+
+            Divider()
+
+            if let category = selectedCategory {
+                ChannelsList(category: category, sort: contentSort) { stream in
+                    playChannel(stream)
+                }
+                .id("\(category.id)-\(contentSort.rawValue)")
+            } else {
+                ContentUnavailableView(
+                    "Select a Category",
+                    systemImage: "list.bullet",
+                    description: Text("Choose a category from the sidebar")
+                )
+            }
         }
     }
 
@@ -174,6 +208,50 @@ struct CategorySidebar: View {
         .listStyle(.sidebar)
     }
 }
+
+// MARK: - iOS Category Bar
+
+#if os(iOS)
+struct CategoryBar: View {
+    let categories: [Category]
+    @Binding var selectedCategory: Category?
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(categories) { category in
+                    Button {
+                        selectedCategory = category
+                    } label: {
+                        Text(category.name)
+                            .font(.subheadline)
+                            .fontWeight(selectedCategory?.id == category.id ? .semibold : .regular)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(
+                                selectedCategory?.id == category.id
+                                    ? Color.accentColor
+                                    : Color.gray.opacity(0.15)
+                            )
+                            .foregroundStyle(
+                                selectedCategory?.id == category.id
+                                    ? .white
+                                    : .primary
+                            )
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+        }
+        .background(.bar)
+
+        Divider()
+    }
+}
+#endif
 
 // MARK: - Channels List
 
