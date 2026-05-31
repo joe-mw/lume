@@ -260,7 +260,7 @@ struct HomeView: View {
             }
             trendingMovies = Array(movieItems.prefix(20))
             trendingSeries = Array(seriesItems.prefix(20))
-            heroItems = Array(heroes.prefix(6))
+            heroItems = Array(heroes.prefix(8))
             trendingState = .loaded
         } catch {
             trendingState = .failed
