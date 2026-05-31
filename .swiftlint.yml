@@ -3,3 +3,11 @@ line_length:
   error: 300
   ignores_urls: true
   ignores_function_declarations: true
+
+file_length:
+  warning: 600
+  error: 800
+
+type_body_length:
+  warning: 400
+  error: 500
