@@ -400,14 +400,16 @@ private struct HomeRow: View {
                 .padding(.horizontal)
 
             ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: 16) {
+                LazyHStack(spacing: PosterCardMetrics.railSpacing) {
                     ForEach(items) { item in
                         HomeItemCell(item: item, onPlayLive: onPlayLive, animationNamespace: animationNamespace)
                     }
                 }
                 .padding(.horizontal)
+                .padding(.vertical, PosterCardMetrics.railVerticalPadding)
             }
-            .frame(height: 220)
+            .scrollClipDisabled()
+            .frame(height: PosterCardMetrics.rowHeight)
         }
     }
 }
@@ -424,20 +426,20 @@ private struct HomeItemCell: View {
                 HomePosterCard(title: item.title, imageURL: item.imageURL, progress: item.progress)
                     .matchedTransitionSourceIfAvailable(id: movie.id, in: animationNamespace)
             }
-            .buttonStyle(.plain)
+            .posterCardButtonStyle()
         case let .series(series):
             NavigationLink(value: series) {
                 HomePosterCard(title: item.title, imageURL: item.imageURL, progress: item.progress)
                     .matchedTransitionSourceIfAvailable(id: series.id, in: animationNamespace)
             }
-            .buttonStyle(.plain)
+            .posterCardButtonStyle()
         case let .live(stream):
             Button {
                 onPlayLive(stream)
             } label: {
                 HomePosterCard(title: item.title, imageURL: item.imageURL, isLive: true)
             }
-            .buttonStyle(.plain)
+            .posterCardButtonStyle()
         }
     }
 }
@@ -453,7 +455,7 @@ private struct HomePosterCard: View {
     var isLive: Bool = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: PosterCardMetrics.titleSpacing) {
             ZStack(alignment: .bottomLeading) {
                 AsyncImage(url: imageURL) { phase in
                     switch phase {
@@ -477,7 +479,7 @@ private struct HomePosterCard: View {
                         EmptyView()
                     }
                 }
-                .frame(width: 120, height: 180)
+                .frame(width: PosterCardMetrics.posterWidth, height: PosterCardMetrics.posterHeight)
 
                 if isLive {
                     Text("LIVE")
@@ -498,14 +500,14 @@ private struct HomePosterCard: View {
                         .padding(.bottom, 6)
                 }
             }
-            .frame(width: 120, height: 180)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .frame(width: PosterCardMetrics.posterWidth, height: PosterCardMetrics.posterHeight)
+            .clipShape(RoundedRectangle(cornerRadius: PosterCardMetrics.cornerRadius))
             .shadow(radius: 2)
 
             Text(title)
-                .font(.caption)
+                .font(PosterCardMetrics.titleFont)
                 .lineLimit(2)
-                .frame(width: 120, alignment: .leading)
+                .frame(width: PosterCardMetrics.posterWidth, alignment: .leading)
         }
     }
 }

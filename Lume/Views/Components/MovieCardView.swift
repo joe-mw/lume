@@ -11,7 +11,7 @@ struct MovieCardView: View {
     let movie: Movie
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: PosterCardMetrics.titleSpacing) {
             // Poster
             AsyncImage(url: URL(string: movie.streamIcon ?? "")) { phase in
                 switch phase {
@@ -37,15 +37,15 @@ struct MovieCardView: View {
                     EmptyView()
                 }
             }
-            .frame(width: 120, height: 180)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .frame(width: PosterCardMetrics.posterWidth, height: PosterCardMetrics.posterHeight)
+            .clipShape(RoundedRectangle(cornerRadius: PosterCardMetrics.cornerRadius))
             .shadow(radius: 2)
 
             // Title
             Text(movie.name)
-                .font(.caption)
+                .font(PosterCardMetrics.titleFont)
                 .lineLimit(2)
-                .frame(width: 120, alignment: .leading)
+                .frame(width: PosterCardMetrics.posterWidth, alignment: .leading)
         }
     }
 }

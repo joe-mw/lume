@@ -21,7 +21,7 @@ struct CategoryContentGrid<Item: Identifiable & Hashable, Card: View>: View {
     @Binding var sortRaw: String
     @ViewBuilder let card: (Item) -> Card
 
-    private let columns = [GridItem(.adaptive(minimum: 100), spacing: 16)]
+    private let columns = [GridItem(.adaptive(minimum: PosterCardMetrics.gridMinimum), spacing: PosterCardMetrics.gridSpacing)]
 
     var body: some View {
         ScrollView {
@@ -33,13 +33,13 @@ struct CategoryContentGrid<Item: Identifiable & Hashable, Card: View>: View {
                 )
                 .padding(.top, 40)
             } else {
-                LazyVGrid(columns: columns, spacing: 16) {
+                LazyVGrid(columns: columns, spacing: PosterCardMetrics.gridSpacing) {
                     ForEach(items) { item in
                         NavigationLink(value: item) {
                             card(item)
                                 .matchedTransitionSourceIfAvailable(id: item.id, in: animationNamespace)
                         }
-                        .buttonStyle(.plain)
+                        .posterCardButtonStyle()
                     }
                 }
                 .padding()
@@ -85,18 +85,20 @@ struct CategoryPreviewRow<Item: Identifiable & Hashable, Card: View>: View {
                     .padding(.horizontal)
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHStack(spacing: 16) {
+                    LazyHStack(spacing: PosterCardMetrics.railSpacing) {
                         ForEach(items) { item in
                             NavigationLink(value: item) {
                                 card(item)
                                     .matchedTransitionSourceIfAvailable(id: item.id, in: animationNamespace)
                             }
-                            .buttonStyle(.plain)
+                            .posterCardButtonStyle()
                         }
                     }
                     .padding(.horizontal)
+                    .padding(.vertical, PosterCardMetrics.railVerticalPadding)
                 }
-                .frame(height: 220)
+                .scrollClipDisabled()
+                .frame(height: PosterCardMetrics.rowHeight)
             }
         }
     }

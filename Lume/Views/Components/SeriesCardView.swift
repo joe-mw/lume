@@ -11,7 +11,7 @@ struct SeriesCardView: View {
     let series: Series
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: PosterCardMetrics.titleSpacing) {
             // Cover
             AsyncImage(url: URL(string: series.cover ?? "")) { phase in
                 switch phase {
@@ -37,15 +37,15 @@ struct SeriesCardView: View {
                     EmptyView()
                 }
             }
-            .frame(width: 120, height: 180)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .frame(width: PosterCardMetrics.posterWidth, height: PosterCardMetrics.posterHeight)
+            .clipShape(RoundedRectangle(cornerRadius: PosterCardMetrics.cornerRadius))
             .shadow(radius: 2)
 
             // Title
             Text(series.name)
-                .font(.caption)
+                .font(PosterCardMetrics.titleFont)
                 .lineLimit(2)
-                .frame(width: 120, alignment: .leading)
+                .frame(width: PosterCardMetrics.posterWidth, alignment: .leading)
         }
     }
 }
