@@ -37,6 +37,13 @@ final class Movie {
     @Relationship(deleteRule: .cascade, inverse: \CastMember.movie)
     var castMembers: [CastMember] = []
 
+    // MARK: TMDB collection
+
+    var collectionId: Int?
+    var collectionName: String?
+    var collectionPosterPath: String?
+    var collectionBackdropPath: String?
+
     var categoryId: String?
 
     var isFavorite: Bool = false

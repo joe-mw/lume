@@ -30,6 +30,7 @@ struct MovieDetailView: View {
 
     @State private var playingMedia: PlayableMedia?
     @State private var similar: [HomeMediaItem] = []
+    @State private var collectionMovies: [HomeMediaItem] = []
     @State private var refreshToken: UUID = .init()
     @State private var isLoadingTMDB: Bool
 
@@ -70,11 +71,13 @@ struct MovieDetailView: View {
             .task(id: movie.id) {
                 await enrichIfNeeded()
                 resolveSimilar()
+                await resolveCollection()
                 withAnimation(.easeInOut(duration: 0.3)) {
                     isLoadingTMDB = false
                 }
             }
             .onChange(of: movie.similarTMDBIds) { resolveSimilar() }
+            .onChange(of: movie.collectionId) { Task { await resolveCollection() } }
             .onChange(of: refreshToken) { resolveSimilar() }
         #if os(iOS)
             .fullScreenCover(item: $playingMedia) { media in
@@ -147,6 +150,12 @@ struct MovieDetailView: View {
                     if !similar.isEmpty {
                         section(title: "You May Also Like") {
                             SimilarRow(items: similar, animationNamespace: animationNamespace)
+                        }
+                    }
+
+                    if !collectionMovies.isEmpty, let name = movie.collectionName {
+                        section(title: "Part of \(name)") {
+                            SimilarRow(items: collectionMovies, animationNamespace: animationNamespace)
                         }
                     }
                 }
@@ -326,6 +335,39 @@ struct MovieDetailView: View {
             }
         }
         similar = Array(resolved.prefix(12))
+    }
+
+    private func resolveCollection() async {
+        guard let collectionId = movie.collectionId else {
+            collectionMovies = []
+            return
+        }
+
+        let manager = ContentSyncManager(modelContainer: modelContext.container)
+        let partIDs: [Int]
+        do {
+            partIDs = try await manager.fetchTMDBCollectionMovieIDs(collectionId: collectionId)
+        } catch {
+            collectionMovies = []
+            return
+        }
+
+        let playlistPrefix = movie.id.components(separatedBy: "-movie-").first
+        func owned(_ id: String) -> Bool {
+            guard let prefix = playlistPrefix else { return true }
+            return id.hasPrefix(prefix)
+        }
+
+        var resolved: [HomeMediaItem] = []
+        for tmdbId in partIDs {
+            let movieMatches = (try? modelContext.fetch(
+                FetchDescriptor<Movie>(predicate: #Predicate { $0.tmdbId == tmdbId })
+            )) ?? []
+            if let match = movieMatches.first(where: { owned($0.id) && $0.id != movie.id }) {
+                resolved.append(.movie(match))
+            }
+        }
+        collectionMovies = resolved
     }
 
     // MARK: - Actions

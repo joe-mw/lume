@@ -19,6 +19,13 @@ extension ContentSyncManager {
         guard client.isConfigured else { return nil }
         return try await client.tvDetails(tmdbId)
     }
+
+    /// Fetches the list of TMDB movie IDs that belong to a collection.
+    func fetchTMDBCollectionMovieIDs(collectionId: Int) async throws -> [Int] {
+        let client = TMDBClient.shared
+        guard client.isConfigured else { return [] }
+        return try await client.collectionMovieIDs(collectionId)
+    }
 }
 
 // MARK: - Direct context apply
@@ -43,6 +50,13 @@ func applyMovieDetails(_ details: TMDBTitleDetails, to movie: Movie, context: Mo
     }
     if movie.rating == 0, let vote = details.voteAverage, vote > 0 {
         movie.rating = vote
+    }
+
+    if let collectionId = details.collectionId, collectionId > 0 {
+        movie.collectionId = collectionId
+        movie.collectionName = details.collectionName
+        movie.collectionPosterPath = details.collectionPosterPath
+        movie.collectionBackdropPath = details.collectionBackdropPath
     }
 
     replaceCast(of: movie.castMembers, with: details.cast, ownerId: movie.id, context: context) { castMember in

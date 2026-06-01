@@ -11,14 +11,20 @@ import SwiftUI
 struct SearchView: View {
     @Namespace private var animationNamespace
     @Environment(\.modelContext) private var modelContext
+    #if os(macOS)
+        @Environment(\.openWindow) private var openWindow
+    #endif
     @Query private var movies: [Movie]
     @Query private var series: [Series]
     @Query private var liveStreams: [LiveStream]
+    @Query private var playlists: [Playlist]
 
+    @AppStorage(PlaylistSelectionStore.key) private var selectedPlaylistID: String = ""
     @State private var searchText = ""
     @State private var debouncedSearchText = ""
     @State private var selectedFilter: ContentFilter = .all
     @State private var searchTask: Task<Void, Never>?
+    @State private var playingMedia: PlayableMedia?
 
     var body: some View {
         NavigationStack {
@@ -58,9 +64,12 @@ struct SearchView: View {
                                             .matchedTransitionSourceIfAvailable(id: series.id, in: animationNamespace)
                                     }
                                 case let .liveStream(stream):
-                                    NavigationLink(value: stream) {
+                                    Button {
+                                        playChannel(stream)
+                                    } label: {
                                         SearchResultRow(result: result)
                                     }
+                                    .buttonStyle(.plain)
                                 }
                             }
                         } header: {
@@ -86,9 +95,6 @@ struct SearchView: View {
                         .navigationTransition(.zoom(sourceID: series.id, in: animationNamespace))
                     #endif
                 }
-                .navigationDestination(for: LiveStream.self) { stream in
-                    Text("Live Stream: \(stream.name)")
-                }
                 .onChange(of: searchText) { _, newValue in
                     searchTask?.cancel()
                     searchTask = Task {
@@ -98,6 +104,27 @@ struct SearchView: View {
                     }
                 }
         }
+        #if os(iOS)
+        .fullScreenCover(item: $playingMedia) { media in
+            FullScreenPlayerView(media: media)
+        }
+        #endif
+    }
+
+    // MARK: - Playback
+
+    private var activePlaylist: Playlist? {
+        playlists.active(for: selectedPlaylistID)
+    }
+
+    private func playChannel(_ stream: LiveStream) {
+        guard let playlist = activePlaylist,
+              let media = PlayableMedia.from(stream: stream, playlist: playlist) else { return }
+        #if os(macOS)
+            openWindow(id: "player", value: media)
+        #else
+            playingMedia = media
+        #endif
     }
 
     private var filteredResults: [SearchResult] {

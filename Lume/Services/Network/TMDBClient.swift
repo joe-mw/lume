@@ -103,6 +103,12 @@ struct TMDBClient {
         return response.normalized(isMovie: false)
     }
 
+    /// Returns the list of TMDB movie IDs that belong to a collection.
+    func collectionMovieIDs(_ id: Int) async throws -> [Int] {
+        let response: CollectionDetailsResponse = try await get("/collection/\(id)")
+        return response.parts.map(\.id)
+    }
+
     // MARK: - Networking
 
     private func get<T: Decodable>(_ path: String) async throws -> T {
@@ -153,6 +159,12 @@ struct TMDBTitleDetails {
     var contentRating: String?
     var cast: [TMDBCastMember]
     var similarIDs: [Int]
+
+    /// Collection this movie belongs to (only for movies, nil for series).
+    var collectionId: Int?
+    var collectionName: String?
+    var collectionPosterPath: String?
+    var collectionBackdropPath: String?
 }
 
 /// One billed performer from TMDB credits.
@@ -198,6 +210,7 @@ private struct TitleDetailsResponse: Decodable {
     let similar: Similar?
     let releaseDates: Results<ReleaseDatesEntry>? // movies
     let contentRatings: Results<ContentRatingEntry>? // tv
+    let belongsToCollection: BelongsToCollection?
 
     struct Genre: Decodable { let name: String }
     struct Credits: Decodable { let cast: [TMDBCastMemberDTO]? }
@@ -210,6 +223,19 @@ private struct TitleDetailsResponse: Decodable {
         case episodeRunTime = "episode_run_time"
         case releaseDates = "release_dates"
         case contentRatings = "content_ratings"
+        case belongsToCollection = "belongs_to_collection"
+    }
+}
+
+private struct BelongsToCollection: Decodable {
+    let id: Int
+    let name: String?
+    let posterPath: String?
+    let backdropPath: String?
+    enum CodingKeys: String, CodingKey {
+        case id, name
+        case posterPath = "poster_path"
+        case backdropPath = "backdrop_path"
     }
 }
 
@@ -247,6 +273,15 @@ private struct SimilarItem: Decodable { let id: Int }
 
 private struct ReleaseDateEntry: Decodable { let certification: String? }
 
+private struct CollectionDetailsResponse: Decodable {
+    let id: Int
+    let parts: [CollectionPart]
+}
+
+private struct CollectionPart: Decodable {
+    let id: Int
+}
+
 extension TitleDetailsResponse {
     func normalized(isMovie: Bool) -> TMDBTitleDetails {
         let cast = (credits?.cast ?? [])
@@ -271,7 +306,11 @@ extension TitleDetailsResponse {
             genreNames: genres?.map(\.name) ?? [],
             contentRating: isMovie ? movieCertification() : tvRating(),
             cast: Array(cast),
-            similarIDs: similar?.results.map(\.id) ?? []
+            similarIDs: similar?.results.map(\.id) ?? [],
+            collectionId: isMovie ? belongsToCollection?.id : nil,
+            collectionName: isMovie ? belongsToCollection?.name : nil,
+            collectionPosterPath: isMovie ? belongsToCollection?.posterPath : nil,
+            collectionBackdropPath: isMovie ? belongsToCollection?.backdropPath : nil
         )
     }
 
