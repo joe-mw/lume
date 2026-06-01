@@ -1,0 +1,193 @@
+//
+//  TVDetailButtons.swift
+//  Lume
+//
+//  Focus-aware button styles and button components for the tvOS movie and
+//  series detail screens. Split out from TVDetailComponents to keep each file
+//  focused: this file owns the interactive controls (primary / glass / card /
+//  circle styles and the Play, secondary and icon buttons), while
+//  TVDetailComponents owns the static layout pieces.
+//
+//  Everything here is tuned for the focus engine: cards and buttons lift and
+//  gain a shadow when focused, mirroring tvOS system controls.
+//
+
+#if os(tvOS)
+
+    import SwiftUI
+
+    // MARK: - Focus-aware button styles
+
+    /// The big, white, primary action (Play / Resume). Lifts and brightens on
+    /// focus the way tvOS system buttons do.
+    struct TVPrimaryButtonStyle: ButtonStyle {
+        func makeBody(configuration: Configuration) -> some View {
+            StyleBody(configuration: configuration)
+        }
+
+        struct StyleBody: View {
+            let configuration: ButtonStyleConfiguration
+            @Environment(\.isFocused) private var isFocused
+            @Environment(\.isEnabled) private var isEnabled
+
+            var body: some View {
+                let pressed = configuration.isPressed
+                let background = Color.white.opacity(isFocused ? 1.0 : 0.9)
+                let shadowOpacity: Double = isFocused ? 0.45 : 0
+                return configuration.label
+                    .font(.system(size: 30, weight: .semibold))
+                    .foregroundStyle(.black)
+                    .padding(.horizontal, 44)
+                    .frame(height: 76)
+                    .frame(minWidth: 300)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(background)
+                    )
+                    .scaleEffect(scale)
+                    .opacity(isEnabled ? 1 : 0.45)
+                    .shadow(color: .black.opacity(shadowOpacity), radius: 24, y: 14)
+                    .animation(.easeOut(duration: 0.18), value: isFocused)
+                    .animation(.easeOut(duration: 0.1), value: pressed)
+            }
+
+            private var scale: CGFloat {
+                if configuration.isPressed { return 1.02 }
+                return isFocused ? 1.08 : 1.0
+            }
+        }
+    }
+
+    /// A translucent pill for secondary hero actions (Trailer, Favorite,
+    /// Watched). Tints solid white when focused.
+    struct TVGlassButtonStyle: ButtonStyle {
+        func makeBody(configuration: Configuration) -> some View {
+            StyleBody(configuration: configuration)
+        }
+
+        struct StyleBody: View {
+            let configuration: ButtonStyleConfiguration
+            @Environment(\.isFocused) private var isFocused
+
+            var body: some View {
+                let foreground: Color = isFocused ? .black : .white
+                let background: AnyShapeStyle = isFocused
+                    ? AnyShapeStyle(.white)
+                    : AnyShapeStyle(.regularMaterial)
+                let shadowOpacity: Double = isFocused ? 0.4 : 0
+                return configuration.label
+                    .font(.system(size: 26, weight: .semibold))
+                    .foregroundStyle(foreground)
+                    .padding(.horizontal, 34)
+                    .frame(height: 76)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(background)
+                    )
+                    .scaleEffect(isFocused ? 1.06 : 1.0)
+                    .shadow(color: .black.opacity(shadowOpacity), radius: 18, y: 10)
+                    .animation(.easeOut(duration: 0.18), value: isFocused)
+            }
+        }
+    }
+
+    /// Generic card lift used by episode, poster and cast cards.
+    struct TVCardButtonStyle: ButtonStyle {
+        var focusScale: CGFloat = 1.08
+
+        func makeBody(configuration: Configuration) -> some View {
+            StyleBody(configuration: configuration, focusScale: focusScale)
+        }
+
+        struct StyleBody: View {
+            let configuration: ButtonStyleConfiguration
+            let focusScale: CGFloat
+            @Environment(\.isFocused) private var isFocused
+
+            var body: some View {
+                let pressed = configuration.isPressed
+                let scale: CGFloat = pressed ? focusScale * 0.97 : (isFocused ? focusScale : 1.0)
+                let shadowOpacity: Double = isFocused ? 0.5 : 0
+                return configuration.label
+                    .scaleEffect(scale)
+                    .shadow(color: .black.opacity(shadowOpacity), radius: 22, y: 14)
+                    .animation(.easeOut(duration: 0.18), value: isFocused)
+                    .animation(.easeOut(duration: 0.1), value: pressed)
+            }
+        }
+    }
+
+    struct TVCircleButtonStyle: ButtonStyle {
+        func makeBody(configuration: Configuration) -> some View {
+            StyleBody(configuration: configuration)
+        }
+
+        struct StyleBody: View {
+            let configuration: ButtonStyleConfiguration
+            @Environment(\.isFocused) private var isFocused
+
+            var body: some View {
+                let background: AnyShapeStyle = isFocused
+                    ? AnyShapeStyle(.white)
+                    : AnyShapeStyle(.regularMaterial)
+                let shadowOpacity: Double = isFocused ? 0.4 : 0
+                return configuration.label
+                    .foregroundStyle(isFocused ? .black : .white)
+                    .frame(width: 68, height: 68)
+                    .background(Circle().fill(background))
+                    .scaleEffect(isFocused ? 1.1 : 1.0)
+                    .shadow(color: .black.opacity(shadowOpacity), radius: 16, y: 8)
+                    .animation(.easeOut(duration: 0.18), value: isFocused)
+            }
+        }
+    }
+
+    // MARK: - Buttons
+
+    struct TVPlayButton: View {
+        let title: String
+        var systemImage: String = "play.fill"
+        var isEnabled: Bool = true
+        let action: () -> Void
+
+        var body: some View {
+            Button(action: action) {
+                Label(title, systemImage: systemImage)
+            }
+            .buttonStyle(TVPrimaryButtonStyle())
+            .disabled(!isEnabled)
+        }
+    }
+
+    struct TVSecondaryActionButton: View {
+        let title: String
+        let systemImage: String
+        var action: () -> Void
+
+        var body: some View {
+            Button(action: action) {
+                Label(title, systemImage: systemImage)
+                    .labelStyle(.titleAndIcon)
+            }
+            .buttonStyle(TVGlassButtonStyle())
+        }
+    }
+
+    /// A circular, focus-aware icon button for the floating top bar
+    /// (back, favorite, mark-watched).
+    struct TVIconButton: View {
+        let systemImage: String
+        var accessibilityLabel: String = ""
+        let action: () -> Void
+
+        var body: some View {
+            Button(action: action) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 30, weight: .semibold))
+            }
+            .buttonStyle(TVCircleButtonStyle())
+            .accessibilityLabel(accessibilityLabel)
+        }
+    }
+
+#endif
