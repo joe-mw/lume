@@ -117,12 +117,20 @@ struct HomeHeroCarousel: View {
             .animation(.easeInOut(duration: 0.35), value: currentID)
         }
         .frame(height: heroHeight)
-        .onAppear {
-            if currentID == nil { currentID = items.first?.id }
-        }
-        .task(id: items.count) {
-            await autoAdvance()
-        }
+        #if os(tvOS)
+            // tvOS applies overscan safe-area insets (~60pt) on every edge. The
+            // enclosing ScrollView only ignores the top edge, which leaves the
+            // hero inset on the left/right and stops it from spanning the full
+            // screen. Bleed past the horizontal insets so the artwork reaches
+            // both edges; HeroInfo keeps its own title-safe padding.
+            .ignoresSafeArea(edges: .horizontal)
+        #endif
+            .onAppear {
+                if currentID == nil { currentID = items.first?.id }
+            }
+            .task(id: items.count) {
+                await autoAdvance()
+            }
     }
 
     // MARK: - Scrolling artwork
@@ -164,8 +172,13 @@ struct HomeHeroCarousel: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .background(.ultraThinMaterial, in: Capsule())
-            .padding(.bottom, 14)
-            .animation(.easeInOut, value: currentID)
+            #if os(tvOS)
+                // Keep the indicator clear of the bottom overscan margin.
+                .padding(.bottom, 40)
+            #else
+                .padding(.bottom, 14)
+            #endif
+                .animation(.easeInOut, value: currentID)
         }
     }
 
@@ -295,15 +308,22 @@ private struct HeroInfo: View {
                 .padding(.top, 4)
         }
         .foregroundStyle(.white)
-        .padding(.horizontal, isCompact ? 16 : 24)
         .padding(.top, isCompact ? 16 : 24)
-        // Extra bottom inset so the (taller) stacked buttons clear the page
-        // indicator instead of colliding with it / clipping at the edge.
-        .padding(.bottom, 40)
-        // Cap the readable column on very wide windows; fill the width when
-        // compact. Pin the block to the leading edge.
-        .frame(maxWidth: isCompact ? .infinity : 640, alignment: .leading)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        #if os(tvOS)
+            // The carousel bleeds to the screen edges on tvOS, so pad the text
+            // and buttons into the title-safe area (overscan is ~60pt).
+            .padding(.horizontal, 60)
+            .padding(.bottom, 60)
+        #else
+            .padding(.horizontal, isCompact ? 16 : 24)
+            // Extra bottom inset so the (taller) stacked buttons clear the page
+            // indicator instead of colliding with it / clipping at the edge.
+            .padding(.bottom, 40)
+        #endif
+            // Cap the readable column on very wide windows; fill the width when
+            // compact. Pin the block to the leading edge.
+            .frame(maxWidth: isCompact ? .infinity : 640, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder
