@@ -452,18 +452,30 @@ struct XtreamEpisodeInfo: Decodable {
     let movieImage: String?
     let durationSecs: Int?
     let rating: Double?
+    let plot: String?
 
     enum CodingKeys: String, CodingKey {
         case airDate = "air_date"
+        case releaseDate
         case movieImage = "movie_image"
         case durationSecs = "duration_secs"
         case rating
+        case plot
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        airDate = try? container.decodeIfPresent(String.self, forKey: .airDate)
+
+        if let adStr = try? container.decodeIfPresent(String.self, forKey: .airDate) {
+            airDate = adStr
+        } else if let rdStr = try? container.decodeIfPresent(String.self, forKey: .releaseDate) {
+            airDate = rdStr
+        } else {
+            airDate = nil
+        }
+
         movieImage = try? container.decodeIfPresent(String.self, forKey: .movieImage)
+        plot = try? container.decodeIfPresent(String.self, forKey: .plot)
 
         if let rDouble = try? container.decodeIfPresent(Double.self, forKey: .rating) {
             rating = rDouble

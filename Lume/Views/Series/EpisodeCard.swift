@@ -17,8 +17,8 @@ struct EpisodeCard: View {
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
 
-                    if let minutes = DetailFormat.minutes(episode.durationSecs) {
-                        Text(minutes)
+                    if let metaLine {
+                        Text(metaLine)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -71,6 +71,15 @@ struct EpisodeCard: View {
                 .shadow(radius: 4)
                 .opacity(0.9)
         }
+    }
+
+    /// Air date and runtime joined on a single caption line, omitting whichever is missing.
+    private var metaLine: String? {
+        let parts = [
+            DetailFormat.date(from: episode.airDate),
+            DetailFormat.minutes(episode.durationSecs)
+        ].compactMap(\.self)
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
     private var resumeFraction: Double? {

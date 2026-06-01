@@ -326,7 +326,7 @@ actor ContentSyncManager {
                     series: localSeries
                 )
 
-                episode.title = episodeDTO.title ?? ""
+                episode.title = Self.cleanEpisodeTitle(episodeDTO.title)
                 episode.containerExtension = episodeDTO.containerExtension ?? "mkv"
                 episode.seasonNum = seasonNum
                 episode.episodeNum = episodeDTO.episodeNum ?? 0
@@ -338,6 +338,9 @@ actor ContentSyncManager {
                     episode.movieImage = info.movieImage
                     episode.rating = info.rating
                     episode.airDate = info.airDate
+                    if let plot = info.plot, !plot.isEmpty {
+                        episode.plot = plot
+                    }
                 }
 
                 context.insert(episode)
@@ -345,6 +348,27 @@ actor ContentSyncManager {
         }
 
         try context.save()
+    }
+
+    /// Reduces a raw Xtream episode title to just the episode name.
+    ///
+    /// Providers commonly prefix the series and a season/episode token, e.g.
+    /// "Breaking Bad - S05E16 - Felina" or "Breaking Bad S05E16 Felina". We locate
+    /// the first `SxxExx` / `NxM` token and keep whatever follows it ("Felina").
+    /// Titles with no such token are returned untouched; a token with nothing after
+    /// it (e.g. "Breaking Bad - S05E16") yields "" so the UI can fall back to "E16".
+    static func cleanEpisodeTitle(_ raw: String?) -> String {
+        guard let raw = raw?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty else {
+            return ""
+        }
+
+        let token = #"(?i)\bS\d{1,3}\s*E\d{1,4}\b|\b\d{1,3}x\d{1,4}\b"#
+        guard let match = raw.range(of: token, options: .regularExpression) else {
+            return raw
+        }
+
+        let separators = CharacterSet(charactersIn: " -–—·:|.").union(.whitespacesAndNewlines)
+        return raw[match.upperBound...].trimmingCharacters(in: separators)
     }
 
     /// Syncs live streams in memory-bounded batches.

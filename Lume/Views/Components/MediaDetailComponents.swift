@@ -446,6 +446,20 @@ enum DetailFormat {
         }
         return nil
     }
+
+    /// A localized abbreviated date ("Mar 15, 2021") from a release-date string.
+    static func date(from dateString: String?) -> String? {
+        guard let dateString, !dateString.isEmpty else { return nil }
+        let parser = DateFormatter()
+        parser.locale = Locale(identifier: "en_US_POSIX")
+        for format in ["yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd"] {
+            parser.dateFormat = format
+            if let date = parser.date(from: dateString) {
+                return date.formatted(date: .abbreviated, time: .omitted)
+            }
+        }
+        return nil
+    }
 }
 
 // MARK: - Previews
