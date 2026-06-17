@@ -103,6 +103,14 @@ struct HomeHeroCarousel: View {
 
                 pageIndicator
                     .frame(maxWidth: .infinity, alignment: .center)
+
+                #if os(macOS)
+                    // Manual slider arrows — macOS has no touch swipe, so give the
+                    // pointer an explicit way to page. Hidden when there's nothing
+                    // to scroll between.
+                    sliderButtons
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                #endif
             }
             .frame(width: width, height: heroHeight)
             .clipped()
@@ -182,6 +190,34 @@ struct HomeHeroCarousel: View {
             .padding(.bottom, 14)
         }
     }
+
+    // MARK: - Slider buttons (macOS)
+
+    #if os(macOS)
+        @ViewBuilder
+        private var sliderButtons: some View {
+            if items.count > 1 {
+                HStack {
+                    sliderButton(systemName: "chevron.compact.left", action: retreat)
+                    Spacer()
+                    sliderButton(systemName: "chevron.compact.right", action: advance)
+                }
+                .padding(.horizontal, 16)
+            }
+        }
+
+        private func sliderButton(systemName: String, action: @escaping () -> Void) -> some View {
+            Button(action: action) {
+                Image(systemName: systemName)
+                    .font(.system(size: 28, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .shadow(radius: 6)
+                    .frame(width: 40, height: 60)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(HeroSliderButtonStyle())
+        }
+    #endif
 
     // MARK: - Auto-advance
 
@@ -344,3 +380,24 @@ private struct HeroBackdrop: View {
 
 // `HeroInfo` (the title / overview / buttons overlay) and the hero button styles
 // live in `HeroInfo.swift`.
+
+#if os(macOS)
+    /// Translucent pill behind the carousel arrows that brightens on hover and
+    /// dims on press — gives the pointer the feedback macOS users expect.
+    private struct HeroSliderButtonStyle: ButtonStyle {
+        @State private var isHovering = false
+
+        func makeBody(configuration: Configuration) -> some View {
+            configuration.label
+                .background {
+                    Capsule()
+                        .fill(.black.opacity(isHovering ? 0.45 : 0.25))
+                }
+                .opacity(configuration.isPressed ? 0.6 : (isHovering ? 1 : 0.85))
+                .scaleEffect(configuration.isPressed ? 0.92 : 1)
+                .onHover { isHovering = $0 }
+                .animation(.easeInOut(duration: 0.15), value: isHovering)
+                .animation(.easeInOut(duration: 0.15), value: configuration.isPressed)
+        }
+    }
+#endif
