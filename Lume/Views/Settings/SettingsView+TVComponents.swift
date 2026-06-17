@@ -95,9 +95,9 @@ import SwiftUI
                     .padding(.vertical, 8)
                 }
 
-                tvCreditsSection
-
                 tvSupportSection
+
+                tvCreditsSection
             }
         }
 

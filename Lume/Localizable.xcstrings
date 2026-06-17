@@ -4332,12 +4332,12 @@
         }
       }
     },
-    "Scan a code with your phone to open our website, Discord, or rate Lume — or email us for help." : {
+    "Scan the code with your phone to open our Discord." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Scanne einen Code mit deinem Handy, um unsere Website oder Discord zu öffnen oder Lume zu bewerten – oder schreib uns für Hilfe eine E-Mail."
+            "value" : "Scanne dem Code mit deinem Handy, um unser Discord zu öffnen."
           }
         }
       }
