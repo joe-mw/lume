@@ -14,19 +14,24 @@ permissions:
 jobs:
   build:
     name: Build ${{ matrix.platform }} Sideload
-    runs-on: macos-15
+    runs-on: ${{ matrix.runner }}
 
     strategy:
       fail-fast: false
       matrix:
         include:
           - platform: iOS
+            runner: macos-15
             destination: generic/platform=iOS
             format: ipa
           - platform: tvOS
+            runner: macos-15
             destination: generic/platform=tvOS
             format: ipa
+          # macOS archives on macos-26: the icon's AssetCatalogAgent compile
+          # crashes on macos-15 with a dyld MediaToolbox/AVFCore symbol mismatch.
           - platform: macOS
+            runner: macos-26
             destination: generic/platform=macOS
             format: zip
 
