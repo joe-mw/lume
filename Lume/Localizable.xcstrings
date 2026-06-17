@@ -1961,6 +1961,16 @@
         }
       }
     },
+    "For You" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Für dich"
+          }
+        }
+      }
+    },
     "Force Premium" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2903,6 +2913,16 @@
         }
       }
     },
+    "More Like This" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mehr davon"
+          }
+        }
+      }
+    },
     "Move %@" : {
       "localizations" : {
         "de" : {
@@ -3333,6 +3353,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Auf diesem Gerät nicht verfügbar"
+          }
+        }
+      }
+    },
+    "Not Interested" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht interessiert"
           }
         }
       }

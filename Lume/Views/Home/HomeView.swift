@@ -42,6 +42,9 @@ struct HomeView: View {
     @State private var trendingMovies: [HomeMediaItem] = []
     @State private var trendingSeries: [HomeMediaItem] = []
     @State private var watchlist: [HomeMediaItem] = []
+    @State private var recommendations: [HomeMediaItem] = []
+    /// Bumped after a vote so the "For You" row recomputes with the new feedback.
+    @State private var recommendationsReloadToken = 0
     @State private var heroItems: [HeroItem] = []
     @State private var trendingState: LoadState = .idle
     @State private var trakt = TraktService.shared
@@ -187,6 +190,9 @@ struct HomeView: View {
                 .task(id: "watchlist-\(trakt.isConnected)-\(selectedPlaylistID)") {
                     await loadWatchlist()
                 }
+                .task(id: recommendationsKey) {
+                    await loadRecommendations()
+                }
             #if os(iOS) || os(tvOS)
                 .fullScreenCover(item: $playingMedia) { media in
                     FullScreenPlayerView(media: media)
@@ -204,6 +210,9 @@ struct HomeView: View {
         }
         if !favorites.isEmpty {
             HomeRow(title: "Favorites", items: favorites, onPlayLive: playChannel, animationNamespace: animationNamespace)
+        }
+        if !recommendations.isEmpty {
+            HomeRow(title: "For You", items: recommendations, onPlayLive: playChannel, onVote: vote, animationNamespace: animationNamespace)
         }
         if !trendingMovies.isEmpty {
             HomeRow(title: "Trending Movies", items: trendingMovies, onPlayLive: playChannel, animationNamespace: animationNamespace)
@@ -390,6 +399,79 @@ struct HomeView: View {
         let descriptor = FetchDescriptor<Series>(predicate: #Predicate { $0.tmdbId == tmdbId })
         let matches = (try? modelContext.fetch(descriptor)) ?? []
         return matches.first { belongsToActivePlaylist($0.id) && !restriction.hides(categoryID: $0.categoryId) }
+    }
+
+    // MARK: - For You
+
+    /// Recompute when the signals the engine reads change: the favorites/history
+    /// queries, the active playlist, or a vote (via the token).
+    private var recommendationsKey: String {
+        "rec-\(watchedMovies.count)-\(watchedSeries.count)-\(favoriteMovies.count)-\(favoriteSeries.count)-\(selectedPlaylistID)-\(recommendationsReloadToken)"
+    }
+
+    /// Builds the on-device "For You" list off the main thread, then resolves the
+    /// scored ids to local models scoped to the active playlist and restriction.
+    private func loadRecommendations() async {
+        let engine = RecommendationEngine(modelContainer: modelContext.container)
+        let scored = await engine.recommendations()
+        var items: [HomeMediaItem] = []
+        for recommendation in scored {
+            switch recommendation.kind {
+            case .movie:
+                if let movie = fetchMovie(id: recommendation.id) { items.append(.movie(movie)) }
+            case .series:
+                if let series = fetchSeries(id: recommendation.id) { items.append(.series(series)) }
+            }
+            if items.count >= 10 { break }
+        }
+        recommendations = items
+    }
+
+    private func fetchMovie(id: String) -> Movie? {
+        var descriptor = FetchDescriptor<Movie>(predicate: #Predicate { $0.id == id })
+        descriptor.fetchLimit = 1
+        guard let movie = try? modelContext.fetch(descriptor).first,
+              belongsToActivePlaylist(movie.id), !restriction.hides(categoryID: movie.categoryId)
+        else { return nil }
+        return movie
+    }
+
+    private func fetchSeries(id: String) -> Series? {
+        var descriptor = FetchDescriptor<Series>(predicate: #Predicate { $0.id == id })
+        descriptor.fetchLimit = 1
+        guard let series = try? modelContext.fetch(descriptor).first,
+              belongsToActivePlaylist(series.id), !restriction.hides(categoryID: series.categoryId)
+        else { return nil }
+        return series
+    }
+
+    /// Records an up/down vote for a recommendation. A downvote drops the title
+    /// from the row immediately and excludes it from future passes; both votes
+    /// feed the taste profile on the next recompute.
+    private func vote(_ item: HomeMediaItem, _ vote: RecommendationVote) {
+        let contentId: String
+        switch item {
+        case let .movie(movie): contentId = movie.id
+        case let .series(series): contentId = series.id
+        case .live: return
+        }
+
+        let profileID = ActiveProfileStore.current
+        let identity = RecommendationFeedback.identity(contentId: contentId, profileID: profileID)
+        var descriptor = FetchDescriptor<RecommendationFeedback>(predicate: #Predicate { $0.id == identity })
+        descriptor.fetchLimit = 1
+        if let existing = try? modelContext.fetch(descriptor).first {
+            existing.vote = vote
+            existing.updatedAt = Date()
+        } else {
+            modelContext.insert(RecommendationFeedback(contentId: contentId, profileID: profileID, vote: vote))
+        }
+        try? modelContext.save()
+
+        if vote == .downvote {
+            recommendations.removeAll { $0.id == item.id }
+        }
+        recommendationsReloadToken += 1
     }
 
     // MARK: - Recently watched
