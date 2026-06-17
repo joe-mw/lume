@@ -8,6 +8,7 @@
 //  builds (those are always Premium).
 //
 
+import OSLog
 import StoreKit
 import SwiftUI
 
@@ -19,6 +20,15 @@ struct PaywallView: View {
     @State private var premium = PremiumManager.shared
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
+
+    #if !os(tvOS)
+        /// Drives the system offer-code redemption sheet. Offer codes let users
+        /// unlock Pro with a coupon issued in App Store Connect. The redeemed
+        /// transaction also arrives via `Transaction.updates`, but we refresh on
+        /// completion so the paywall dismisses immediately. tvOS has no in-app
+        /// sheet — those users redeem in the App Store.
+        @State private var showRedeemCode = false
+    #endif
 
     /// Apple's standard EULA, plus Lume's privacy policy. Subscriptions must link
     /// to terms of use and a privacy policy on the purchase screen.
@@ -49,6 +59,7 @@ struct PaywallView: View {
                         header
                         benefitsList
                         planButtons
+                        redeemButton
                         legalFooter
                     }
                     .padding(.horizontal, 20)
@@ -74,10 +85,26 @@ struct PaywallView: View {
                     .onChange(of: premium.isPremium) { _, isPremium in
                         if isPremium { dismiss() }
                     }
+                    .offerCodeRedemption(isPresented: $showRedeemCode) { result in
+                        if case let .failure(error) = result {
+                            Logger.premium.error(
+                                "Offer code redemption failed: \(error.localizedDescription, privacy: .public)"
+                            )
+                        }
+                        Task { await premium.refreshEntitlements() }
+                    }
             }
             #if os(macOS)
             .frame(minWidth: 460, idealWidth: 520, minHeight: 560, idealHeight: 680)
             #endif
+        }
+
+        private var redeemButton: some View {
+            Button("Redeem Code") { showRedeemCode = true }
+                .font(.callout.weight(.medium))
+                .buttonStyle(.plain)
+                .foregroundStyle(.tint)
+                .disabled(premium.isWorking)
         }
 
         private var header: some View {

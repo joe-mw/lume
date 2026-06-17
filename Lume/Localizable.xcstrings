@@ -3966,6 +3966,16 @@
         }
       }
     },
+    "Redeem Code" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Code einlösen"
+          }
+        }
+      }
+    },
     "Refresh" : {
       "localizations" : {
         "de" : {
@@ -5420,6 +5430,7 @@
       }
     },
     "Watched movies and episodes sync to your Trakt history." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
