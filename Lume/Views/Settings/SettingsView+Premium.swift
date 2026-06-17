@@ -91,10 +91,15 @@ extension SettingsView {
                         get: { premium.debugForcePremium },
                         set: { premium.debugForcePremium = $0 }
                     ))
+
+                    Button("Recalculate Recommendations") {
+                        RecommendationCacheStore().clear(for: ActiveProfileStore.current)
+                        recommendationsRecalcToken += 1
+                    }
                 } header: {
                     Text("Developer")
                 } footer: {
-                    Text("DEBUG only. Turn off to preview the free tier and the paywall.")
+                    Text("DEBUG only. Force Premium previews the free tier and paywall. Recalculate rebuilds the For You row now, bypassing the once-a-day throttle.")
                 }
             }
         #endif

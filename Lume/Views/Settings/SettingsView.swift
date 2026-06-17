@@ -21,6 +21,10 @@ struct SettingsView: View {
     /// Whether the Home "For You" row is shown. Not `private`: the toggle lives in
     /// the SettingsView+Indexing extension (separate file).
     @AppStorage(RecommendationSettings.enabledKey) var recommendationsEnabled = RecommendationSettings.enabledDefault
+    #if DEBUG && !SIDE_LOAD
+        /// Force-recompute counter for the DEBUG developer section (separate file).
+        @AppStorage(RecommendationSettings.manualRecalculationKey) var recommendationsRecalcToken = 0
+    #endif
     /// Legacy single-engine key, kept in sync with the primary engine so a
     /// downgrade still finds the user's preferred engine, and read as the
     /// migration seed for the priority list. See `PlayerEnginePriority`.

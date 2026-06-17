@@ -34,6 +34,12 @@ nonisolated struct RecommendationCacheStore {
         defaults.set(data, forKey: key(for: profileID))
     }
 
+    /// Drops the cached list so the next request recomputes regardless of the
+    /// recalculation interval. Used by the DEBUG "Recalculate" action.
+    func clear(for profileID: UUID?) {
+        defaults.removeObject(forKey: key(for: profileID))
+    }
+
     private func key(for profileID: UUID?) -> String {
         keyPrefix + (profileID?.uuidString ?? "default")
     }

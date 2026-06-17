@@ -1159,13 +1159,12 @@
         }
       }
     },
-    "DEBUG only. Turn off to preview the free tier and the paywall." : {
-      "extractionState" : "stale",
+    "DEBUG only. Force Premium previews the free tier and paywall. Recalculate rebuilds the For You row now, bypassing the once-a-day throttle." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nur DEBUG. Deaktivieren, um den kostenlosen Tarif und die Paywall in der Vorschau zu sehen."
+            "value" : "Nur DEBUG. „Premium erzwingen“ zeigt die kostenlose Stufe und das Paywall-Fenster. „Neu berechnen“ baut die „Für dich“-Reihe sofort neu auf und umgeht das Tageslimit."
           }
         }
       }
@@ -3942,6 +3941,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Bereit zum Synchronisieren"
+          }
+        }
+      }
+    },
+    "Recalculate Recommendations" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Empfehlungen neu berechnen"
           }
         }
       }

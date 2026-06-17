@@ -13,4 +13,9 @@ nonisolated enum RecommendationSettings {
     /// user can switch recommendations off in Settings.
     static let enabledKey = "recommendations.enabled.v1"
     static let enabledDefault = true
+
+    /// A counter bumped by the DEBUG-only "Recalculate" action to force an
+    /// immediate recompute. Part of Home's recommendations task id; dormant (0)
+    /// in release builds, where nothing increments it.
+    static let manualRecalculationKey = "recommendations.manualRecalculation.v1"
 }
