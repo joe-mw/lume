@@ -4,6 +4,13 @@ on:
   release:
     types: [published]
 
+# The build jobs attach assets to the release, which requires write access to
+# repo contents. The default GITHUB_TOKEN is read-only when the repo's default
+# workflow permissions are restricted, causing "Resource not accessible by
+# integration" on upload.
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build ${{ matrix.platform }} Sideload
