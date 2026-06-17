@@ -109,6 +109,26 @@ class XtreamClient: APIClient {
 
     // MARK: - Helper Methods
 
+    /// The provider's XMLTV guide URL for a playlist (`xmltv.php` with the
+    /// account credentials). Exposed so `EPGSourceReconciler` can store it as a
+    /// standalone EPG source — the guide is no longer fetched during a playlist
+    /// sync.
+    nonisolated static func xmltvURL(for playlist: Playlist) -> URL? {
+        guard !playlist.serverURL.isEmpty else { return nil }
+        var components = URLComponents(string: playlist.serverURL)
+        guard components != nil else { return nil }
+        if !(components?.path.hasSuffix("/") ?? false) {
+            components?.path.append("/")
+        }
+        components?.path.append("xmltv.php")
+        let existingItems = components?.queryItems ?? []
+        components?.queryItems = existingItems + [
+            URLQueryItem(name: "username", value: playlist.username),
+            URLQueryItem(name: "password", value: playlist.password)
+        ]
+        return components?.url
+    }
+
     private func buildURL(serverURL: String, path: String, queryItems: [URLQueryItem]) -> URL? {
         var components = URLComponents(string: serverURL)
         // Ensure the path is appended properly

@@ -161,7 +161,6 @@ actor ContentSyncManager {
         try await syncSeries(for: playlist, playlistId: playlistId, progress: progress)
         try await Task.sleep(for: .seconds(2))
         try await syncLiveStreams(for: playlist, playlistId: playlistId, progress: progress)
-        try await syncEPG(for: playlist, playlistId: playlistId, progress: progress)
     }
 
     func syncAllCategories(for playlist: Playlist, playlistId: UUID, progress: SyncProgress? = nil, full _: Bool = false) async throws {
@@ -480,34 +479,6 @@ actor ContentSyncManager {
 
         Logger.database.info("Completed syncing \(totalCount) live streams")
         await progress?.complete(.liveStreams)
-    }
-
-    /// Syncs EPG data using a streaming pipeline:
-    /// 1. Download XMLTV to a temp file (no in-memory blob).
-    /// 2. Collect the set of channel IDs that any LiveStream actually references.
-    /// 3. Bulk-delete all existing EPGListings in one pass.
-    /// 4. SAX-parse the file in batches, inserting only programmes whose
-    ///    channelId matches a known stream — directly into SwiftData.
-    ///
-    /// Memory stays flat regardless of EPG size because:
-    /// - The file is on disk, not in RAM.
-    /// - Only one batch of ParsedProgramme structs lives in memory at a time.
-    /// - EPGListing is keyed by channelId (no 1:N duplication per stream).
-    private func syncEPG(for playlist: Playlist, playlistId _: UUID, progress: SyncProgress? = nil) async throws {
-        await progress?.start(.epg)
-
-        guard let knownChannelIDs = try epgChannelIDs() else {
-            await progress?.complete(.epg)
-            return
-        }
-
-        // Download XMLTV to temp file
-        Logger.database.info("Downloading XMLTV EPG data")
-        let fileURL = try await xtreamClient.downloadXMLTV(playlist: playlist)
-        defer { try? FileManager.default.removeItem(at: fileURL) }
-
-        importEPGFile(fileURL, knownChannelIDs: knownChannelIDs)
-        await progress?.complete(.epg)
     }
 }
 

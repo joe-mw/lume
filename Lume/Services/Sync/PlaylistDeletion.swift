@@ -55,6 +55,9 @@ nonisolated enum PlaylistDeletion {
             context.delete(stream)
         }
 
+        // Drop the playlist's auto-created EPG source so it isn't re-synced.
+        EPGSourceReconciler.remove(playlistID: playlist.id, in: context)
+
         context.delete(playlist)
 
         let orphanedChannelIDs = removedChannelIDs.subtracting(survivingChannelIDs)

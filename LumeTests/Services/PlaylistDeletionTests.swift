@@ -23,7 +23,8 @@ struct PlaylistDeletionTests {
             Series.self,
             Episode.self,
             CastMember.self,
-            EPGListing.self
+            EPGListing.self,
+            EPGSource.self
         ])
         // `cloudKitDatabase: .none`: the catalog uses `@Attribute(.unique)`,
         // which CloudKit forbids and fails the load on a signed test host.

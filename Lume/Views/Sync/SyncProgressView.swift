@@ -99,6 +99,9 @@ struct SyncProgressView: View {
                     // Newly synced titles need indexing; the launch-time pass
                     // may already be finished, so kick a fresh one.
                     ContentIndexingService.shared.kick()
+                    // Refresh the guide so a freshly synced playlist's channels
+                    // get EPG data without waiting for the next scheduled run.
+                    EPGSyncService.shared.syncNow()
                     phase = .finished
                     // Auto-sync gets out of the way as soon as it succeeds so the
                     // user can start browsing; the manual flow waits for Done.

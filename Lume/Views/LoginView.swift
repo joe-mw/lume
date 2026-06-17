@@ -339,6 +339,9 @@ struct LoginView: View {
 
     private func insertAndFinish(_ playlist: Playlist) {
         modelContext.insert(playlist)
+        // Set up the playlist's EPG source so the guide refreshes on its own
+        // schedule — EPG is no longer part of the content sync.
+        EPGSourceReconciler.reconcile(playlist, in: modelContext)
         // Persist immediately so the ContentSyncManager actor's
         // separate ModelContext can fetch the playlist. Without this
         // the autosave is deferred and the sync's fresh context

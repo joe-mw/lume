@@ -20,7 +20,8 @@ struct ContentSyncTests {
             Series.self,
             Episode.self,
             CastMember.self,
-            EPGListing.self
+            EPGListing.self,
+            EPGSource.self
         ])
         // `cloudKitDatabase: .none` is required: the catalog uses `@Attribute(.unique)`,
         // which CloudKit forbids. The default `.automatic` mirrors to CloudKit on a

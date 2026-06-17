@@ -70,6 +70,7 @@ Metacritic), and your viewing activity can be scrobbled to **Trakt**.
 #### 📺 Live TV
 - Browse channels by category with logos and **EPG** data (now & next)
 - Full **program guide** with a scrollable timeline
+- **Custom EPG sources**: add external XMLTV feeds, refresh the guide on its own schedule, and sync manually — managed separately from playlist content
 - Catchup / time-shift support
 - Channel zapping with recently-watched history
 - **In-player channel browser** on tvOS (left-press overlay with category/channel grid)
