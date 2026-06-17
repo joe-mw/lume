@@ -36,6 +36,8 @@
 		<string>zh-Hans</string>
 		<string>zh-Hant</string>
 	</array>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>IntroDBAPIKey</key>
 	<string></string>
 	<key>LSApplicationQueriesSchemes</key>
