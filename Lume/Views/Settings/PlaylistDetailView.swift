@@ -380,6 +380,9 @@ struct PlaylistDetailView: View {
             playlist.password = editPassword
         }
         playlist.lastUpdated = Date()
+        // Keep the playlist's EPG source in step with its (possibly changed)
+        // guide URL / credentials.
+        EPGSourceReconciler.reconcile(playlist, in: modelContext)
         withAnimation { isEditing = false }
     }
 

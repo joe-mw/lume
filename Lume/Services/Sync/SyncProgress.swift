@@ -21,7 +21,6 @@ enum SyncStep: Int, CaseIterable, Identifiable {
     case movies
     case series
     case liveStreams
-    case epg
     // m3u-only steps
     case playlistDownload
     case playlistImport
@@ -33,11 +32,11 @@ enum SyncStep: Int, CaseIterable, Identifiable {
     /// The steps an Xtream sync walks through, in order.
     static let xtreamSteps: [SyncStep] = [
         .authenticating, .movieCategories, .seriesCategories, .liveCategories,
-        .movies, .series, .liveStreams, .epg
+        .movies, .series, .liveStreams
     ]
 
     /// The steps an m3u sync walks through, in order.
-    static let m3uSteps: [SyncStep] = [.playlistDownload, .playlistImport, .epg]
+    static let m3uSteps: [SyncStep] = [.playlistDownload, .playlistImport]
 
     static func steps(for sourceType: PlaylistSourceType) -> [SyncStep] {
         switch sourceType {
@@ -55,7 +54,6 @@ enum SyncStep: Int, CaseIterable, Identifiable {
         case .movies: "Movies"
         case .series: "Series"
         case .liveStreams: "Live TV channels"
-        case .epg: "TV guide"
         case .playlistDownload: "Downloading playlist"
         case .playlistImport: "Importing content"
         }
@@ -70,7 +68,6 @@ enum SyncStep: Int, CaseIterable, Identifiable {
         case .movies: "film.stack"
         case .series: "tv"
         case .liveStreams: "antenna.radiowaves.left.and.right"
-        case .epg: "list.clipboard"
         case .playlistDownload: "arrow.down.circle"
         case .playlistImport: "square.and.arrow.down.on.square"
         }

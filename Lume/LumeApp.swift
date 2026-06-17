@@ -65,7 +65,7 @@ struct LumeApp: App {
         let cloud = makeCloudContainer()
         let catalogSchema = Schema([
             Playlist.self, Category.self, LiveStream.self, Movie.self,
-            Series.self, Episode.self, CastMember.self, EPGListing.self
+            Series.self, Episode.self, CastMember.self, EPGListing.self, EPGSource.self
         ])
         // Unnamed → keeps the historical `default.store` path (preserves data).
         // `cloudKitDatabase: .none` is REQUIRED: the default is `.automatic`, which
@@ -90,6 +90,7 @@ struct LumeApp: App {
             // it now, before MainTabView's auto-sync gate reads playlist status,
             // or the playlist stays wedged out of all future syncs.
             ContentSyncManager.recoverInterruptedSyncs(in: ModelContext(catalog))
+            EPGSyncManager.recoverInterruptedSyncs(in: ModelContext(catalog))
             return (catalog, cloud)
         } catch {
             #if DEBUG
@@ -210,6 +211,11 @@ struct LumeApp: App {
                     // sync is running).
                     ContentIndexingService.shared.configure(container: catalogContainer)
                     ContentIndexingService.shared.kick()
+
+                    // Refresh the TV guide on its own schedule, independent of
+                    // the content sync. No-ops when no guide is due yet.
+                    EPGSyncService.shared.configure(container: catalogContainer)
+                    EPGSyncService.shared.syncIfDue()
                 }
                 .onChange(of: scenePhase) { _, phase in
                     cloudSync.handleScenePhaseChange(to: phase)

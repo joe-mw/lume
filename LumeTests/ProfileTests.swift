@@ -22,14 +22,14 @@ struct ProfileEngineTests {
     private func makeContainer() throws -> ModelContainer {
         let fullSchema = Schema([
             Playlist.self, Lume.Category.self, LiveStream.self, Movie.self,
-            Series.self, Episode.self, CastMember.self, EPGListing.self,
+            Series.self, Episode.self, CastMember.self, EPGListing.self, EPGSource.self,
             SyncedPlaylist.self, UserContentState.self, UserProfile.self
         ])
         let localConfig = ModelConfiguration(
             "local",
             schema: Schema([
                 Playlist.self, Lume.Category.self, LiveStream.self, Movie.self,
-                Series.self, Episode.self, CastMember.self, EPGListing.self
+                Series.self, Episode.self, CastMember.self, EPGListing.self, EPGSource.self
             ]),
             isStoredInMemoryOnly: true,
             cloudKitDatabase: .none

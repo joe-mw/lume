@@ -135,7 +135,7 @@ struct M3USyncTests {
         #expect(category.isHidden, "Re-sync must not wipe hidden state")
     }
 
-    @Test func `imports EPG from explicit XMLTV URL`() async throws {
+    @Test func `dedicated EPG sync imports listings for a playlist's source`() async throws {
         let xmltv = """
         <?xml version="1.0" encoding="UTF-8"?>
         <tv>
@@ -157,8 +157,22 @@ struct M3USyncTests {
         }
         let playlist = try makePlaylist(container: container, fileURL: playlistFile, epgURL: epgFile.absoluteString)
 
-        let manager = ContentSyncManager(modelContainer: container)
-        try await manager.syncPlaylist(playlist)
+        // Adding a playlist sets up its EPG source — the guide is no longer
+        // fetched as part of the content sync.
+        let setupContext = ModelContext(container)
+        if let stored = try setupContext.fetch(FetchDescriptor<Playlist>()).first {
+            EPGSourceReconciler.reconcile(stored, in: setupContext)
+        }
+        #expect(try setupContext.fetchCount(FetchDescriptor<EPGSource>()) == 1)
+
+        // Content sync brings in the channels the guide is matched against, but
+        // imports no EPG itself.
+        try await ContentSyncManager(modelContainer: container).syncPlaylist(playlist)
+        #expect(try setupContext.fetchCount(FetchDescriptor<EPGListing>()) == 0)
+
+        // The dedicated EPG sync imports the guide, filtered to known channels.
+        let didSync = await EPGSyncManager(modelContainer: container).syncAllSources()
+        #expect(didSync)
 
         let context = ModelContext(container)
         let listings = try context.fetch(FetchDescriptor<EPGListing>())

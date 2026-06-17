@@ -68,6 +68,42 @@ enum SyncFrequency: String, CaseIterable, Identifiable {
     }
 }
 
+// MARK: - EPG schedule
+
+extension SyncFrequency {
+    /// `@AppStorage` key for the EPG guide's own refresh interval — independent
+    /// of the content sync frequency, since guide data changes far more often
+    /// than the catalog.
+    static let epgStorageKey = "lume.epgSyncFrequency"
+
+    /// EPG defaults to a daily refresh.
+    static let epgDefaultValue: SyncFrequency = .daily
+
+    /// UserDefaults key holding the last successful full EPG sync as a unix
+    /// timestamp. EPG sync is global (all sources at once), so the timestamp
+    /// lives here rather than on any one source.
+    static let epgLastSyncKey = "lume.epgLastSyncDate"
+
+    /// Resolves a stored raw value to a case, falling back to the EPG default.
+    static func resolveEPG(_ raw: String) -> SyncFrequency {
+        SyncFrequency(rawValue: raw) ?? epgDefaultValue
+    }
+}
+
+/// The global last-EPG-sync timestamp, persisted in UserDefaults. Read by the
+/// auto-sync gate and stamped by `EPGSyncService` after a successful refresh.
+enum EPGSyncSchedule {
+    static var lastSyncDate: Date? {
+        get {
+            let stamp = UserDefaults.standard.double(forKey: SyncFrequency.epgLastSyncKey)
+            return stamp > 0 ? Date(timeIntervalSince1970: stamp) : nil
+        }
+        set {
+            UserDefaults.standard.set(newValue?.timeIntervalSince1970 ?? 0, forKey: SyncFrequency.epgLastSyncKey)
+        }
+    }
+}
+
 // MARK: - AutoSync
 
 /// The full gate for "should this playlist auto-sync right now". Pure so it can

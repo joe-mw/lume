@@ -189,14 +189,12 @@ extension ContentSyncManager {
         await progress?.update(detail: "\(summary.liveCount + summary.movieCount + summary.episodeCount) items", fraction: 1)
         await progress?.complete(.playlistImport)
 
-        // Prefer the user-entered EPG URL; otherwise adopt (and remember) the
-        // playlist's own url-tvg header so the guide works out of the box.
-        var epgURL = storedEPGURL
-        if epgURL == nil, let discovered = summary.headerEPGURL {
-            epgURL = discovered
+        // When the user didn't supply a guide URL, adopt (and remember) the
+        // playlist's own url-tvg header so its EPG source is configured
+        // automatically. The guide itself is fetched separately by EPGSyncManager.
+        if storedEPGURL == nil, let discovered = summary.headerEPGURL {
             persistDiscoveredEPGURL(discovered, playlistId: playlistId)
         }
-        await syncM3UEPG(epgURL: epgURL, progress: progress, client: client)
 
         markPlaylistUpdated(playlistId)
     }
@@ -471,32 +469,6 @@ extension ContentSyncManager {
         return lookup
     }
 
-    // MARK: - EPG
-
-    /// Imports the XMLTV guide behind `epgURL`. A guide failure logs and moves
-    /// on instead of failing the sync — the content import already succeeded,
-    /// and m3u guide URLs are user-supplied and often flaky.
-    private func syncM3UEPG(epgURL: String?, progress: SyncProgress?, client: M3UClient) async {
-        await progress?.start(.epg)
-
-        if let epgURL, !epgURL.isEmpty {
-            if let channelIDs = (try? epgChannelIDs()) ?? nil {
-                do {
-                    let isRemote = !(URL(string: epgURL)?.isFileURL ?? false)
-                    let fileURL = try await client.downloadEPG(from: epgURL)
-                    defer { if isRemote { try? FileManager.default.removeItem(at: fileURL) } }
-                    importEPGFile(fileURL, knownChannelIDs: channelIDs)
-                } catch {
-                    Logger.database.warning("m3u EPG sync failed, continuing without guide: \(error.localizedDescription)")
-                }
-            }
-        } else {
-            Logger.database.info("No EPG URL for m3u playlist, skipping EPG sync")
-        }
-
-        await progress?.complete(.epg)
-    }
-
     // MARK: - Playlist bookkeeping
 
     private func persistDiscoveredEPGURL(_ url: String, playlistId: UUID) {
@@ -506,6 +478,7 @@ extension ContentSyncManager {
             FetchDescriptor<Playlist>(predicate: #Predicate { $0.id == playlistId })
         ).first else { return }
         playlist.epgURL = url
+        EPGSourceReconciler.reconcile(playlist, in: context)
         try? context.save()
         Logger.database.info("Adopted EPG URL from playlist url-tvg header")
     }
