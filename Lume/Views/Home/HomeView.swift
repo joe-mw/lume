@@ -43,8 +43,6 @@ struct HomeView: View {
     @State private var trendingSeries: [HomeMediaItem] = []
     @State private var watchlist: [HomeMediaItem] = []
     @State private var recommendations: [HomeMediaItem] = []
-    /// Bumped after a vote so the "For You" row recomputes with the new feedback.
-    @State private var recommendationsReloadToken = 0
     @State private var heroItems: [HeroItem] = []
     @State private var trendingState: LoadState = .idle
     @State private var trakt = TraktService.shared
@@ -403,14 +401,18 @@ struct HomeView: View {
 
     // MARK: - For You
 
-    /// Recompute when the signals the engine reads change: the favorites/history
-    /// queries, the active playlist, or a vote (via the token).
+    /// Refresh the row when the active playlist or the favorites/history queries
+    /// change. This only re-resolves the list (cheap, and re-validates each entry
+    /// against live state) — the engine still throttles the actual re-ranking to
+    /// its recalculation interval.
     private var recommendationsKey: String {
-        "rec-\(watchedMovies.count)-\(watchedSeries.count)-\(favoriteMovies.count)-\(favoriteSeries.count)-\(selectedPlaylistID)-\(recommendationsReloadToken)"
+        "rec-\(watchedMovies.count)-\(watchedSeries.count)-\(favoriteMovies.count)-\(favoriteSeries.count)-\(selectedPlaylistID)"
     }
 
-    /// Builds the on-device "For You" list off the main thread, then resolves the
-    /// scored ids to local models scoped to the active playlist and restriction.
+    /// Resolves the engine's (throttled, possibly cached) list to local models,
+    /// dropping any that are no longer recommendable — watched, favorited or
+    /// voted on since the list was computed. That live re-validation is what lets
+    /// a vote remove a card without forcing a full re-rank.
     private func loadRecommendations() async {
         let engine = RecommendationEngine(modelContainer: modelContext.container)
         let scored = await engine.recommendations()
@@ -418,13 +420,21 @@ struct HomeView: View {
         for recommendation in scored {
             switch recommendation.kind {
             case .movie:
-                if let movie = fetchMovie(id: recommendation.id) { items.append(.movie(movie)) }
+                if let movie = fetchMovie(id: recommendation.id), isRecommendable(movie) { items.append(.movie(movie)) }
             case .series:
-                if let series = fetchSeries(id: recommendation.id) { items.append(.series(series)) }
+                if let series = fetchSeries(id: recommendation.id), isRecommendable(series) { items.append(.series(series)) }
             }
             if items.count >= 10 { break }
         }
         recommendations = items
+    }
+
+    private func isRecommendable(_ movie: Movie) -> Bool {
+        !movie.isWatched && !movie.isFavorite && movie.lastWatchedDate == nil && movie.recommendationVote == nil
+    }
+
+    private func isRecommendable(_ series: Series) -> Bool {
+        !series.isFavorite && series.lastWatchedDate == nil && series.recommendationVote == nil
     }
 
     private func fetchMovie(id: String) -> Movie? {
@@ -446,8 +456,9 @@ struct HomeView: View {
     }
 
     /// Records an up/down vote for a recommendation. Either vote drops the title
-    /// from the row immediately (it's been acted on) and steers future passes —
-    /// an upvote pulls the taste profile toward it, a downvote away.
+    /// from the row immediately (it's been acted on) and steers the next recompute
+    /// — an upvote pulls the taste profile toward it, a downvote away. The vote is
+    /// persisted now; the engine folds it in on its next (throttled) recompute.
     private func vote(_ item: HomeMediaItem, _ vote: RecommendationVote) {
         switch item {
         case let .movie(movie): movie.recommendationVote = vote
@@ -459,7 +470,6 @@ struct HomeView: View {
         try? modelContext.save()
 
         recommendations.removeAll { $0.id == item.id }
-        recommendationsReloadToken += 1
     }
 
     // MARK: - Recently watched

@@ -66,6 +66,24 @@ struct RecommendationEngineTests {
         container.mainContext.insert(movie)
     }
 
+    /// A cache backed by a throwaway defaults domain, so each test starts cold
+    /// and never touches `.standard`.
+    private func isolatedStore() -> RecommendationCacheStore {
+        RecommendationCacheStore(defaults: UserDefaults(suiteName: "rec-test-\(UUID().uuidString)")!)
+    }
+
+    private func makeEngine(
+        _ container: ModelContainer,
+        cacheStore: RecommendationCacheStore? = nil,
+        interval: TimeInterval = RecommendationEngine.recalculationInterval
+    ) -> RecommendationEngine {
+        RecommendationEngine(
+            modelContainer: container,
+            cacheStore: cacheStore ?? isolatedStore(),
+            recalculationInterval: interval
+        )
+    }
+
     @Test func `recommends unwatched titles similar to a favorite and excludes watched ones`() async throws {
         let container = try makeTestContainer()
         makeMovie(container, id: "liked", vector: [1, 0, 0, 0], favorite: true)
@@ -74,7 +92,7 @@ struct RecommendationEngineTests {
         makeMovie(container, id: "watched-similar", vector: [0.95, 0.05, 0, 0], watched: true)
         try container.mainContext.save()
 
-        let engine = RecommendationEngine(modelContainer: container)
+        let engine = makeEngine(container)
         let result = await engine.recommendations()
         let ids = result.map(\.id)
 
@@ -90,7 +108,7 @@ struct RecommendationEngineTests {
         makeMovie(container, id: "b", vector: [0, 1, 0, 0])
         try container.mainContext.save()
 
-        let engine = RecommendationEngine(modelContainer: container)
+        let engine = makeEngine(container)
         #expect(await engine.recommendations().isEmpty)
     }
 
@@ -100,7 +118,7 @@ struct RecommendationEngineTests {
         makeMovie(container, id: "similar", vector: [0.9, 0.1, 0, 0], vote: .downvote)
         try container.mainContext.save()
 
-        let engine = RecommendationEngine(modelContainer: container)
+        let engine = makeEngine(container)
         let ids = await engine.recommendations().map(\.id)
         #expect(!ids.contains("similar"))
     }
@@ -113,8 +131,46 @@ struct RecommendationEngineTests {
         makeMovie(container, id: "different", vector: [0, 0, 0, 1])
         try container.mainContext.save()
 
-        let engine = RecommendationEngine(modelContainer: container)
+        let engine = makeEngine(container)
         let ids = await engine.recommendations().map(\.id)
         #expect(ids.first == "similar")
+    }
+
+    @Test func `reuses the cached list within the recalculation interval`() async throws {
+        let container = try makeTestContainer()
+        makeMovie(container, id: "liked", vector: [1, 0, 0, 0], favorite: true)
+        makeMovie(container, id: "similar", vector: [0.9, 0.1, 0, 0])
+        try container.mainContext.save()
+
+        let store = isolatedStore()
+        let first = await makeEngine(container, cacheStore: store).recommendations().map(\.id)
+        #expect(first.contains("similar"))
+
+        // A new, more-similar title appears after the first compute.
+        makeMovie(container, id: "closer", vector: [0.99, 0.01, 0, 0])
+        try container.mainContext.save()
+
+        // Within the (default, day-long) interval the cached list is reused, so
+        // the new title is not picked up.
+        let second = await makeEngine(container, cacheStore: store).recommendations().map(\.id)
+        #expect(second == first)
+        #expect(!second.contains("closer"))
+    }
+
+    @Test func `recomputes once the interval has elapsed`() async throws {
+        let container = try makeTestContainer()
+        makeMovie(container, id: "liked", vector: [1, 0, 0, 0], favorite: true)
+        makeMovie(container, id: "similar", vector: [0.9, 0.1, 0, 0])
+        try container.mainContext.save()
+
+        let store = isolatedStore()
+        _ = await makeEngine(container, cacheStore: store, interval: 0).recommendations()
+
+        makeMovie(container, id: "closer", vector: [0.99, 0.01, 0, 0])
+        try container.mainContext.save()
+
+        // A zero interval forces a fresh rank every call, so the new title wins.
+        let second = await makeEngine(container, cacheStore: store, interval: 0).recommendations().map(\.id)
+        #expect(second.first == "closer")
     }
 }

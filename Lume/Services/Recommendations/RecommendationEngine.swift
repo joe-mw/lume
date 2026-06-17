@@ -20,20 +20,28 @@ import SwiftData
 
 /// Which catalog kind a recommendation points at. Live TV isn't indexed, so the
 /// engine only ever produces movies and series.
-enum RecommendedKind {
+enum RecommendedKind: String, Codable {
     case movie
     case series
 }
 
 /// A single ranked recommendation — just enough for the view to fetch the model
 /// and present it.
-struct ScoredRecommendation: Equatable {
+struct ScoredRecommendation: Equatable, Codable {
     let id: String
     let kind: RecommendedKind
 }
 
 actor RecommendationEngine {
+    /// How often the (expensive) ranking is actually recomputed. Between
+    /// recomputes the cached list is reused — voting or watching still drops the
+    /// acted-on card live, but the full re-rank waits for this interval. Adjust
+    /// here to recompute more or less often.
+    static let recalculationInterval: TimeInterval = 24 * 60 * 60 // once per day
+
     private let modelContainer: ModelContainer
+    private let cacheStore: RecommendationCacheStore
+    private let recalculationInterval: TimeInterval
 
     /// How many liked titles seed the taste profile. The whole favorites/history
     /// set is naturally small, but cap it so a power user's library still builds
@@ -49,19 +57,44 @@ actor RecommendationEngine {
     private let upvote = RecommendationVote.upvote.rawValue
     private let downvote = RecommendationVote.downvote.rawValue
 
-    init(modelContainer: ModelContainer) {
+    init(
+        modelContainer: ModelContainer,
+        cacheStore: RecommendationCacheStore = RecommendationCacheStore(),
+        recalculationInterval: TimeInterval = RecommendationEngine.recalculationInterval
+    ) {
         self.modelContainer = modelContainer
+        self.cacheStore = cacheStore
+        self.recalculationInterval = recalculationInterval
     }
 
     /// The top `limit` unwatched titles for the active profile, best first.
-    /// Empty when the user has no taste signals yet (nothing favorited, watched
-    /// or upvoted with an embedding) — the caller then simply hides the row.
+    ///
+    /// Throttled: a non-empty list computed within `recalculationInterval` is
+    /// returned from the cache instead of re-ranking the catalog. The caller
+    /// re-validates each entry against live state, so a freshly watched, favorited
+    /// or voted title still drops out between recomputes. Empty when the user has
+    /// no taste signals yet — the caller then simply hides the row.
     func recommendations(limit: Int = 30) -> [ScoredRecommendation] {
+        let profileID = ActiveProfileStore.current
+        if let cached = cacheStore.cache(for: profileID),
+           !cached.items.isEmpty,
+           Date().timeIntervalSince(cached.computedAt) < recalculationInterval
+        {
+            return cached.items
+        }
+
         guard let taste = RecommendationScoring.centroid(of: positiveSignals()) else {
             return []
         }
         let dislike = RecommendationScoring.centroid(of: dislikeSignals())
-        return rankCandidates(limit: limit, taste: taste, dislike: dislike)
+        let ranked = rankCandidates(limit: limit, taste: taste, dislike: dislike)
+
+        // Only cache a real result — an empty one means "no signal yet", which
+        // should retry cheaply as soon as the user favorites or watches something.
+        if !ranked.isEmpty {
+            cacheStore.save(RecommendationCache(computedAt: Date(), items: ranked), for: profileID)
+        }
+        return ranked
     }
 
     // MARK: - Taste profile
