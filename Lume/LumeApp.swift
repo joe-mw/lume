@@ -166,6 +166,7 @@ struct LumeApp: App {
         WindowGroup {
             ContentView()
                 .environment(TraktService.shared)
+                .environment(PremiumManager.shared)
                 .environment(cloudSync)
                 .environment(profileManager)
                 .environment(playlistSwitch)
@@ -232,6 +233,7 @@ struct LumeApp: App {
             }
             .modelContainer(catalogContainer)
             .environment(TraktService.shared)
+            .environment(PremiumManager.shared)
             .windowStyle(.hiddenTitleBar)
             .windowResizability(.contentMinSize)
         #endif

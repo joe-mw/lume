@@ -1,0 +1,96 @@
+name: Sideload Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    name: Build ${{ matrix.platform }} Sideload
+    runs-on: macos-15
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: iOS
+            destination: generic/platform=iOS
+            format: ipa
+          - platform: tvOS
+            destination: generic/platform=tvOS
+            format: ipa
+          - platform: macOS
+            destination: generic/platform=macOS
+            format: zip
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_26.app
+
+      # ── Inject API key secrets (optional) ───────────────────────────────────
+      # Features degrade gracefully when absent (see Scripts/inject-env.sh).
+      - name: Write .env
+        env:
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+          OMDB_API_KEY: ${{ secrets.OMDB_API_KEY }}
+          TRAKT_CLIENT_ID: ${{ secrets.TRAKT_CLIENT_ID }}
+          TRAKT_CLIENT_SECRET: ${{ secrets.TRAKT_CLIENT_SECRET }}
+        run: |
+          {
+            [ -n "$TMDB_API_KEY" ]        && echo "TMDB_API_KEY=$TMDB_API_KEY"
+            [ -n "$OMDB_API_KEY" ]        && echo "OMDB_API_KEY=$OMDB_API_KEY"
+            [ -n "$TRAKT_CLIENT_ID" ]     && echo "TRAKT_CLIENT_ID=$TRAKT_CLIENT_ID"
+            [ -n "$TRAKT_CLIENT_SECRET" ] && echo "TRAKT_CLIENT_SECRET=$TRAKT_CLIENT_SECRET"
+          } > .env || true
+
+      # ── Archive (unsigned) ───────────────────────────────────────────────────
+      # CODE_SIGNING_ALLOWED=NO skips all signing. The resulting .app is unsigned;
+      # users re-sign it themselves (iOS/tvOS via AltStore/Sideloadly,
+      # macOS via right-click → Open to bypass Gatekeeper).
+      - name: Archive (Sideload, unsigned)
+        run: |
+          xcodebuild archive \
+            -project Lume.xcodeproj \
+            -scheme Lume \
+            -configuration Sideload \
+            -destination '${{ matrix.destination }}' \
+            -archivePath "$RUNNER_TEMP/Lume-Sideload.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            ENABLE_HARDENED_RUNTIME=NO
+
+      # ── Package: IPA (iOS / tvOS) ────────────────────────────────────────────
+      # An IPA is a zip with Payload/<AppName>.app at its root.
+      - name: Package IPA
+        if: matrix.format == 'ipa'
+        run: |
+          VERSION="${{ github.event.release.tag_name }}"
+          APP=$(find "$RUNNER_TEMP/Lume-Sideload.xcarchive/Products" -name "*.app" | head -1)
+
+          mkdir -p "$RUNNER_TEMP/ipa/Payload"
+          cp -r "$APP" "$RUNNER_TEMP/ipa/Payload/"
+          cd "$RUNNER_TEMP/ipa"
+          zip -r "$RUNNER_TEMP/Lume-${VERSION}-${{ matrix.platform }}-Sideload.ipa" Payload
+
+      # ── Package: zip (macOS) ────────────────────────────────────────────────
+      # ditto preserves symlinks and resource forks inside the .app bundle.
+      # plain zip would break the bundle's internal structure.
+      - name: Package zip
+        if: matrix.format == 'zip'
+        run: |
+          VERSION="${{ github.event.release.tag_name }}"
+          APP=$(find "$RUNNER_TEMP/Lume-Sideload.xcarchive/Products" -name "*.app" | head -1)
+
+          ditto -c -k --sequesterRsrc --keepParent \
+            "$APP" \
+            "$RUNNER_TEMP/Lume-${VERSION}-macOS-Sideload.zip"
+
+      # ── Attach to release ────────────────────────────────────────────────────
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ runner.temp }}/Lume-${{ github.event.release.tag_name }}-${{ matrix.platform }}-Sideload.${{ matrix.format }}
