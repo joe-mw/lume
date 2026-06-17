@@ -79,21 +79,22 @@ extension SettingsView {
             VStack(alignment: .leading, spacing: 16) {
                 TVSettingsSectionLabel("Support")
 
-                Text("Scan a code with your phone to open our website, Discord, or rate Lume — or email us for help.")
+                Text("Scan the code with your phone to open our Discord.")
                     .font(.system(size: 22))
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, TVSettingsMetrics.rowHPadding)
 
                 HStack(alignment: .top, spacing: 40) {
-                    supportQRCode(caption: "Website", value: SupportInfo.websiteDisplay, link: SupportInfo.website)
                     supportQRCode(caption: "Discord", value: SupportInfo.discordDisplay, link: SupportInfo.discord)
-                    supportQRCode(caption: "Rate Lume", value: SupportInfo.appStoreDisplay, link: SupportInfo.appStoreReview)
                 }
                 .padding(.horizontal, TVSettingsMetrics.rowHPadding)
                 .padding(.top, 4)
 
-                TVSettingsValueRow("Email", value: SupportInfo.email)
-                    .padding(.top, 8)
+                VStack(spacing: 2) {
+                    TVSettingsValueRow("Website", value: SupportInfo.websiteDisplay)
+                    TVSettingsValueRow("Email", value: SupportInfo.email)
+                }
+                .padding(.top, 8)
             }
         }
 

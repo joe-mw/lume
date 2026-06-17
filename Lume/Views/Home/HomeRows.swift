@@ -18,6 +18,9 @@ struct HomeRow: View {
     /// When set, each card gains a "Remove from Recently Watched" context menu.
     /// Only the Recently Watched row passes this; the others leave it nil.
     var onRemove: ((HomeMediaItem) -> Void)?
+    /// When set, each card gains up/down vote actions. Only the "For You" row
+    /// passes this; the others leave it nil.
+    var onVote: ((HomeMediaItem, RecommendationVote) -> Void)?
     var animationNamespace: Namespace.ID?
 
     var body: some View {
@@ -31,7 +34,7 @@ struct HomeRow: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: PosterCardMetrics.railSpacing) {
                     ForEach(items) { item in
-                        HomeItemCell(item: item, onPlayLive: onPlayLive, onRemove: onRemove, animationNamespace: animationNamespace)
+                        HomeItemCell(item: item, onPlayLive: onPlayLive, onRemove: onRemove, onVote: onVote, animationNamespace: animationNamespace)
                     }
                 }
                 .padding(.horizontal)
@@ -47,6 +50,7 @@ private struct HomeItemCell: View {
     let item: HomeMediaItem
     let onPlayLive: (LiveStream) -> Void
     var onRemove: ((HomeMediaItem) -> Void)?
+    var onVote: ((HomeMediaItem, RecommendationVote) -> Void)?
     var animationNamespace: Namespace.ID?
 
     var body: some View {
@@ -74,6 +78,82 @@ private struct HomeItemCell: View {
             }
         }
         .recentlyWatchedRemoveMenu(onRemove.map { action in { action(item) } })
+        .recommendationVoteMenu(onVote.map { action in { vote in action(item, vote) } })
+    }
+}
+
+// MARK: - For You row
+
+/// The "For You" rail. Unlike the other rows it always renders when
+/// recommendations are enabled: while the first list is still being computed it
+/// shows a progress placeholder, and when there's nothing to suggest yet it
+/// nudges the user toward the actions that seed recommendations.
+struct ForYouRow: View {
+    let items: [HomeMediaItem]
+    let isLoading: Bool
+    let onPlayLive: (LiveStream) -> Void
+    let onVote: (HomeMediaItem, RecommendationVote) -> Void
+    var animationNamespace: Namespace.ID?
+
+    var body: some View {
+        if items.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("For You")
+                    .font(.subheadline)
+                    .fontWeight(.bold)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal)
+                placeholder
+                    .padding(.horizontal)
+            }
+        } else {
+            HomeRow(title: "For You", items: items, onPlayLive: onPlayLive, onVote: onVote, animationNamespace: animationNamespace)
+        }
+    }
+
+    private var placeholder: some View {
+        HStack(spacing: 12) {
+            if isLoading {
+                ProgressView()
+                Text("Finding recommendations…")
+            } else {
+                Image(systemName: "sparkles")
+                Text("Watch, favorite, or rate titles and we'll suggest more here.")
+            }
+        }
+        .font(.callout)
+        .foregroundStyle(.secondary)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(.quaternary, in: RoundedRectangle(cornerRadius: 12))
+    }
+}
+
+// MARK: - Recommendation vote menu
+
+extension View {
+    /// Attaches thumbs up / thumbs down actions for a "For You" recommendation
+    /// when an action is provided, otherwise leaves the view untouched. Surfaced
+    /// by the same secondary-action gesture as the remove menu (long-press on
+    /// iOS/tvOS, right-click on macOS).
+    @ViewBuilder
+    func recommendationVoteMenu(_ vote: ((RecommendationVote) -> Void)?) -> some View {
+        if let vote {
+            contextMenu {
+                Button {
+                    vote(.upvote)
+                } label: {
+                    Label("More Like This", systemImage: "hand.thumbsup")
+                }
+                Button(role: .destructive) {
+                    vote(.downvote)
+                } label: {
+                    Label("Not Interested", systemImage: "hand.thumbsdown")
+                }
+            }
+        } else {
+            self
+        }
     }
 }
 
