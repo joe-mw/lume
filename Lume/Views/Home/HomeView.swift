@@ -50,6 +50,10 @@ struct HomeView: View {
     @State private var heroItems: [HeroItem] = []
     @State private var trendingState: LoadState = .idle
     @State private var trakt = TraktService.shared
+    // Observed so the For You row defers its (potentially heavy) recompute while
+    // the device is busy syncing — and retries automatically once it isn't.
+    @State private var indexing = ContentIndexingService.shared
+    @State private var epgSync = EPGSyncService.shared
     @State private var playingMedia: PlayableMedia?
     @State private var showingSync = false
     @State private var showingSettings = false
@@ -416,7 +420,18 @@ struct HomeView: View {
     /// against live state) — the engine still throttles the actual re-ranking to
     /// its recalculation interval.
     private var recommendationsKey: String {
-        "rec-\(recommendationsEnabled)-\(watchedMovies.count)-\(watchedSeries.count)-\(favoriteMovies.count)-\(favoriteSeries.count)-\(selectedPlaylistID)"
+        "rec-\(recommendationsEnabled)-\(isSyncBusy)-\(watchedMovies.count)-\(watchedSeries.count)-\(favoriteMovies.count)-\(favoriteSeries.count)-\(selectedPlaylistID)"
+    }
+
+    /// True while a playlist sync, iCloud sync or EPG import is running. The For
+    /// You recompute reads and ranks the whole catalog, so on older devices it's
+    /// deferred until those finish — and during a CloudKit import, touching the
+    /// catalog mid-handshake is best avoided entirely. Folded into
+    /// `recommendationsKey` so the load retries the moment syncing settles.
+    private var isSyncBusy: Bool {
+        playlists.contains { $0.syncStatus == .syncing }
+            || indexing.isCloudSyncActive
+            || epgSync.isSyncing
     }
 
     /// Resolves the engine's (throttled, possibly cached) list to local models,
@@ -428,6 +443,10 @@ struct HomeView: View {
             recommendations = []
             return
         }
+        // Don't calculate while syncing — leave whatever is already shown (or the
+        // loading placeholder) in place; the task re-fires once `isSyncBusy` clears.
+        guard !isSyncBusy else { return }
+
         let engine = RecommendationEngine(modelContainer: modelContext.container)
         let scored = await engine.recommendations()
         var items: [HomeMediaItem] = []
