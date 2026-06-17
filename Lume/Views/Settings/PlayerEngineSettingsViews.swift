@@ -32,6 +32,8 @@ import SwiftUI
         @AppStorage(PlayerSettings.VLC.clockJitterKey) private var clockJitter = VLCClockJitter.auto.rawValue
         @AppStorage(PlayerSettings.VLC.clockSynchroKey) private var clockSynchro = VLCClockSynchro.automatic.rawValue
 
+        @State private var showResetConfirmation = false
+
         var body: some View {
             Section {
                 Toggle("Hardware Decoding", isOn: $hardwareDecode)
@@ -67,6 +69,22 @@ import SwiftUI
             } footer: {
                 Text("Applied the next time playback starts.")
             }
+
+            Section {
+                Button("Restore Defaults", role: .destructive) {
+                    showResetConfirmation = true
+                }
+            }
+            .confirmationDialog(
+                "Restore the default VLCKit options?",
+                isPresented: $showResetConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Restore Defaults", role: .destructive) {
+                    PlayerSettings.VLC.resetToDefaults()
+                }
+                Button("Cancel", role: .cancel) {}
+            }
         }
     }
 
@@ -101,6 +119,8 @@ import SwiftUI
         @AppStorage(PlayerSettings.KSPlayer.vodBufferKey) private var vodBuffer = PlayerSettings.KSPlayer.vodBufferDefault
         @AppStorage(PlayerSettings.KSPlayer.maxBufferKey) private var maxBuffer = PlayerSettings.KSPlayer.maxBufferDefault
 
+        @State private var showResetConfirmation = false
+
         var body: some View {
             Section {
                 Picker("Decoder Engine", selection: $primaryEngine) {
@@ -132,6 +152,22 @@ import SwiftUI
             } footer: {
                 Text("FFmpeg honours every option below for all streams. ")
                     + Text("AVPlayer is more efficient but ignores most of them — including buffering — for formats it plays natively, such as HLS. Applied the next time playback starts.")
+            }
+
+            Section {
+                Button("Restore Defaults", role: .destructive) {
+                    showResetConfirmation = true
+                }
+            }
+            .confirmationDialog(
+                "Restore the default KSPlayer options?",
+                isPresented: $showResetConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Restore Defaults", role: .destructive) {
+                    PlayerSettings.KSPlayer.resetToDefaults()
+                }
+                Button("Cancel", role: .cancel) {}
             }
         }
     }
@@ -209,6 +245,8 @@ import SwiftUI
         @AppStorage(PlayerSettings.VLC.clockJitterKey) private var clockJitter = VLCClockJitter.auto.rawValue
         @AppStorage(PlayerSettings.VLC.clockSynchroKey) private var clockSynchro = VLCClockSynchro.automatic.rawValue
 
+        @State private var showResetConfirmation = false
+
         var body: some View {
             VStack(alignment: .leading, spacing: 28) {
                 VStack(alignment: .leading, spacing: 8) {
@@ -247,6 +285,18 @@ import SwiftUI
                         valueLabel: (VLCClockSynchro(rawValue: clockSynchro) ?? .automatic).label
                     ) { clockSynchro = PlayerOptionCycle.next(clockSynchro, in: VLCClockSynchro.self) }
                 }
+
+                TVOptionResetRow(title: "Restore Defaults") { showResetConfirmation = true }
+            }
+            .confirmationDialog(
+                "Restore the default VLCKit options?",
+                isPresented: $showResetConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Restore Defaults", role: .destructive) {
+                    PlayerSettings.VLC.resetToDefaults()
+                }
+                Button("Cancel", role: .cancel) {}
             }
         }
     }
@@ -269,6 +319,8 @@ import SwiftUI
         @AppStorage(PlayerSettings.KSPlayer.liveBufferKey) private var liveBuffer = PlayerSettings.KSPlayer.liveBufferDefault
         @AppStorage(PlayerSettings.KSPlayer.vodBufferKey) private var vodBuffer = PlayerSettings.KSPlayer.vodBufferDefault
         @AppStorage(PlayerSettings.KSPlayer.maxBufferKey) private var maxBuffer = PlayerSettings.KSPlayer.maxBufferDefault
+
+        @State private var showResetConfirmation = false
 
         var body: some View {
             VStack(alignment: .leading, spacing: 28) {
@@ -308,7 +360,36 @@ import SwiftUI
                         maxBuffer = PlayerOptionCycle.next(maxBuffer, in: KSMaxBufferPreset.values)
                     }
                 }
+
+                TVOptionResetRow(title: "Restore Defaults") { showResetConfirmation = true }
             }
+            .confirmationDialog(
+                "Restore the default KSPlayer options?",
+                isPresented: $showResetConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Restore Defaults", role: .destructive) {
+                    PlayerSettings.KSPlayer.resetToDefaults()
+                }
+                Button("Cancel", role: .cancel) {}
+            }
+        }
+    }
+
+    /// A flat destructive-styled row used to trigger a reset on tvOS.
+    struct TVOptionResetRow: View {
+        let title: LocalizedStringKey
+        let action: () -> Void
+
+        var body: some View {
+            Button(action: action) {
+                HStack(spacing: 16) {
+                    Text(title)
+                        .foregroundStyle(.red)
+                    Spacer(minLength: 0)
+                }
+            }
+            .buttonStyle(TVSettingsRowButtonStyle())
         }
     }
 

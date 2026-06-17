@@ -185,6 +185,26 @@ enum PlayerSettings {
         static let liveBufferDefault = 3000
         /// Network/file caching for on-demand streams, in milliseconds.
         static let vodBufferDefault = 1500
+
+        /// Every persisted VLCKit option key, including the legacy top-level
+        /// deinterlace toggle surfaced in the VLC options. Used to wipe the
+        /// stored values so each `@AppStorage` binding reverts to its default.
+        static var allKeys: [String] {
+            [
+                hardwareDecodeKey, decodeThreadsKey, skipFramesKey, dropLateFramesKey,
+                httpReconnectKey, deinterlaceModeKey, liveBufferKey, vodBufferKey,
+                clockJitterKey, clockSynchroKey, PlayerSettings.deinterlaceKey
+            ]
+        }
+
+        /// Clear every stored VLCKit option so the engine and its settings UI
+        /// fall back to the built-in defaults.
+        static func resetToDefaults() {
+            let defaults = UserDefaults.standard
+            for key in allKeys {
+                defaults.removeObject(forKey: key)
+            }
+        }
     }
 
     // MARK: - KSPlayer options
@@ -229,5 +249,25 @@ enum PlayerSettings {
         static let vodBufferDefault = 8
         /// Maximum buffer, in seconds.
         static let maxBufferDefault = 30
+
+        /// Every persisted KSPlayer option key. Used to wipe the stored values
+        /// so each `@AppStorage` binding reverts to its default.
+        static var allKeys: [String] {
+            [
+                hardwareDecodeKey, asyncDecompressionKey, secondOpenKey, accurateSeekKey,
+                loopPlayKey, systemProxyKey, autoDeinterlaceKey, autoRotateKey,
+                adaptiveKey, noBufferKey, codecLowDelayKey, autoPipKey,
+                liveBufferKey, vodBufferKey, maxBufferKey, primaryEngineKey
+            ]
+        }
+
+        /// Clear every stored KSPlayer option so the engine and its settings UI
+        /// fall back to the built-in defaults.
+        static func resetToDefaults() {
+            let defaults = UserDefaults.standard
+            for key in allKeys {
+                defaults.removeObject(forKey: key)
+            }
+        }
     }
 }

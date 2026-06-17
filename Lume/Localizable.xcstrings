@@ -4062,12 +4062,42 @@
         }
       }
     },
+    "Restore Defaults" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Standardwerte wiederherstellen"
+          }
+        }
+      }
+    },
     "Restore Purchases" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Käufe wiederherstellen"
+          }
+        }
+      }
+    },
+    "Restore the default KSPlayer options?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "KSPlayer-Standardoptionen wiederherstellen?"
+          }
+        }
+      }
+    },
+    "Restore the default VLCKit options?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VLCKit-Standardoptionen wiederherstellen?"
           }
         }
       }
