@@ -401,6 +401,11 @@ struct ChannelsList: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.contentRestriction) private var restriction
     @Query private var streams: [LiveStream]
+    /// Now/next EPG for the visible channels, resolved in one off-main fetch
+    /// (see `ChannelEPGSnapshot`) instead of a per-card `@Query`.
+    @State private var epgByChannel: [String: ChannelEPG] = [:]
+    /// Observed so the EPG lookup refreshes when a guide import finishes.
+    @State private var epgSync = EPGSyncService.shared
 
     init(scope: LiveChannelScope, playlistPrefix: String, sort: ContentSortOption, onPlay: @escaping (LiveStream) -> Void) {
         self.scope = scope
@@ -422,20 +427,21 @@ struct ChannelsList: View {
     }
 
     var body: some View {
+        let channels = scopedStreams
         ScrollView {
             LazyVStack(spacing: 0) {
-                if scopedStreams.isEmpty {
+                if channels.isEmpty {
                     ContentUnavailableView(
                         "No Channels",
                         systemImage: "antenna.radiowaves.left.and.right",
                         description: Text("This category has no channels")
                     )
                 } else {
-                    ForEach(scopedStreams) { stream in
+                    ForEach(channels) { stream in
                         Button {
                             onPlay(stream)
                         } label: {
-                            LiveStreamCardView(stream: stream)
+                            LiveStreamCardView(stream: stream, epg: epgByChannel[stream.epgChannelId ?? ""])
                                 .padding(.horizontal)
                                 .contentShape(Rectangle())
                         }
@@ -448,6 +454,23 @@ struct ChannelsList: View {
                 }
             }
         }
+        // Reload when the channel set changes or a guide import settles.
+        .task(id: "\(channels.count)-\(epgSync.isSyncing)") {
+            await loadEPG(for: channels)
+        }
+    }
+
+    private func loadEPG(for channels: [LiveStream]) async {
+        let channelIds = Array(Set(channels.compactMap(\.epgChannelId).filter { !$0.isEmpty }))
+        guard !channelIds.isEmpty else {
+            epgByChannel = [:]
+            return
+        }
+        let container = modelContext.container
+        let now = Date()
+        epgByChannel = await Task.detached(priority: .userInitiated) {
+            ChannelEPGLoader.load(container: container, channelIds: channelIds, now: now)
+        }.value
     }
 }
 
