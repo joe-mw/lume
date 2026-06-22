@@ -97,8 +97,11 @@ struct SyncProgressView: View {
                 try await syncManager.syncPlaylist(playlist, progress: progress, full: true)
                 await MainActor.run {
                     // Newly synced titles need indexing; the launch-time pass
-                    // may already be finished, so kick a fresh one.
-                    ContentIndexingService.shared.kick()
+                    // may already be finished, so kick a fresh one — but hold it
+                    // off a few seconds so loading the embedding model and the
+                    // per-chunk saves don't fight the first browse of the catalog
+                    // the user just synced.
+                    ContentIndexingService.shared.kick(after: .seconds(3))
                     // Refresh the guide so a freshly synced playlist's channels
                     // get EPG data without waiting for the next scheduled run.
                     EPGSyncService.shared.syncNow()

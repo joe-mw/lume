@@ -58,6 +58,10 @@ actor ContentIndexer {
 
         await status.setPreparing()
         let embedder = try TextEmbedder()
+        // Release the model the moment the pass ends — completion, cancellation,
+        // or throw — so the tens-of-MB embedding model isn't left resident between
+        // passes or while the app is suspended in the background.
+        defer { embedder.unload() }
         try await prepareEmbedder(embedder, status: status)
 
         while !Task.isCancelled {

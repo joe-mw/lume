@@ -41,6 +41,14 @@ final nonisolated class TextEmbedder {
         try embedding.load()
     }
 
+    /// Frees the loaded model from memory. The model is tens of MB resident; call
+    /// this when an indexing pass ends so it isn't left loaded between passes (and
+    /// while the app sits in the background as a jetsam target). Idempotent and
+    /// safe whether or not `prepare()` loaded the model.
+    func unload() {
+        embedding.unload()
+    }
+
     /// Mean-pooled sentence vector for `text`. Returns nil when the model
     /// produces no tokens (e.g. empty input).
     func vector(for text: String) throws -> [Float]? {

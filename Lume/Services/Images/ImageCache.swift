@@ -19,6 +19,7 @@
 import CryptoKit
 import Foundation
 import ImageIO
+import OSLog
 import SwiftUI
 
 #if canImport(UIKit)
@@ -55,6 +56,23 @@ final nonisolated class ImageMemoryCache: @unchecked Sendable {
     private init() {
         // ~256 MB of decoded pixels; NSCache also purges on memory warnings.
         cache.totalCostLimit = 256 * 1024 * 1024
+        #if canImport(UIKit)
+            // NSCache evicts under pressure on its own, but silently and only
+            // reactively. Observe the explicit warning too so we drop *all* decoded
+            // pixels at once and leave a breadcrumb — a suspended app holding 256 MB
+            // of posters is a prime jetsam target, which reads to users as the app
+            // being slow / reloading after a long time in the background. The disk
+            // cache still holds the bytes, so this forces a re-decode, not a
+            // re-download. The singleton lives for the whole process, so the observer
+            // never needs removing.
+            NotificationCenter.default.addObserver(
+                forName: UIApplication.didReceiveMemoryWarningNotification,
+                object: nil,
+                queue: nil
+            ) { [weak self] _ in
+                self?.purge(reason: "memory warning")
+            }
+        #endif
     }
 
     func image(for key: String) -> PlatformImage? {
@@ -67,6 +85,14 @@ final nonisolated class ImageMemoryCache: @unchecked Sendable {
 
     func removeAll() {
         cache.removeAllObjects()
+    }
+
+    /// Drops every decoded image and logs why. Called on memory warnings and when
+    /// the app backgrounds, to shrink the resident footprint a suspended app keeps.
+    /// The disk cache still holds the original bytes, so this only forces a re-decode.
+    func purge(reason: String) {
+        cache.removeAllObjects()
+        Logger.memory.notice("Image memory cache purged (\(reason, privacy: .public))")
     }
 }
 

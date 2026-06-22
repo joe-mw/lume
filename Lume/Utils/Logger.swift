@@ -9,4 +9,5 @@ nonisolated extension Logger {
     static let downloads = Logger(subsystem: subsystem, category: "Downloads")
     static let indexing = Logger(subsystem: subsystem, category: "Indexing")
     static let premium = Logger(subsystem: subsystem, category: "Premium")
+    static let memory = Logger(subsystem: subsystem, category: "Memory")
 }

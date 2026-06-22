@@ -220,6 +220,17 @@ struct LumeApp: App {
                 }
                 .onChange(of: scenePhase) { _, phase in
                     cloudSync.handleScenePhaseChange(to: phase)
+                    #if !os(macOS)
+                        // Shrink the resident footprint before the system suspends
+                        // the app: a 256 MB decoded-image cache makes it a prime
+                        // jetsam target after a long background (the symptom that
+                        // reads as "slow after a while in the background"). The disk
+                        // cache keeps the bytes, so re-decoding on return is cheap.
+                        // macOS has ample RAM and no jetsam, so it keeps its cache.
+                        if phase == .background {
+                            ImageMemoryCache.shared.purge(reason: "app backgrounded")
+                        }
+                    #endif
                 }
         }
         .modelContainer(catalogContainer)

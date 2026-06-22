@@ -60,10 +60,21 @@ final class ContentIndexingService {
     /// Starts a background indexing pass unless one is already running.
     /// Called on launch and after every successful playlist sync, so missing
     /// indexes are picked up without any user action.
-    func kick() {
+    ///
+    /// `delay` lets the post-sync caller hold the pass off briefly: a sync just
+    /// grew the catalog and the user is about to browse it, so loading the
+    /// embedding model and the per-chunk saves (each forces a main-context merge
+    /// that re-runs every `@Query`) shouldn't fight that first browse. `task` is
+    /// claimed immediately, so a second kick during the delay coalesces to a no-op.
+    func kick(after delay: Duration = .zero) {
         guard let container, task == nil, state != .unavailable else { return }
         let indexer = ContentIndexer(modelContainer: container)
         task = Task {
+            defer { task = nil }
+            if delay > .zero {
+                try? await Task.sleep(for: delay)
+                guard !Task.isCancelled else { return }
+            }
             do {
                 try await indexer.run(status: self)
             } catch is CancellationError {
@@ -75,7 +86,6 @@ final class ContentIndexingService {
                 state = .interrupted
                 Logger.indexing.error("Indexing pass interrupted: \(error)")
             }
-            task = nil
         }
     }
 
