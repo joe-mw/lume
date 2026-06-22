@@ -8,9 +8,9 @@ struct DeepLinkTests {
         #expect(DeepLink(url: url) == .movie(tmdbId: 603))
     }
 
-    @Test func `parses show link`() throws {
-        let url = try #require(URL(string: "lume://show/1396"))
-        #expect(DeepLink(url: url) == .show(tmdbId: 1396))
+    @Test func `parses series link`() throws {
+        let url = try #require(URL(string: "lume://series/1396"))
+        #expect(DeepLink(url: url) == .series(tmdbId: 1396))
     }
 
     @Test func `scheme is case insensitive`() throws {
@@ -19,8 +19,8 @@ struct DeepLinkTests {
     }
 
     @Test func `tolerates a trailing slash`() throws {
-        let url = try #require(URL(string: "lume://show/77/"))
-        #expect(DeepLink(url: url) == .show(tmdbId: 77))
+        let url = try #require(URL(string: "lume://series/77/"))
+        #expect(DeepLink(url: url) == .series(tmdbId: 77))
     }
 
     @Test func `rejects a foreign scheme`() throws {

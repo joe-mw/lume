@@ -164,7 +164,7 @@ struct MainTabView: View {
 
     // MARK: - Deep links
 
-    /// Resolves a `lume://movie/{tmdbId}` / `lume://show/{tmdbId}` link to a
+    /// Resolves a `lume://movie/{tmdbId}` / `lume://series/{tmdbId}` link to a
     /// catalog item, switches to the matching tab and pushes its detail screen.
     /// Silently ignores unknown links and titles not present in the catalog
     /// (e.g. a tmdbId that was never synced or enriched).
@@ -176,7 +176,7 @@ struct MainTabView: View {
             router.selectedTab = .movies
             router.moviesPath = NavigationPath()
             router.moviesPath.append(movie)
-        case let .show(tmdbId):
+        case let .series(tmdbId):
             guard let series = resolveSeries(tmdbId: tmdbId) else { return }
             router.selectedTab = .series
             router.seriesPath = NavigationPath()
