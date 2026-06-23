@@ -234,6 +234,14 @@ actor ContentSyncManager {
         }
 
         try context.save()
+
+        // Remove categories of this type the provider has dropped. Gated on a
+        // non-empty fetch: an empty category list is the transient-failure
+        // signature, and sweeping then would drop every category for the type.
+        if !dtos.isEmpty {
+            let seenApiIds = Set(dtos.map(\.categoryId))
+            pruneStaleCategories(playlistId: playlistId, type: type, seenApiIds: seenApiIds)
+        }
     }
 
     // MARK: - Content Sync (Batched)
@@ -276,23 +284,7 @@ actor ContentSyncManager {
                         movie = Movie(id: movieId, streamId: streamId, name: "")
                         context.insert(movie)
                     }
-                    movie.name = movieDTO.name ?? ""
-                    movie.streamIcon = movieDTO.streamIcon
-                    movie.rating = movieDTO.rating ?? 0
-                    movie.rating5Based = movieDTO.rating5Based ?? 0
-                    movie.added = movieDTO.added
-                    movie.containerExtension = movieDTO.containerExtension
-                    movie.tmdb = movieDTO.tmdb
-                    movie.num = movieDTO.num ?? 0
-                    movie.isAdult = movieDTO.isAdult ?? 0
-
-                    if let catIdStr = movieDTO.categoryId {
-                        movie.categoryId = playlistPrefix + catIdStr
-                    }
-
-                    if let tmdbString = movieDTO.tmdb, let tmdbInt = Int(tmdbString) {
-                        movie.tmdbId = tmdbInt
-                    }
+                    applyMovieFields(from: movieDTO, to: movie, playlistPrefix: playlistPrefix)
                 }
 
                 try context.save()
@@ -303,6 +295,9 @@ actor ContentSyncManager {
                 fraction: totalCount == 0 ? 1 : Double(min(batchStart + batchSize, totalCount)) / Double(totalCount)
             )
         }
+
+        // Remove movies the provider has dropped (see pruneMovies for the guard).
+        pruneMovies(playlistId: playlistId, against: movieDTOs)
 
         Logger.database.info("Completed syncing \(totalCount) movies")
         await progress?.complete(.movies)
@@ -353,6 +348,9 @@ actor ContentSyncManager {
                 fraction: totalCount == 0 ? 1 : Double(min(batchStart + batchSize, totalCount)) / Double(totalCount)
             )
         }
+
+        // Remove series the provider has dropped (episodes/cast cascade).
+        pruneSeries(playlistId: playlistId, against: seriesDTOs)
 
         Logger.database.info("Completed syncing \(totalCount) series")
         await progress?.complete(.series)
@@ -476,6 +474,9 @@ actor ContentSyncManager {
                 fraction: totalCount == 0 ? 1 : Double(min(batchStart + batchSize, totalCount)) / Double(totalCount)
             )
         }
+
+        // Remove live channels the provider has dropped.
+        pruneLiveStreams(playlistId: playlistId, against: streamDTOs)
 
         Logger.database.info("Completed syncing \(totalCount) live streams")
         await progress?.complete(.liveStreams)

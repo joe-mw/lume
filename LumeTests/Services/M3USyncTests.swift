@@ -135,6 +135,82 @@ struct M3USyncTests {
         #expect(category.isHidden, "Re-sync must not wipe hidden state")
     }
 
+    /// A reduced version of `mixedPlaylist`: Sport One (live), The Godfather
+    /// (movie) and the whole Breaking Bad series are gone, taking the Sports,
+    /// VOD | Drama and Series | Crime categories with them.
+    private let reducedPlaylist = """
+    #EXTM3U url-tvg="http://example.com/embedded-guide.xml"
+    #EXTINF:-1 tvg-id="news.1" tvg-logo="http://example.com/news1.png" group-title="News",News One
+    http://example.com/live/news1.ts
+    #EXTINF:-1 group-title="General",Ungrouped Extras
+    http://example.com/live/extra
+    #EXTINF:-1 tvg-logo="http://example.com/film.png" group-title="VOD | Action",Die Hard
+    http://example.com/movie/u/p/1001.mp4
+    """
+
+    @Test func `re-sync prunes content the playlist no longer contains`() async throws {
+        let container = try makeTestContainer()
+        let fileURL = try writeTempFile(mixedPlaylist, ext: "m3u")
+        defer { try? FileManager.default.removeItem(at: fileURL) }
+        let playlist = try makePlaylist(container: container, fileURL: fileURL)
+
+        let manager = ContentSyncManager(modelContainer: container)
+        try await manager.syncPlaylist(playlist)
+
+        // Favorite a survivor to prove pruning leaves untouched rows (and their
+        // user state) alone.
+        do {
+            let context = ModelContext(container)
+            let dieHard = try #require(try context.fetch(FetchDescriptor<Movie>()).first { $0.name == "Die Hard" })
+            dieHard.isFavorite = true
+            try context.save()
+        }
+
+        // The provider drops several items; re-sync reads the shrunken file.
+        try reducedPlaylist.write(to: fileURL, atomically: true, encoding: .utf8)
+        try await manager.syncPlaylist(playlist)
+
+        let context = ModelContext(container)
+        #expect(try context.fetchCount(FetchDescriptor<LiveStream>()) == 2)
+        #expect(try context.fetchCount(FetchDescriptor<Movie>()) == 1)
+        #expect(try context.fetchCount(FetchDescriptor<Series>()) == 0)
+        #expect(try context.fetchCount(FetchDescriptor<Episode>()) == 0)
+        #expect(try context.fetchCount(FetchDescriptor<Lume.Category>()) == 3) // News, General, VOD | Action
+
+        #expect(try context.fetch(FetchDescriptor<LiveStream>()).contains { $0.name == "Sport One" } == false)
+        #expect(try context.fetch(FetchDescriptor<Movie>()).contains { $0.name == "The Godfather" } == false)
+        let categoryNames = try Set(context.fetch(FetchDescriptor<Lume.Category>()).map(\.name))
+        #expect(!categoryNames.contains("Sports"))
+        #expect(!categoryNames.contains("Series | Crime"))
+
+        // The surviving favorited movie is untouched.
+        let dieHard = try #require(try context.fetch(FetchDescriptor<Movie>()).first)
+        #expect(dieHard.name == "Die Hard")
+        #expect(dieHard.isFavorite, "Pruning must not disturb surviving rows")
+    }
+
+    @Test func `an empty fetch does not prune existing content`() async throws {
+        let container = try makeTestContainer()
+        let fileURL = try writeTempFile(mixedPlaylist, ext: "m3u")
+        defer { try? FileManager.default.removeItem(at: fileURL) }
+        let playlist = try makePlaylist(container: container, fileURL: fileURL)
+
+        let manager = ContentSyncManager(modelContainer: container)
+        try await manager.syncPlaylist(playlist)
+
+        // A transient failure looks like an empty file: header only, no entries.
+        // The guard must keep the catalog rather than wipe it.
+        try "#EXTM3U\n".write(to: fileURL, atomically: true, encoding: .utf8)
+        try await manager.syncPlaylist(playlist)
+
+        let context = ModelContext(container)
+        #expect(try context.fetchCount(FetchDescriptor<LiveStream>()) == 3)
+        #expect(try context.fetchCount(FetchDescriptor<Movie>()) == 2)
+        #expect(try context.fetchCount(FetchDescriptor<Series>()) == 1)
+        #expect(try context.fetchCount(FetchDescriptor<Episode>()) == 3)
+        #expect(try context.fetchCount(FetchDescriptor<Lume.Category>()) == 6)
+    }
+
     @Test func `dedicated EPG sync imports listings for a playlist's source`() async throws {
         let xmltv = """
         <?xml version="1.0" encoding="UTF-8"?>

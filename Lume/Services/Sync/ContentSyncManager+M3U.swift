@@ -147,6 +147,14 @@ private final nonisolated class M3UImportState {
     var importedMovies = 0
     var importedEpisodes = 0
 
+    /// Ids seen this sync, accumulated across batches so a post-import sweep can
+    /// prune rows the file no longer contains. Categories keyed "\(typeRaw)|\(apiId)".
+    var seenLiveIds: Set<String> = []
+    var seenMovieIds: Set<String> = []
+    var seenSeriesIds: Set<String> = []
+    var seenEpisodeIds: Set<String> = []
+    var seenCategoryKeys: Set<String> = []
+
     /// First error hit inside a batch; aborts the remaining batches.
     var firstError: Error?
 
@@ -240,6 +248,27 @@ extension ContentSyncManager {
             throw SyncError.databaseError(error)
         }
 
+        // Sweep rows the file no longer carries. Gate on a non-empty import:
+        // total == 0 means the download/parse produced nothing (failure or empty
+        // file), where sweeping would wipe the catalog. Once the file is known
+        // good, a per-kind zero is legitimate — a live-only playlist correctly
+        // prunes any movies/series left from when it carried them.
+        if state.totalImported > 0 {
+            pruneStaleLiveStreams(playlistId: playlistId, seenIds: state.seenLiveIds)
+            pruneStaleMovies(playlistId: playlistId, seenIds: state.seenMovieIds)
+            pruneStaleEpisodes(playlistId: playlistId, seenIds: state.seenEpisodeIds)
+            pruneStaleSeries(playlistId: playlistId, seenIds: state.seenSeriesIds)
+            for type in CategoryType.allCases {
+                let typePrefix = "\(type.rawValue)|"
+                let seenApiIds = Set(
+                    state.seenCategoryKeys
+                        .filter { $0.hasPrefix(typePrefix) }
+                        .map { String($0.dropFirst(typePrefix.count)) }
+                )
+                pruneStaleCategories(playlistId: playlistId, type: type, seenApiIds: seenApiIds)
+            }
+        }
+
         return M3UImportSummary(
             liveCount: state.importedLive,
             movieCount: state.importedMovies,
@@ -291,6 +320,9 @@ extension ContentSyncManager {
         func collect(_ group: String?, type: CategoryType) {
             let name = (group?.isEmpty == false) ? group! : Self.uncategorizedGroup
             let key = "\(type.rawValue)|\(name)"
+            // Record every category referenced this sync — including ones that
+            // already exist — so the post-import sweep keeps them.
+            state.seenCategoryKeys.insert(key)
             guard !state.knownCategories.contains(key) else { return }
             state.knownCategories.insert(key)
             needed.append((type, name))
@@ -329,6 +361,7 @@ extension ContentSyncManager {
     private func importLive(_ entries: [M3UEntry], playlistId: UUID, state: M3UImportState, context: ModelContext) {
         guard !entries.isEmpty else { return }
         let ids = entries.map { "\(playlistId.uuidString)-live-\(M3UIdentity.key(for: $0.url))" }
+        state.seenLiveIds.formUnion(ids)
         var existing: [String: LiveStream] = [:]
         let fetched = (try? context.fetch(
             FetchDescriptor<LiveStream>(predicate: #Predicate { ids.contains($0.id) })
@@ -360,6 +393,7 @@ extension ContentSyncManager {
     private func importMovies(_ entries: [M3UEntry], playlistId: UUID, state: M3UImportState, context: ModelContext) {
         guard !entries.isEmpty else { return }
         let ids = entries.map { "\(playlistId.uuidString)-movie-\(M3UIdentity.key(for: $0.url))" }
+        state.seenMovieIds.formUnion(ids)
         var existing: [String: Movie] = [:]
         let fetched = (try? context.fetch(
             FetchDescriptor<Movie>(predicate: #Predicate { ids.contains($0.id) })
@@ -400,6 +434,8 @@ extension ContentSyncManager {
         let episodeIds = entries.enumerated().map { index, entry in
             "\(seriesIds[index])-episode-\(M3UIdentity.key(for: entry.0.url))"
         }
+        state.seenSeriesIds.formUnion(seriesIds)
+        state.seenEpisodeIds.formUnion(episodeIds)
         var seriesById = existingSeries(ids: seriesIds, context: context)
         var existingEpisodes = existingEpisodes(ids: episodeIds, context: context)
 

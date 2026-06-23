@@ -131,6 +131,27 @@ extension ContentSyncManager {
         return lookup
     }
 
+    /// Copies the provider-owned fields from a movie DTO onto an existing or
+    /// freshly-inserted `Movie`, leaving user state and TMDB enrichment intact.
+    func applyMovieFields(from dto: XtreamVODStream, to movie: Movie, playlistPrefix: String) {
+        movie.name = dto.name ?? ""
+        movie.streamIcon = dto.streamIcon
+        movie.rating = dto.rating ?? 0
+        movie.rating5Based = dto.rating5Based ?? 0
+        movie.added = dto.added
+        movie.containerExtension = dto.containerExtension
+        movie.tmdb = dto.tmdb
+        movie.num = dto.num ?? 0
+        movie.isAdult = dto.isAdult ?? 0
+
+        if let catIdStr = dto.categoryId {
+            movie.categoryId = playlistPrefix + catIdStr
+        }
+        if let tmdbString = dto.tmdb, let tmdbInt = Int(tmdbString) {
+            movie.tmdbId = tmdbInt
+        }
+    }
+
     /// Copies the provider-owned fields from a series DTO onto an existing or
     /// freshly-inserted `Series`, leaving user state and TMDB enrichment intact.
     func applySeriesFields(from dto: XtreamSeries, to series: Series, playlistPrefix: String) {
