@@ -259,6 +259,10 @@ struct MovieCategoryView: View {
     @State private var movies: [Movie] = []
     @State private var canLoadMore = true
     @State private var isLoadingPage = false
+    /// The sort the current pages were loaded for. Pushing a detail cancels and
+    /// (on pop) re-runs `.task`; reloading page one there would discard the
+    /// loaded pages and reset the scroll position. Reload only when this differs.
+    @State private var loadedSort: String?
 
     /// A category in a large IPTV playlist can hold thousands of titles; fetch a
     /// page at a time and load the next as the grid nears the end, rather than
@@ -282,6 +286,8 @@ struct MovieCategoryView: View {
             card: { MovieCardView(movie: $0) }
         )
         .task(id: contentSortRaw) {
+            guard loadedSort != contentSortRaw else { return }
+            loadedSort = contentSortRaw
             movies = []
             canLoadMore = true
             loadNextPage()
@@ -351,6 +357,9 @@ struct SeriesCategoryView: View {
     @State private var series: [Series] = []
     @State private var canLoadMore = true
     @State private var isLoadingPage = false
+    /// Sort the current pages were loaded for; reload only on change so a pop
+    /// back from a detail keeps the loaded pages and scroll position intact.
+    @State private var loadedSort: String?
 
     /// A category in a large IPTV playlist can hold thousands of titles; fetch a
     /// page at a time and load the next as the grid nears the end, rather than
@@ -374,6 +383,8 @@ struct SeriesCategoryView: View {
             card: { SeriesCardView(series: $0) }
         )
         .task(id: contentSortRaw) {
+            guard loadedSort != contentSortRaw else { return }
+            loadedSort = contentSortRaw
             series = []
             canLoadMore = true
             loadNextPage()

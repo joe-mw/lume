@@ -91,6 +91,23 @@ struct MovieGenreView: View {
 
     @AppStorage(SortStorageKey.movieContent) private var contentSortRaw: String = ContentSortOption.playlist.rawValue
     @State private var movies: [Movie] = []
+    @State private var canLoadMore = true
+    @State private var isLoadingPage = false
+    /// SQLite cursor position, distinct from `movies.count`. The in-memory
+    /// genre/prefix/restriction filter below drops rows the substring fetch
+    /// returned, so the displayed count and the source offset diverge — the
+    /// offset must track rows pulled from SQLite, not rows shown.
+    @State private var fetchedCount = 0
+    /// The sort the current pages were loaded for. Pushing a detail cancels and
+    /// (on pop) re-runs `.task`; reloading page one there would discard the
+    /// loaded pages and reset the scroll position. Reload only when this differs.
+    @State private var loadedSort: String?
+
+    /// A popular genre in a large IPTV playlist can span thousands of titles;
+    /// fetch a page at a time and load the next as the grid nears the end,
+    /// rather than hydrating the whole genre into memory at once — mirroring
+    /// `MovieCategoryView`.
+    private let pageSize = 100
 
     private var contentSort: ContentSortOption {
         ContentSortOption(rawValue: contentSortRaw) ?? .playlist
@@ -105,17 +122,45 @@ struct MovieGenreView: View {
             emptyIcon: "film.stack",
             emptyDescription: "No movies in this genre",
             sortRaw: $contentSortRaw,
+            onLoadMore: { loadNextPage() },
             card: { MovieCardView(movie: $0) }
         )
         .task(id: contentSortRaw) {
-            let token = genre
-            let descriptor = FetchDescriptor<Movie>(
+            guard loadedSort != contentSortRaw else { return }
+            loadedSort = contentSortRaw
+            movies = []
+            fetchedCount = 0
+            canLoadMore = true
+            loadNextPage()
+        }
+    }
+
+    private func loadNextPage() {
+        guard canLoadMore, !isLoadingPage else { return }
+        isLoadingPage = true
+        defer { isLoadingPage = false }
+        let token = genre
+        let prefix = playlistPrefix
+        // Keep pulling raw pages until a batch surfaces at least one displayable
+        // title or the source is exhausted: the in-memory filter can drop an
+        // entire SQLite page, and without new trailing items the grid would
+        // never fire `onLoadMore` again, stalling pagination.
+        var added = 0
+        while canLoadMore, added == 0 {
+            var descriptor = FetchDescriptor<Movie>(
                 predicate: #Predicate { ($0.genre?.localizedStandardContains(token)) ?? false },
                 sortBy: contentSort.movieDescriptors
             )
-            movies = ((try? modelContext.fetch(descriptor)) ?? [])
-                .filter { $0.id.hasPrefix(playlistPrefix) && GenreParser.contains($0.genre, genre: token) }
+            descriptor.fetchOffset = fetchedCount
+            descriptor.fetchLimit = pageSize
+            let rawPage = (try? modelContext.fetch(descriptor)) ?? []
+            fetchedCount += rawPage.count
+            if rawPage.count < pageSize { canLoadMore = false }
+            let filtered = rawPage
+                .filter { $0.id.hasPrefix(prefix) && GenreParser.contains($0.genre, genre: token) }
                 .excludingRestricted(restriction)
+            movies.append(contentsOf: filtered)
+            added += filtered.count
         }
     }
 }
@@ -130,6 +175,16 @@ struct SeriesGenreView: View {
 
     @AppStorage(SortStorageKey.seriesContent) private var contentSortRaw: String = ContentSortOption.playlist.rawValue
     @State private var series: [Series] = []
+    @State private var canLoadMore = true
+    @State private var isLoadingPage = false
+    /// SQLite cursor position, distinct from `series.count` — see `MovieGenreView`.
+    @State private var fetchedCount = 0
+    /// Sort the current pages were loaded for; reload only on change — see
+    /// `MovieGenreView`, which explains why reappearance must not reset.
+    @State private var loadedSort: String?
+
+    /// Page a genre at a time rather than hydrating it whole; see `MovieGenreView`.
+    private let pageSize = 100
 
     private var contentSort: ContentSortOption {
         ContentSortOption(rawValue: contentSortRaw) ?? .playlist
@@ -144,17 +199,44 @@ struct SeriesGenreView: View {
             emptyIcon: "tv.fill",
             emptyDescription: "No series in this genre",
             sortRaw: $contentSortRaw,
+            onLoadMore: { loadNextPage() },
             card: { SeriesCardView(series: $0) }
         )
         .task(id: contentSortRaw) {
-            let token = genre
-            let descriptor = FetchDescriptor<Series>(
+            guard loadedSort != contentSortRaw else { return }
+            loadedSort = contentSortRaw
+            series = []
+            fetchedCount = 0
+            canLoadMore = true
+            loadNextPage()
+        }
+    }
+
+    private func loadNextPage() {
+        guard canLoadMore, !isLoadingPage else { return }
+        isLoadingPage = true
+        defer { isLoadingPage = false }
+        let token = genre
+        let prefix = playlistPrefix
+        // Keep pulling until a batch yields displayable titles or the source is
+        // exhausted — the in-memory filter can empty a whole page; see
+        // `MovieGenreView.loadNextPage`.
+        var added = 0
+        while canLoadMore, added == 0 {
+            var descriptor = FetchDescriptor<Series>(
                 predicate: #Predicate { ($0.genre?.localizedStandardContains(token)) ?? false },
                 sortBy: contentSort.seriesDescriptors
             )
-            series = ((try? modelContext.fetch(descriptor)) ?? [])
-                .filter { $0.id.hasPrefix(playlistPrefix) && GenreParser.contains($0.genre, genre: token) }
+            descriptor.fetchOffset = fetchedCount
+            descriptor.fetchLimit = pageSize
+            let rawPage = (try? modelContext.fetch(descriptor)) ?? []
+            fetchedCount += rawPage.count
+            if rawPage.count < pageSize { canLoadMore = false }
+            let filtered = rawPage
+                .filter { $0.id.hasPrefix(prefix) && GenreParser.contains($0.genre, genre: token) }
                 .excludingRestricted(restriction)
+            series.append(contentsOf: filtered)
+            added += filtered.count
         }
     }
 }
