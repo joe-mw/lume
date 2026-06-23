@@ -46,14 +46,17 @@ jobs:
       # Features degrade gracefully when absent (see Scripts/inject-env.sh).
       - name: Write .env
         env:
-          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+          # Key names MUST match what Scripts/inject-env.sh reads (read_env …).
+          TMDB_ACCESS_TOKEN: ${{ secrets.TMDB_ACCESS_TOKEN }}
           OMDB_API_KEY: ${{ secrets.OMDB_API_KEY }}
+          INTRO_DB_API_KEY: ${{ secrets.INTRO_DB_API_KEY }}
           TRAKT_CLIENT_ID: ${{ secrets.TRAKT_CLIENT_ID }}
           TRAKT_CLIENT_SECRET: ${{ secrets.TRAKT_CLIENT_SECRET }}
         run: |
           {
-            [ -n "$TMDB_API_KEY" ]        && echo "TMDB_API_KEY=$TMDB_API_KEY"
+            [ -n "$TMDB_ACCESS_TOKEN" ]   && echo "TMDB_ACCESS_TOKEN=$TMDB_ACCESS_TOKEN"
             [ -n "$OMDB_API_KEY" ]        && echo "OMDB_API_KEY=$OMDB_API_KEY"
+            [ -n "$INTRO_DB_API_KEY" ]    && echo "INTRO_DB_API_KEY=$INTRO_DB_API_KEY"
             [ -n "$TRAKT_CLIENT_ID" ]     && echo "TRAKT_CLIENT_ID=$TRAKT_CLIENT_ID"
             [ -n "$TRAKT_CLIENT_SECRET" ] && echo "TRAKT_CLIENT_SECRET=$TRAKT_CLIENT_SECRET"
           } > .env || true

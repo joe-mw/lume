@@ -239,6 +239,7 @@ The easiest way to use Lume is to [**download it from the App Store**](https://a
 - *(Optional)* a [TMDB](https://www.themoviedb.org/settings/api) API access token for metadata enrichment
 - *(Optional)* a [Trakt](https://trakt.tv/oauth/applications) application for scrobbling
 - *(Optional)* an [OMDb](https://www.omdbapi.com/apikey.aspx) API key for IMDb / Rotten Tomatoes / Metacritic ratings
+- *(Optional)* an [IntroDB](https://introdb.app) API key for intro / recap skip windows
 
 ### Build & run
 
@@ -254,17 +255,27 @@ or import an M3U playlist, and Lume will sync your catalog.
 
 > Dependencies are resolved automatically by Swift Package Manager on first build.
 
+**Code signing.** The project ships with the maintainer's Development Team
+(`DEVELOPMENT_TEAM`) and bundle identifier (`com.bilipp.lume`). Simulator builds run as
+is. To run on a physical device, open **Signing & Capabilities** for each target and set
+your own team (and, if needed, a unique bundle identifier) — or clear the team for a
+simulator-only build. Don't commit these personal signing changes back to the repo.
+
 ---
 
 ## Configuration
 
-Optional integrations (TMDB and Trakt) are configured through a repo-root `.env` file.
-The `Scripts/inject-env.sh` build phase reads it and injects the values into the built
-app's `Info.plist` — keeping secrets out of source control. `.env` is gitignored, and
-if it is missing the dependent features simply degrade gracefully (e.g. the Trending
-rail hides).
+Optional integrations (TMDB, OMDb, IntroDB, and Trakt) are configured through a
+repo-root `.env` file. The `Scripts/inject-env.sh` build phase reads it and injects the
+values into the built app's `Info.plist` — keeping secrets out of source control. `.env`
+is gitignored, and if it is missing the dependent features simply degrade gracefully
+(e.g. the Trending rail hides).
 
-Create a `.env` file in the project root:
+Copy the template and fill in the keys you have:
+
+```bash
+cp .env.example .env
+```
 
 ```dotenv
 # TMDB — metadata, artwork & trailers
@@ -273,10 +284,15 @@ TMDB_ACCESS_TOKEN=your_tmdb_v4_read_access_token
 # OMDb — IMDb, Rotten Tomatoes & Metacritic ratings
 OMDB_API_KEY=your_omdb_api_key
 
+# IntroDB — intro / recap skip windows (read access works unauthenticated)
+INTRO_DB_API_KEY=your_introdb_api_key
+
 # Trakt — watch scrobbling (device OAuth flow)
 TRAKT_CLIENT_ID=your_trakt_client_id
 TRAKT_CLIENT_SECRET=your_trakt_client_secret
 ```
+
+Every key is optional — Lume builds and runs fine with an empty `.env` or none at all.
 
 Trakt uses the **device OAuth flow** (no embedded web view), which works on tvOS as
 well as iOS/macOS. Tokens are stored securely in the Keychain.
