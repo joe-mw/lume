@@ -40,4 +40,11 @@ nonisolated enum SupportInfo {
     static var appStoreReviewURL: URL? {
         URL(string: appStoreReview)
     }
+
+    /// Marketing version (`CFBundleShortVersionString`, e.g. "2.1.0"), sourced
+    /// from the build's `MARKETING_VERSION` rather than a hardcoded string so
+    /// the iOS and tvOS About panes always reflect the shipped version.
+    static var appVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—"
+    }
 }

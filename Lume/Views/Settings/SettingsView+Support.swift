@@ -57,7 +57,7 @@ extension SettingsView {
 
                     VStack(alignment: .leading, spacing: 1) {
                         Text("Lume")
-                        Text("Version 1.0.0")
+                        Text("Version \(SupportInfo.appVersion)")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

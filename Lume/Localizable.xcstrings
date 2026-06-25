@@ -27575,54 +27575,54 @@
         }
       }
     },
-    "Version 1.0.0" : {
+    "Version %@" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Version 1.0.0"
+            "value" : "Version %@"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Versión 1.0.0"
+            "value" : "Versión %@"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Version 1.0.0"
+            "value" : "Version %@"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Versione 1.0.0"
+            "value" : "Versione %@"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "バージョン 1.0.0"
+            "value" : "バージョン %@"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "버전 1.0.0"
+            "value" : "버전 %@"
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Versão 1.0.0"
+            "value" : "Versão %@"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "版本 1.0.0"
+            "value" : "版本 %@"
           }
         }
       }

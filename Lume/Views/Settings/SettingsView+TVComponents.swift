@@ -84,7 +84,7 @@ import SwiftUI
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Lume")
                                 .font(.system(size: 26, weight: .semibold))
-                            Text("Version 1.0.0")
+                            Text("Version \(SupportInfo.appVersion)")
                                 .font(.system(size: 20))
                                 .foregroundStyle(.secondary)
                         }
