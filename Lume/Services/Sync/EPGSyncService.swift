@@ -51,7 +51,12 @@ final class EPGSyncService {
         guard let container, task == nil else { return }
         isSyncing = true
         let manager = EPGSyncManager(modelContainer: container)
-        task = Task {
+        // Background guide refresh: run below the UI so an in-flight sync (which
+        // saves into the shared catalog container, churning browse `@Query`s)
+        // yields CPU to the main thread instead of competing with it. The
+        // profile showed EPG ingest pegging a background thread at 100% in
+        // lockstep with a frozen main thread right after a playlist sync.
+        task = Task(priority: .utility) {
             let succeeded = await manager.syncAllSources()
             if succeeded {
                 EPGSyncSchedule.lastSyncDate = Date()

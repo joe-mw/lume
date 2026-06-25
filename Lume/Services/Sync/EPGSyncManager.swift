@@ -119,45 +119,53 @@ actor EPGSyncManager {
         }
     }
 
+    /// How many listings to accumulate before saving. Every save on the shared
+    /// catalog container merges into the main context and re-runs *every* active
+    /// `@Query` (not just `EPGListing` ones) — so a guide that saved once per
+    /// 2000-programme parse batch produced dozens of browse-view recompute
+    /// storms right after a sync. Coalescing into far larger saves cuts that
+    /// churn proportionally; the in-flight listings are tiny, so memory stays
+    /// bounded.
+    private static let saveThreshold = 10000
+
     /// Stream-parses an XMLTV file and inserts every programme on a known
     /// channel. Returns the number of listings inserted.
+    ///
+    /// Parsing streams in 2000-programme batches to keep `ParsedProgramme`
+    /// memory flat, but inserts accumulate on a single context and save only
+    /// every `saveThreshold` listings to minimise main-context merges.
     private func insertListings(from fileURL: URL, knownChannelIDs: Set<String>) -> Int {
         var insertedCount = 0
-        let container = modelContainer
+        var pendingInserts = 0
+        let context = ModelContext(modelContainer)
+        context.autosaveEnabled = false
+
         _ = XMLTVParser.parse(fileURL: fileURL, batchSize: 2000) { batch in
-            insertedCount += Self.insertBatch(batch, knownChannelIDs: knownChannelIDs, into: container)
+            autoreleasepool {
+                for programme in batch where knownChannelIDs.contains(programme.channelId) {
+                    let listingId = "\(programme.channelId)-\(Int(programme.start.timeIntervalSince1970))"
+                    context.insert(EPGListing(
+                        id: listingId,
+                        channelId: programme.channelId,
+                        title: programme.title,
+                        listingDescription: programme.description,
+                        start: programme.start,
+                        end: programme.end
+                    ))
+                    insertedCount += 1
+                    pendingInserts += 1
+                }
+                if pendingInserts >= Self.saveThreshold {
+                    try? context.save()
+                    pendingInserts = 0
+                }
+            }
+        }
+
+        if pendingInserts > 0 {
+            try? context.save()
         }
         return insertedCount
-    }
-
-    private static func insertBatch(
-        _ batch: [ParsedProgramme],
-        knownChannelIDs: Set<String>,
-        into container: ModelContainer
-    ) -> Int {
-        let relevant = batch.filter { knownChannelIDs.contains($0.channelId) }
-        guard !relevant.isEmpty else { return 0 }
-
-        return autoreleasepool {
-            let context = ModelContext(container)
-            context.autosaveEnabled = false
-
-            for programme in relevant {
-                let listingId = "\(programme.channelId)-\(Int(programme.start.timeIntervalSince1970))"
-                let listing = EPGListing(
-                    id: listingId,
-                    channelId: programme.channelId,
-                    title: programme.title,
-                    listingDescription: programme.description,
-                    start: programme.start,
-                    end: programme.end
-                )
-                context.insert(listing)
-            }
-
-            try? context.save()
-            return relevant.count
-        }
     }
 
     // MARK: - Status bookkeeping
