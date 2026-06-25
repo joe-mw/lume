@@ -138,11 +138,22 @@ struct LumeApp: App {
     /// store stays local and the reconcile engine still runs (just no sync).
     /// Real, properly-signed builds get full CloudKit sync.
     static let isCloudKitEnvironment: Bool = {
-        let environment = ProcessInfo.processInfo.environment
-        let isPreview = environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
-        let isUnitTest = environment["XCTestConfigurationFilePath"] != nil
-        let isUITest = CommandLine.arguments.contains("-ui-testing")
-        return !(isPreview || isUnitTest || isUITest)
+        #if SIDE_LOAD
+            // Sideloaded / self-compiled builds are re-signed with an identity that
+            // doesn't own the `iCloud.bilipp.Lume` container, so the CloudKit
+            // entitlement is stripped at install time. Touching CloudKit then hard-
+            // crashes at launch — the un-catchable `_os_crash` in
+            // `containerWithIdentifier:` documented above. Keep all user data
+            // local-only: both stores resolve to `cloudKitDatabase: .none` and the
+            // sync coordinator skips every `CKContainer`/`accountStatus` call.
+            return false
+        #else
+            let environment = ProcessInfo.processInfo.environment
+            let isPreview = environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
+            let isUnitTest = environment["XCTestConfigurationFilePath"] != nil
+            let isUITest = CommandLine.arguments.contains("-ui-testing")
+            return !(isPreview || isUnitTest || isUITest)
+        #endif
     }()
 
     private static var cloudKitDatabase: ModelConfiguration.CloudKitDatabase {
