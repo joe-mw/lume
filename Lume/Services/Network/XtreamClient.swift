@@ -496,13 +496,6 @@ final nonisolated class XMLTVParser: NSObject, XMLParserDelegate {
     private var currentDesc: String?
     private var currentText: String = ""
 
-    private static let xmltvDateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyyMMddHHmmss Z"
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        return formatter
-    }()
-
     init(batchSize: Int = 2000, onBatch: @escaping ([ParsedProgramme]) -> Void) {
         self.batchSize = batchSize
         self.onBatch = onBatch
@@ -538,8 +531,8 @@ final nonisolated class XMLTVParser: NSObject, XMLParserDelegate {
 
     func parser(_: XMLParser, didEndElement elementName: String, namespaceURI _: String?, qualifiedName _: String?) {
         if elementName == "programme" {
-            if let startDate = Self.xmltvDate(currentStart),
-               let endDate = Self.xmltvDate(currentStop),
+            if let startDate = XMLTVDate.parse(currentStart),
+               let endDate = XMLTVDate.parse(currentStop),
                let channel = currentChannel,
                let title = currentTitle, !title.isEmpty
             {
@@ -567,11 +560,6 @@ final nonisolated class XMLTVParser: NSObject, XMLParserDelegate {
         } else if elementName == "desc" {
             currentDesc = (currentDesc ?? "") + currentText
         }
-    }
-
-    private static func xmltvDate(_ dateString: String?) -> Date? {
-        guard let dateString, !dateString.isEmpty else { return nil }
-        return xmltvDateFormatter.date(from: dateString)
     }
 }
 
