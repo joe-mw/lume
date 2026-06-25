@@ -211,23 +211,29 @@ struct MetadataLineView: View {
 
 // MARK: - Play button
 
-/// The big, white, full-width primary action (Play / Resume).
+/// The big, full-width primary action (Play / Resume).
+///
+/// Renders as a high-contrast filled pill: a white button with black text in
+/// dark mode, inverting to a black button with white text in light mode so it
+/// never disappears against the detail view's `.systemBackground`.
 struct PrimaryPlayButton: View {
     let title: LocalizedStringKey
     var systemImage: String = "play.fill"
     var isEnabled: Bool = true
     let action: () -> Void
 
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
         Button(action: action) {
             Label(title, systemImage: systemImage)
                 .font(.headline)
-                .foregroundStyle(.black)
+                .foregroundStyle(colorScheme == .dark ? .black : .white)
                 .frame(maxWidth: .infinity)
                 .frame(height: 30)
         }
         .buttonStyle(.borderedProminent)
-        .tint(.white)
+        .tint(colorScheme == .dark ? .white : .black)
         .controlSize(.large)
         .disabled(!isEnabled)
     }
