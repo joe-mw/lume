@@ -22,24 +22,62 @@ import SwiftUI
 private let genreSampleLimit = 5000
 
 enum GenreDerivation {
-    static func movieGenres(in context: ModelContext, playlistPrefix: String, restriction: ContentRestriction) -> [String] {
-        var descriptor = FetchDescriptor<Movie>(predicate: #Predicate { $0.genre != nil })
-        descriptor.fetchLimit = genreSampleLimit
-        let movies = ((try? context.fetch(descriptor)) ?? [])
-            .filter { $0.id.hasPrefix(playlistPrefix) }
-            .excludingRestricted(restriction)
-        return GenreParser.distinctByFrequency(movies.map(\.genre))
+    /// Derives the genre list on a background context. The sample fetch hydrates
+    /// up to `genreSampleLimit` rows, which ran ~500ms on the *main* thread when
+    /// invoked from a view's `.task` (the closure inherits the view's MainActor
+    /// isolation) — a visible hitch when opening the tab or after a sync
+    /// invalidates the query. Running it off the main thread (and fetching only
+    /// the three columns the derivation reads) removes the hang entirely.
+    static func movieGenres(in container: ModelContainer, playlistPrefix: String, restriction: ContentRestriction) async -> [String] {
+        await Task.detached(priority: .userInitiated) {
+            var descriptor = FetchDescriptor<Movie>(predicate: #Predicate { $0.genre != nil })
+            descriptor.fetchLimit = genreSampleLimit
+            descriptor.propertiesToFetch = [\.id, \.genre, \.categoryId]
+            let movies = (try? ModelContext(container).fetch(descriptor)) ?? []
+            return Self.derive(playlistPrefix: playlistPrefix, restriction: restriction, rows: movies)
+        }.value
     }
 
-    static func seriesGenres(in context: ModelContext, playlistPrefix: String, restriction: ContentRestriction) -> [String] {
-        var descriptor = FetchDescriptor<Series>(predicate: #Predicate { $0.genre != nil })
-        descriptor.fetchLimit = genreSampleLimit
-        let series = ((try? context.fetch(descriptor)) ?? [])
+    static func seriesGenres(in container: ModelContainer, playlistPrefix: String, restriction: ContentRestriction) async -> [String] {
+        await Task.detached(priority: .userInitiated) {
+            var descriptor = FetchDescriptor<Series>(predicate: #Predicate { $0.genre != nil })
+            descriptor.fetchLimit = genreSampleLimit
+            descriptor.propertiesToFetch = [\.id, \.genre, \.categoryId]
+            let series = (try? ModelContext(container).fetch(descriptor)) ?? []
+            return Self.derive(playlistPrefix: playlistPrefix, restriction: restriction, rows: series)
+        }.value
+    }
+
+    /// Scopes the sampled rows to the active playlist and viewer (the parental
+    /// `excludingRestricted` filter, inlined so this stays `nonisolated`), then
+    /// derives the distinct genres. Runs on the caller's background context.
+    private nonisolated static func derive(
+        playlistPrefix: String,
+        restriction: ContentRestriction,
+        rows: [some GenreCarrying]
+    ) -> [String] {
+        let restricted = restriction.isActive ? restriction.restrictedCategoryIDs : []
+        let genres = rows.lazy
             .filter { $0.id.hasPrefix(playlistPrefix) }
-            .excludingRestricted(restriction)
-        return GenreParser.distinctByFrequency(series.map(\.genre))
+            .filter { restricted.isEmpty || !restricted.contains($0.categoryId ?? "") }
+            .map(\.genre)
+        return GenreParser.distinctByFrequency(Array(genres))
     }
 }
+
+/// The fields the genre derivation reads off a sampled title. `nonisolated` so
+/// `derive` can run on a background context (default isolation is `MainActor`);
+/// the witnesses are `@Model` stored properties, which are safe to read off the
+/// main thread on a background `ModelContext`. Lets `derive` work over both
+/// `Movie` and `Series` without duplicating the scoping logic.
+nonisolated protocol GenreCarrying {
+    var id: String { get }
+    var genre: String? { get }
+    var categoryId: String? { get }
+}
+
+extension Movie: GenreCarrying {}
+extension Series: GenreCarrying {}
 
 // MARK: - Browse-by-genre section
 

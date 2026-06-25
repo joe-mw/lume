@@ -91,7 +91,7 @@ struct MoviesView: View {
                         .padding(.vertical)
                     }
                     .task(id: playlistPrefix) {
-                        genres = GenreDerivation.movieGenres(in: modelContext, playlistPrefix: playlistPrefix, restriction: restriction)
+                        genres = await GenreDerivation.movieGenres(in: modelContext.container, playlistPrefix: playlistPrefix, restriction: restriction)
                     }
                 }
             }

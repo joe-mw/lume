@@ -89,7 +89,7 @@ struct SeriesView: View {
                         .padding(.vertical)
                     }
                     .task(id: playlistPrefix) {
-                        genres = GenreDerivation.seriesGenres(in: modelContext, playlistPrefix: playlistPrefix, restriction: restriction)
+                        genres = await GenreDerivation.seriesGenres(in: modelContext.container, playlistPrefix: playlistPrefix, restriction: restriction)
                     }
                 }
             }

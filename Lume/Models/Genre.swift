@@ -11,7 +11,10 @@
 import Foundation
 
 /// Splits a provider/TMDB genre string into individual genre tokens.
-enum GenreParser {
+///
+/// Pure string logic with no main-actor state, so it's `nonisolated` — the
+/// genre derivation runs it on a background context (see `GenreDerivation`).
+nonisolated enum GenreParser {
     /// We split on commas, pipes and slashes — the separators providers actually
     /// use — but deliberately keep `&` intact so multi-word TMDB genres like
     /// "Sci-Fi & Fantasy" and "Action & Adventure" stay whole.
