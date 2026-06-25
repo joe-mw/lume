@@ -16,9 +16,16 @@ import SwiftData
 
 /// Decides what kind of content an m3u entry is. m3u playlists mix live
 /// channels, movies and series episodes in one flat list, so we classify by
-/// the two signals providers actually emit: a season/episode token in the
-/// title, and the URL shape (Xtream-style `/movie/`–`/series/` paths or a
-/// video-file extension; live streams end in `.ts`/`.m3u8` or nothing).
+/// the signals providers actually emit, in priority order: a season/episode
+/// token in the title; an explicit `type="video"` attribute marking VOD; then
+/// the URL shape — Xtream-style `/movie/`–`/series/` paths or a video-file
+/// extension mark VOD, while live streaming endpoints (`/channel/`–`/live/`
+/// paths, an `index.*` segment filename, or a `.ts`/`.m3u8`/no extension) are
+/// live. The live-endpoint signal is checked *before* the extension test
+/// because some providers serve live channels through `…/index.mpeg`-style
+/// URLs whose extension would otherwise read as on-demand video; the `type`
+/// attribute, when present, is the only thing distinguishing a movie from a
+/// live channel for providers that serve both through that same endpoint shape.
 nonisolated enum M3UClassifier {
     nonisolated enum Kind: Equatable {
         case live
@@ -32,19 +39,55 @@ nonisolated enum M3UClassifier {
         "mp4", "mkv", "avi", "mov", "wmv", "flv", "webm", "m4v", "mpg", "mpeg"
     ]
 
+    /// URL path segments that mark a live streaming endpoint — the live-side
+    /// mirror of the `/movie/`–`/series/` VOD markers.
+    static let liveStreamPathMarkers = ["/channel/", "/live/", "/stream/"]
+
+    /// Explicit `type="…"` values that mark an entry as on-demand video. Some
+    /// providers serve live channels and movies through identical URLs and
+    /// only this attribute tells them apart.
+    static let vodTypeMarkers: Set<String> = ["video", "movie", "vod"]
+
     static func classify(_ entry: M3UEntry) -> Kind {
         if let info = episodeInfo(in: entry.name) {
             return .episode(series: info.series, season: info.season, episode: info.episode)
+        }
+
+        // An explicit VOD `type` is the strongest signal — it wins over the URL
+        // heuristics, which can't distinguish live from on-demand when a
+        // provider serves both through the same `…/index.mpeg` endpoint shape.
+        if let type = entry.type?.lowercased(), vodTypeMarkers.contains(type) {
+            return .movie
         }
 
         let lowerURL = entry.url.lowercased()
         if lowerURL.contains("/movie/") || lowerURL.contains("/series/") {
             return .movie
         }
+        if isLiveStreamURL(lowerURL) {
+            return .live
+        }
         if let ext = pathExtension(of: lowerURL), vodExtensions.contains(ext) {
             return .movie
         }
         return .live
+    }
+
+    /// Whether a URL is a live streaming endpoint rather than a VOD file.
+    /// Two signals: a known live path segment, or an `index.*` filename — the
+    /// streaming-manifest convention IPTV channels use (e.g.
+    /// `…/channel/<id>/index.mpeg`), as opposed to a per-title VOD filename.
+    /// Expects an already-lowercased URL.
+    static func isLiveStreamURL(_ lowerURL: String) -> Bool {
+        if liveStreamPathMarkers.contains(where: { lowerURL.contains($0) }) {
+            return true
+        }
+        var path = Substring(lowerURL)
+        if let cut = path.firstIndex(where: { $0 == "?" || $0 == "#" }) {
+            path = path[..<cut]
+        }
+        let filenameStart = path.lastIndex(of: "/").map { path.index(after: $0) } ?? path.startIndex
+        return path[filenameStart...].hasPrefix("index.")
     }
 
     /// Finds the first `SxxExx` / `NxM` token in a title and splits it into the

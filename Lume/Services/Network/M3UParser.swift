@@ -28,6 +28,10 @@ nonisolated struct M3UEntry {
     var tvgId: String?
     var logo: String?
     var group: String?
+    /// The provider's explicit `type="…"` attribute (e.g. `video` for VOD),
+    /// when present. Some providers serve live and on-demand through identical
+    /// URLs and only this attribute distinguishes them.
+    var type: String?
 }
 
 // MARK: - Parser
@@ -142,7 +146,7 @@ nonisolated enum M3UParser {
                 // Plain (non-extended) m3u: a bare URL with no metadata.
                 guard looksLikeURL(line) else { return nil }
                 let fallbackName = URL(string: line)?.deletingPathExtension().lastPathComponent ?? line
-                return M3UEntry(name: fallbackName, url: line, tvgId: nil, logo: nil, group: pendingGroup)
+                return M3UEntry(name: fallbackName, url: line, tvgId: nil, logo: nil, group: pendingGroup, type: nil)
             }
 
             let name = info.name.isEmpty ? (info.tvgName ?? line) : info.name
@@ -151,7 +155,8 @@ nonisolated enum M3UParser {
                 url: line,
                 tvgId: info.tvgId,
                 logo: info.logo,
-                group: info.group ?? pendingGroup
+                group: info.group ?? pendingGroup,
+                type: info.type
             )
         }
 
@@ -168,6 +173,7 @@ nonisolated enum M3UParser {
         var tvgName: String?
         var logo: String?
         var group: String?
+        var type: String?
     }
 
     /// Parses `#EXTINF:-1 tvg-id="..." tvg-logo="..." group-title="...",Name`.
@@ -196,7 +202,8 @@ nonisolated enum M3UParser {
             tvgId: nonEmpty(attributes["tvg-id"]),
             tvgName: nonEmpty(attributes["tvg-name"]),
             logo: nonEmpty(attributes["tvg-logo"]),
-            group: nonEmpty(attributes["group-title"])
+            group: nonEmpty(attributes["group-title"]),
+            type: nonEmpty(attributes["type"])
         )
     }
 

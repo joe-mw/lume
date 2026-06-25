@@ -144,14 +144,41 @@ struct M3UParserTests {
 // MARK: - Classifier
 
 struct M3UClassifierTests {
-    private func entry(name: String = "Some Channel", url: String) -> M3UEntry {
-        M3UEntry(name: name, url: url, tvgId: nil, logo: nil, group: nil)
+    private func entry(name: String = "Some Channel", url: String, type: String? = nil) -> M3UEntry {
+        M3UEntry(name: name, url: url, tvgId: nil, logo: nil, group: nil, type: type)
     }
 
     @Test func `streams without VOD markers are live`() {
         #expect(M3UClassifier.classify(entry(url: "http://example.com/live/1.ts")) == .live)
         #expect(M3UClassifier.classify(entry(url: "http://example.com/hls/chan.m3u8")) == .live)
         #expect(M3UClassifier.classify(entry(url: "http://example.com/stream/12345")) == .live)
+    }
+
+    @Test func `explicit VOD type wins over a live endpoint URL`() {
+        // This provider serves movies and live channels through the same
+        // `…/channel/…/index.mpeg` shape; only type="video" distinguishes them.
+        let movieURL = "http://cdn.example.com:9999/channel/n36074338/index.mpeg?q=abc"
+        #expect(M3UClassifier.classify(entry(url: movieURL, type: "video")) == .movie)
+        #expect(M3UClassifier.classify(entry(url: movieURL, type: "VOD")) == .movie)
+        // No type → the same URL is a live channel.
+        #expect(M3UClassifier.classify(entry(url: movieURL)) == .live)
+        // A non-VOD type (e.g. a live transcoder) falls through to live.
+        #expect(M3UClassifier.classify(entry(url: movieURL, type: "flussonic")) == .live)
+    }
+
+    @Test func `episode token wins over a VOD type so series still group`() {
+        let kind = M3UClassifier.classify(
+            entry(name: "Dark S02E05", url: "http://example.com/channel/x/index.mpeg", type: "video")
+        )
+        #expect(kind == .episode(series: "Dark", season: 2, episode: 5))
+    }
+
+    @Test func `live streaming endpoints beat the VOD extension test`() {
+        // Providers serve live channels through `…/index.mpeg`-style URLs; the
+        // `mpeg` extension is in vodExtensions but the endpoint shape wins.
+        #expect(M3UClassifier.classify(entry(url: "http://cdn.example.com:9999/channel/237e38f9/index.mpeg?q=abc")) == .live)
+        #expect(M3UClassifier.classify(entry(url: "http://example.com/live/123/index.mpg")) == .live)
+        #expect(M3UClassifier.classify(entry(url: "http://example.com/stream/index.mp4")) == .live)
     }
 
     @Test func `video file extensions and movie paths are movies`() {
