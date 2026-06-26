@@ -18,11 +18,25 @@ struct PlaylistDetailView: View {
     @State private var editUsername = ""
     @State private var editPassword = ""
     @State private var editEPGURL = ""
+    @State private var editMacAddress = ""
     @State private var showDeleteConfirmation = false
     @State private var showSync = false
 
     private var isM3U: Bool {
         playlist.sourceType == .m3u
+    }
+
+    private var isStalker: Bool {
+        playlist.sourceType == .stalker
+    }
+
+    /// The localized section heading for the connection fields.
+    private var connectionSectionTitle: LocalizedStringKey {
+        switch playlist.sourceType {
+        case .xtream: "Server"
+        case .m3u: "M3U Playlist"
+        case .stalker: "Stalker Portal"
+        }
     }
 
     var body: some View {
@@ -106,9 +120,9 @@ struct PlaylistDetailView: View {
         // MARK: - Server Section (Read-only)
 
         private var readOnlySection: some View {
-            Section(isM3U ? "M3U Playlist" : "Server") {
+            Section(connectionSectionTitle) {
                 LabeledContent("Name", value: playlist.name)
-                LabeledContent("URL") {
+                LabeledContent(isStalker ? "Portal URL" : "URL") {
                     Text(playlist.serverURL)
                         .lineLimit(1)
                         .truncationMode(.middle)
@@ -120,6 +134,11 @@ struct PlaylistDetailView: View {
                             .lineLimit(1)
                             .truncationMode(.middle)
                             .foregroundStyle(.secondary)
+                    }
+                } else if isStalker {
+                    LabeledContent("MAC Address", value: playlist.macAddress ?? "")
+                    if !playlist.username.isEmpty {
+                        LabeledContent("Username", value: playlist.username)
                     }
                 } else {
                     LabeledContent("Username", value: playlist.username)
@@ -138,9 +157,9 @@ struct PlaylistDetailView: View {
         // MARK: - Server Section (Editing)
 
         private var editingSection: some View {
-            Section(isM3U ? "M3U Playlist" : "Server") {
+            Section(connectionSectionTitle) {
                 TextField("Name", text: $editName)
-                TextField(isM3U ? "Playlist URL" : "Server URL", text: $editServerURL)
+                TextField(serverURLFieldTitle, text: $editServerURL)
                 #if os(iOS)
                     .textInputAutocapitalization(.never)
                     .keyboardType(.URL)
@@ -155,6 +174,20 @@ struct PlaylistDetailView: View {
                     #endif
                         .autocorrectionDisabled()
                         .textContentType(.URL)
+                } else if isStalker {
+                    TextField("MAC Address", text: $editMacAddress)
+                    #if os(iOS)
+                        .textInputAutocapitalization(.characters)
+                    #endif
+                        .autocorrectionDisabled()
+                    TextField("Username (optional)", text: $editUsername)
+                    #if os(iOS)
+                        .textInputAutocapitalization(.never)
+                    #endif
+                        .autocorrectionDisabled()
+                        .textContentType(.username)
+                    SecureField("Password (optional)", text: $editPassword)
+                        .textContentType(.password)
                 } else {
                     TextField("Username", text: $editUsername)
                     #if os(iOS)
@@ -165,6 +198,14 @@ struct PlaylistDetailView: View {
                     SecureField("Password", text: $editPassword)
                         .textContentType(.password)
                 }
+            }
+        }
+
+        private var serverURLFieldTitle: LocalizedStringKey {
+            switch playlist.sourceType {
+            case .xtream: "Server URL"
+            case .m3u: "Playlist URL"
+            case .stalker: "Portal URL"
             }
         }
 
@@ -235,14 +276,18 @@ struct PlaylistDetailView: View {
 
         private var tvServerSection: some View {
             VStack(alignment: .leading, spacing: 8) {
-                TVSettingsSectionLabel(isM3U ? "M3U Playlist" : "Server")
+                TVSettingsSectionLabel(connectionSectionTitle)
 
                 if isEditing {
                     VStack(spacing: 18) {
                         TVSettingsField(title: "Name", placeholder: "Name", text: $editName, contentType: .name)
-                        TVSettingsField(title: isM3U ? "Playlist URL" : "Server URL", placeholder: isM3U ? "Playlist URL" : "Server URL", text: $editServerURL, contentType: .URL)
+                        TVSettingsField(title: serverURLFieldTitle, placeholder: serverURLFieldTitle, text: $editServerURL, contentType: .URL)
                         if isM3U {
                             TVSettingsField(title: "EPG URL (optional)", placeholder: "EPG URL", text: $editEPGURL, contentType: .URL)
+                        } else if isStalker {
+                            TVSettingsField(title: "MAC Address", placeholder: "00:1A:79:xx:xx:xx", text: $editMacAddress, contentType: nil)
+                            TVSettingsField(title: "Username (optional)", placeholder: "Username", text: $editUsername, contentType: .username)
+                            TVSettingsField(title: "Password (optional)", placeholder: "Password", text: $editPassword, isSecure: true, contentType: .password)
                         } else {
                             TVSettingsField(title: "Username", placeholder: "Username", text: $editUsername, contentType: .username)
                             TVSettingsField(title: "Password", placeholder: "Password", text: $editPassword, isSecure: true, contentType: .password)
@@ -251,7 +296,7 @@ struct PlaylistDetailView: View {
                 } else {
                     VStack(spacing: 2) {
                         TVSettingsValueRow("Name", value: playlist.name)
-                        TVSettingsValueRow("URL") {
+                        TVSettingsValueRow(isStalker ? "Portal URL" : "URL") {
                             Text(playlist.serverURL)
                                 .lineLimit(1)
                                 .truncationMode(.middle)
@@ -261,6 +306,11 @@ struct PlaylistDetailView: View {
                                 Text(playlist.epgURL ?? String(localized: "None"))
                                     .lineLimit(1)
                                     .truncationMode(.middle)
+                            }
+                        } else if isStalker {
+                            TVSettingsValueRow("MAC Address", value: playlist.macAddress ?? "")
+                            if !playlist.username.isEmpty {
+                                TVSettingsValueRow("Username", value: playlist.username)
                             }
                         } else {
                             TVSettingsValueRow("Username", value: playlist.username)
@@ -362,6 +412,7 @@ struct PlaylistDetailView: View {
         editUsername = playlist.username
         editPassword = playlist.password
         editEPGURL = playlist.epgURL ?? ""
+        editMacAddress = playlist.macAddress ?? ""
         withAnimation { isEditing = true }
     }
 
@@ -375,6 +426,10 @@ struct PlaylistDetailView: View {
         if isM3U {
             let epgURL = editEPGURL.trimmingCharacters(in: .whitespacesAndNewlines)
             playlist.epgURL = epgURL.isEmpty ? nil : epgURL
+        } else if isStalker {
+            playlist.macAddress = editMacAddress.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+            playlist.username = editUsername.trimmingCharacters(in: .whitespacesAndNewlines)
+            playlist.password = editPassword
         } else {
             playlist.username = editUsername.trimmingCharacters(in: .whitespacesAndNewlines)
             playlist.password = editPassword
@@ -394,10 +449,12 @@ struct PlaylistDetailView: View {
             dismiss()
         #endif
     }
+}
 
-    // MARK: - Helpers
+// MARK: - Helpers
 
-    private func formattedExpiry(_ raw: String) -> String {
+private extension PlaylistDetailView {
+    func formattedExpiry(_ raw: String) -> String {
         if let timestamp = TimeInterval(raw) {
             let date = Date(timeIntervalSince1970: timestamp)
             return date.formatted(date: .abbreviated, time: .omitted)
@@ -405,7 +462,7 @@ struct PlaylistDetailView: View {
         return raw
     }
 
-    private func isExpired(_ raw: String) -> Bool {
+    func isExpired(_ raw: String) -> Bool {
         guard let timestamp = TimeInterval(raw) else { return false }
         let date = Date(timeIntervalSince1970: timestamp)
         return date < Date()

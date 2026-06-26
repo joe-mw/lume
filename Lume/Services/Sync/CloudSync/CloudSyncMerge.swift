@@ -96,9 +96,46 @@ nonisolated struct PlaylistConfigValues: Codable, Equatable {
     var serverURL: String
     var username: String
     var password: String
+    var macAddress: String
     var sourceTypeRaw: String
     var epgURL: String?
     var syncEnabled: Bool
+
+    init(
+        name: String,
+        serverURL: String,
+        username: String,
+        password: String,
+        macAddress: String = "",
+        sourceTypeRaw: String,
+        epgURL: String?,
+        syncEnabled: Bool
+    ) {
+        self.name = name
+        self.serverURL = serverURL
+        self.username = username
+        self.password = password
+        self.macAddress = macAddress
+        self.sourceTypeRaw = sourceTypeRaw
+        self.epgURL = epgURL
+        self.syncEnabled = syncEnabled
+    }
+
+    /// Hand-rolled decode so a shadow baseline persisted before Stalker support
+    /// (no `macAddress` key) still decodes — the field falls back to "" rather
+    /// than failing the whole baseline, which would discard the shadow and risk
+    /// a spurious mass reconcile.
+    nonisolated init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        name = try container.decode(String.self, forKey: .name)
+        serverURL = try container.decode(String.self, forKey: .serverURL)
+        username = try container.decode(String.self, forKey: .username)
+        password = try container.decode(String.self, forKey: .password)
+        macAddress = try container.decodeIfPresent(String.self, forKey: .macAddress) ?? ""
+        sourceTypeRaw = try container.decode(String.self, forKey: .sourceTypeRaw)
+        epgURL = try container.decodeIfPresent(String.self, forKey: .epgURL)
+        syncEnabled = try container.decode(Bool.self, forKey: .syncEnabled)
+    }
 
     /// Conflict policy: cloud wins. Deterministic and adequate for config.
     static func mergeConflict(local _: PlaylistConfigValues, cloud: PlaylistConfigValues) -> PlaylistConfigValues {
