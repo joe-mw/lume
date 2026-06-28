@@ -357,22 +357,18 @@ struct LoginView: View {
 
             let client = XtreamClient()
             do {
-                let info = try await client.getInfo(playlist: playlist)
-
-                await MainActor.run {
+                try await withConnectionTimeout {
+                    let info = try await client.getInfo(playlist: playlist)
                     playlist.serverTimezone = info.serverInfo.timezone
                     playlist.userStatus = info.userInfo.status
                     playlist.maxConnections = String(info.userInfo.maxConnections ?? "0")
                     playlist.activeConnections = String(info.userInfo.activeCons ?? "0")
                     playlist.expDate = info.userInfo.expDate
-
                     insertAndFinish(playlist)
                 }
             } catch {
-                await MainActor.run {
-                    errorMessage = error.localizedDescription
-                    isLoading = false
-                }
+                errorMessage = error.localizedDescription
+                isLoading = false
             }
         }
     }
@@ -387,20 +383,17 @@ struct LoginView: View {
 
         Task {
             do {
-                // Cheap validation: stream just the head of the file and check
-                // for m3u markers, so adding a huge playlist stays instant —
-                // the full download happens during the first sync.
-                try await M3UClient().validatePlaylist(at: urlString)
-
-                await MainActor.run {
+                try await withConnectionTimeout {
+                    // Cheap validation: stream just the head of the file and check
+                    // for m3u markers, so adding a huge playlist stays instant —
+                    // the full download happens during the first sync.
+                    try await M3UClient().validatePlaylist(at: urlString)
                     let playlist = Playlist(name: playlistName, m3uURL: urlString, epgURL: epgURLString)
                     insertAndFinish(playlist)
                 }
             } catch {
-                await MainActor.run {
-                    errorMessage = error.localizedDescription
-                    isLoading = false
-                }
+                errorMessage = error.localizedDescription
+                isLoading = false
             }
         }
     }
@@ -424,18 +417,16 @@ struct LoginView: View {
 
             let client = StalkerClient(configuration: StalkerClient.Configuration(playlist: playlist))
             do {
-                // Handshake + profile doubles as the connection test.
-                let profile = try await client.authenticate()
-                await MainActor.run {
+                try await withConnectionTimeout {
+                    // Handshake + profile doubles as the connection test.
+                    let profile = try await client.authenticate()
                     playlist.userStatus = profile.status
                     playlist.expDate = profile.expDate
                     insertAndFinish(playlist)
                 }
             } catch {
-                await MainActor.run {
-                    errorMessage = error.localizedDescription
-                    isLoading = false
-                }
+                errorMessage = error.localizedDescription
+                isLoading = false
             }
         }
     }
@@ -459,6 +450,38 @@ struct LoginView: View {
         // ContentView's @Query.
         if isModal {
             dismiss()
+        }
+    }
+}
+
+// MARK: - Connection-test timeout
+
+private extension LoginView {
+    struct ConnectionTimeoutError: LocalizedError {
+        var errorDescription: String? {
+            String(localized: "The connection timed out. Check the URL and your network, then try again.")
+        }
+    }
+
+    /// Runs an add-playlist connection test under an overall deadline, cancelling
+    /// the in-flight request and surfacing a timeout when it's exceeded.
+    ///
+    /// Each client has its own per-request timeout and (for Xtream) retry/backoff
+    /// tuned for *sync*, where retries matter; left unbounded, a wrong URL or
+    /// dead host can hang the add sheet for ~30–90s on a spinner with no way out.
+    /// This caps the test (default 20s) without weakening the sync path.
+    func withConnectionTimeout(_ seconds: Double = 20, _ operation: @escaping () async throws -> Void) async throws {
+        let work = Task { try await operation() }
+        let watchdog = Task {
+            try? await Task.sleep(for: .seconds(seconds))
+            work.cancel()
+        }
+        defer { watchdog.cancel() }
+        do {
+            try await work.value
+        } catch {
+            if work.isCancelled { throw ConnectionTimeoutError() }
+            throw error
         }
     }
 }

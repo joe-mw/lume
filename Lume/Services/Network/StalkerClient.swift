@@ -134,6 +134,10 @@ class StalkerClient {
 
         var lastError: Error = StalkerError.handshakeFailed
         for endpoint in endpoints {
+            // Bail immediately if a caller deadline (e.g. the add-playlist
+            // connection-test timeout) cancelled us, rather than racing through
+            // the remaining endpoints.
+            try Task.checkCancellation()
             do {
                 let url = appendingQuery(to: endpoint, [
                     URLQueryItem(name: "type", value: "stb"),
