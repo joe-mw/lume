@@ -16,6 +16,7 @@ extension CloudSyncEngine {
             serverURL: playlist.serverURL,
             username: playlist.username,
             password: playlist.password,
+            macAddress: playlist.macAddress ?? "",
             sourceTypeRaw: playlist.sourceTypeRaw,
             epgURL: playlist.epgURL,
             syncEnabled: playlist.syncEnabled
@@ -28,6 +29,7 @@ extension CloudSyncEngine {
             serverURL: mirror.serverURL,
             username: mirror.username,
             password: mirror.password,
+            macAddress: mirror.macAddress,
             sourceTypeRaw: mirror.sourceTypeRaw,
             epgURL: mirror.epgURL,
             syncEnabled: mirror.syncEnabled

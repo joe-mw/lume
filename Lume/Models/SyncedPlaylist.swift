@@ -29,6 +29,11 @@ final class SyncedPlaylist {
     @Attribute(.allowsCloudEncryption) var username: String = ""
     @Attribute(.allowsCloudEncryption) var password: String = ""
 
+    /// Stalker portal MAC address. The portal's authentication identity, so it
+    /// rides the private database end-to-end encrypted like the credentials.
+    /// Empty for Xtream / m3u sources.
+    @Attribute(.allowsCloudEncryption) var macAddress: String = ""
+
     var sourceTypeRaw: String = PlaylistSourceType.xtream.rawValue
     var epgURL: String?
     var syncEnabled: Bool = true
@@ -44,6 +49,7 @@ final class SyncedPlaylist {
         serverURL: String,
         username: String,
         password: String,
+        macAddress: String = "",
         sourceTypeRaw: String,
         epgURL: String?,
         syncEnabled: Bool,
@@ -54,6 +60,7 @@ final class SyncedPlaylist {
         self.serverURL = serverURL
         self.username = username
         self.password = password
+        self.macAddress = macAddress
         self.sourceTypeRaw = sourceTypeRaw
         self.epgURL = epgURL
         self.syncEnabled = syncEnabled

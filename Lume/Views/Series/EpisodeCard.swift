@@ -199,8 +199,11 @@ struct EpisodeCard: View {
                 onToggleWatched: onToggleWatched,
                 onMarkPreviousWatched: onMarkPreviousWatched,
                 onMarkFollowingUnwatched: onMarkFollowingUnwatched,
-                onDownload: playlist.map { playlist in
-                    {
+                onDownload: playlist.flatMap { playlist in
+                    // Stalker portals don't support offline downloads (short-lived
+                    // stream URLs), so the download affordance is hidden for them.
+                    guard playlist.supportsDownloads else { return nil }
+                    return {
                         if premium.isPremium {
                             DownloadManager.shared.startDownload(episode: episode, playlist: playlist)
                         } else {
