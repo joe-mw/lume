@@ -82,6 +82,7 @@ import SwiftUI
 
                 Spacer()
 
+                AirPlayRouteButton()
                 pipButton
             }
             .padding(.horizontal, 20)

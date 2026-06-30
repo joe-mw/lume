@@ -79,6 +79,9 @@ struct VLCPlayerControlsOverlay: View {
 
             Spacer()
 
+            #if !os(tvOS)
+                AirPlayRouteButton()
+            #endif
             pipButton
         }
         .padding(.horizontal, 20)
