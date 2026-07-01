@@ -19,10 +19,19 @@ struct EPGGuideView: View {
     let playlistPrefix: String
     let onPlay: (LiveStream) -> Void
 
+    @Environment(\.modelContext) private var modelContext
     @Query private var streams: [LiveStream]
-    @Query private var listings: [EPGListing]
 
     private let timeline: EPGTimeline
+
+    /// The guide window's listings, grouped by channel and resolved in one
+    /// off-main fetch scoped to *this category's* channels (see `EPGGuideLoader`).
+    /// A view-context `@Query<EPGListing>` here instead pulled the entire guide
+    /// window across every playlist onto the main thread and re-fired on every
+    /// sync write — the freeze-on-open and stutter-while-scrolling this fixes.
+    @State private var listingsByChannel: [String: [EPGWindowListing]] = [:]
+    /// Observed so the guide refreshes once a guide import settles.
+    @State private var epgSync = EPGSyncService.shared
 
     init(scope: LiveChannelScope, playlistPrefix: String, sort: ContentSortOption, onPlay: @escaping (LiveStream) -> Void) {
         self.scope = scope
@@ -33,14 +42,6 @@ struct EPGGuideView: View {
         self.timeline = timeline
 
         _streams = Query(LiveChannelQuery.descriptor(for: scope, sort: sort))
-
-        // Fetch only listings overlapping the window, then group in memory.
-        let windowStart = timeline.start
-        let windowEnd = timeline.end
-        _listings = Query(
-            filter: #Predicate<EPGListing> { $0.end > windowStart && $0.start < windowEnd },
-            sort: [SortDescriptor(\.start)]
-        )
     }
 
     private var scopedStreams: [LiveStream] {
@@ -48,22 +49,49 @@ struct EPGGuideView: View {
     }
 
     var body: some View {
-        if scopedStreams.isEmpty {
-            ContentUnavailableView(
-                "No Channels",
-                systemImage: "antenna.radiowaves.left.and.right",
-                description: Text("This category has no channels")
-            )
-        } else {
-            EPGGridScroller(rows: buildRows(), timeline: timeline, onPlay: onPlay)
+        let channels = scopedStreams
+        Group {
+            if channels.isEmpty {
+                ContentUnavailableView(
+                    "No Channels",
+                    systemImage: "antenna.radiowaves.left.and.right",
+                    description: Text("This category has no channels")
+                )
+            } else {
+                EPGGridScroller(rows: buildRows(for: channels), timeline: timeline, onPlay: onPlay)
+            }
+        }
+        // Reload when the channel set changes or a guide import settles. Keyed on
+        // `isSyncing` (which flips twice per sync) rather than observing the store,
+        // so the grid rebuilds a handful of times — not on every batch write.
+        .task(id: "\(channels.count)-\(epgSync.isSyncing)") {
+            await loadListings(for: channels)
         }
     }
 
-    /// Groups the windowed listings by channel and tiles each stream into a row.
-    /// Runs only when the queries change — not on scroll.
-    private func buildRows() -> [EPGChannelRow] {
-        let grouped = Dictionary(grouping: listings, by: \.channelId)
-        return EPGGridBuilder.rows(streams: scopedStreams, listingsByChannel: grouped, timeline: timeline)
+    /// Tiles each scoped stream into a row from the pre-fetched window snapshots.
+    /// Runs only when the streams or loaded listings change — not on scroll.
+    private func buildRows(for channels: [LiveStream]) -> [EPGChannelRow] {
+        EPGGridBuilder.rows(streams: channels, listingsByChannel: listingsByChannel, timeline: timeline)
+    }
+
+    private func loadListings(for channels: [LiveStream]) async {
+        let channelIds = Array(Set(channels.compactMap(\.epgChannelId).filter { !$0.isEmpty }))
+        guard !channelIds.isEmpty else {
+            listingsByChannel = [:]
+            return
+        }
+        let container = modelContext.container
+        let windowStart = timeline.start
+        let windowEnd = timeline.end
+        listingsByChannel = await Task.detached(priority: .userInitiated) {
+            EPGGuideLoader.load(
+                container: container,
+                channelIds: channelIds,
+                windowStart: windowStart,
+                windowEnd: windowEnd
+            )
+        }.value
     }
 }
 

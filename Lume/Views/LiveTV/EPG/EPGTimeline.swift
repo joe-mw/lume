@@ -132,7 +132,7 @@ enum EPGGridBuilder {
     @MainActor
     static func rows(
         streams: [LiveStream],
-        listingsByChannel: [String: [EPGListing]],
+        listingsByChannel: [String: [EPGWindowListing]],
         timeline: EPGTimeline
     ) -> [EPGChannelRow] {
         streams.map { stream in
@@ -147,7 +147,7 @@ enum EPGGridBuilder {
 
     /// Turns a channel's sorted listings into contiguous cells spanning the
     /// whole window, inserting gap fillers wherever data is missing.
-    static func cells(for listings: [EPGListing], timeline: EPGTimeline) -> [EPGProgramCell] {
+    static func cells(for listings: [EPGWindowListing], timeline: EPGTimeline) -> [EPGProgramCell] {
         var cells: [EPGProgramCell] = []
         var cursor = timeline.start
 
@@ -163,7 +163,7 @@ enum EPGGridBuilder {
             cells.append(EPGProgramCell(
                 id: listing.id,
                 title: listing.title,
-                detail: listing.listingDescription,
+                detail: listing.detail,
                 start: clampedStart,
                 end: clampedEnd,
                 listingID: listing.id,
