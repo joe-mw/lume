@@ -352,6 +352,7 @@ private extension CloudSyncEngine {
             mirror.serverURL = value.serverURL
             mirror.username = value.username
             mirror.password = value.password
+            mirror.macAddress = value.macAddress
             mirror.sourceTypeRaw = value.sourceTypeRaw
             mirror.epgURL = value.epgURL
             mirror.syncEnabled = value.syncEnabled
@@ -363,6 +364,7 @@ private extension CloudSyncEngine {
                 serverURL: value.serverURL,
                 username: value.username,
                 password: value.password,
+                macAddress: value.macAddress,
                 sourceTypeRaw: value.sourceTypeRaw,
                 epgURL: value.epgURL,
                 syncEnabled: value.syncEnabled
@@ -384,6 +386,7 @@ private extension CloudSyncEngine {
             local.serverURL = value.serverURL
             local.username = value.username
             local.password = value.password
+            local.macAddress = value.macAddress.isEmpty ? nil : value.macAddress
             local.sourceTypeRaw = value.sourceTypeRaw
             local.epgURL = value.epgURL
             local.syncEnabled = value.syncEnabled
@@ -391,6 +394,7 @@ private extension CloudSyncEngine {
         }
         let playlist = Playlist(name: value.name, serverURL: value.serverURL, username: value.username, password: value.password)
         playlist.id = id
+        playlist.macAddress = value.macAddress.isEmpty ? nil : value.macAddress
         playlist.sourceTypeRaw = value.sourceTypeRaw
         playlist.epgURL = value.epgURL
         playlist.syncEnabled = value.syncEnabled

@@ -133,6 +133,8 @@ actor ContentSyncManager {
             try await performXtreamSync(playlist: playlist, playlistId: playlistId, progress: progress, full: full)
         case .m3u:
             try await performM3USync(playlist: playlist, playlistId: playlistId, progress: progress)
+        case .stalker:
+            try await performStalkerSync(playlist: playlist, playlistId: playlistId, progress: progress, full: full)
         }
 
         let doneContext = ModelContext(modelContainer)
@@ -367,6 +369,19 @@ actor ContentSyncManager {
     /// races the UI refresh and, on tvOS, loses (episodes only appear after
     /// navigating away and back). Returning value types sidesteps that entirely.
     func fetchEpisodes(seriesId: Int, seriesElementId: String, playlist: Playlist) async throws -> [ParsedEpisode] {
+        switch playlist.sourceType {
+        case .xtream:
+            try await fetchXtreamEpisodes(seriesId: seriesId, seriesElementId: seriesElementId, playlist: playlist)
+        case .stalker:
+            try await fetchStalkerEpisodes(seriesId: seriesId, seriesElementId: seriesElementId, playlist: playlist)
+        case .m3u:
+            // m3u episodes are imported alongside the rest of the catalog during
+            // sync, so there is nothing to fetch lazily here.
+            []
+        }
+    }
+
+    private func fetchXtreamEpisodes(seriesId: Int, seriesElementId: String, playlist: Playlist) async throws -> [ParsedEpisode] {
         let seriesInfo = try await xtreamClient.getSeriesInfo(playlist: playlist, seriesId: seriesId)
         guard let episodesDict = seriesInfo.episodes else { return [] }
 

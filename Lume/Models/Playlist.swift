@@ -19,6 +19,11 @@ final class Playlist {
     /// empty, from the playlist's own `url-tvg` header on first sync.
     var epgURL: String?
 
+    /// Stalker portals authenticate by MAC address rather than credentials.
+    /// `serverURL` holds the portal URL; this holds the bound MAC (e.g.
+    /// `00:1A:79:xx:xx:xx`). `nil` for Xtream / m3u sources.
+    var macAddress: String?
+
     var serverTimezone: String?
     var serverVersion: String?
 
@@ -50,11 +55,21 @@ final class Playlist {
         sourceTypeRaw = PlaylistSourceType.m3u.rawValue
         self.epgURL = (epgURL?.isEmpty == false) ? epgURL : nil
     }
+
+    /// Creates a Stalker portal playlist. The portal URL goes in `serverURL` and
+    /// the bound MAC in `macAddress`; username/password are optional (only some
+    /// portals require them).
+    convenience init(name: String, portalURL: String, macAddress: String, username: String = "", password: String = "") {
+        self.init(name: name, serverURL: portalURL, username: username, password: password)
+        sourceTypeRaw = PlaylistSourceType.stalker.rawValue
+        self.macAddress = macAddress
+    }
 }
 
 enum PlaylistSourceType: String, Codable {
     case xtream
     case m3u
+    case stalker
 }
 
 enum SyncStatus: String, Codable {
@@ -72,5 +87,12 @@ extension Playlist {
     var sourceType: PlaylistSourceType {
         get { PlaylistSourceType(rawValue: sourceTypeRaw) ?? .xtream }
         set { sourceTypeRaw = newValue.rawValue }
+    }
+
+    /// Whether content from this playlist can be downloaded for offline playback.
+    /// Stalker portals hand out short-lived, per-session stream URLs, so there is
+    /// no stable URL to persist for offline use.
+    var supportsDownloads: Bool {
+        sourceType != .stalker
     }
 }
