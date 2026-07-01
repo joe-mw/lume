@@ -77,12 +77,13 @@ struct VLCPlayerControlsOverlay: View {
                 .keyboardShortcut(.escape, modifiers: [])
             #endif
 
+            pipButton
+
             Spacer()
 
             #if !os(tvOS)
                 AirPlayRouteButton()
             #endif
-            pipButton
         }
         .padding(.horizontal, 20)
         .padding(.top, 12)
