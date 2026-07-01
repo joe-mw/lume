@@ -65,3 +65,60 @@ enum ChannelEPGLoader {
         return result
     }
 }
+
+// MARK: - Guide window snapshot
+
+/// A single guide-window programme for a channel — plain values so the whole
+/// window can be fetched off the main thread and shaped into grid rows without
+/// keeping managed `EPGListing` objects alive on the view context.
+nonisolated struct EPGWindowListing: Equatable {
+    let id: String
+    let title: String
+    let detail: String
+    let start: Date
+    let end: Date
+}
+
+/// Loads the full guide window for a set of channels in one indexed, off-main
+/// fetch, grouped by channel id and sorted by start. This is the guide grid's
+/// counterpart to `ChannelEPGLoader`: it keeps *every* listing in the window
+/// (not just now/next) but, crucially, scopes the fetch to the channels on
+/// screen and returns `Sendable` snapshots. A view-context `@Query` here would
+/// instead materialize the *entire* guide window across every playlist on the
+/// main thread — and re-fire on every sync write — which froze the guide open
+/// and stuttered scrolling on large playlists.
+enum EPGGuideLoader {
+    nonisolated static func load(
+        container: ModelContainer,
+        channelIds: [String],
+        windowStart: Date,
+        windowEnd: Date
+    ) -> [String: [EPGWindowListing]] {
+        guard !channelIds.isEmpty else { return [:] }
+
+        let context = ModelContext(container)
+        // Channel-id scope is index-served; the time bounds trim it to the
+        // visible window. Sorted by start so the grid builder can tile in order.
+        let descriptor = FetchDescriptor<EPGListing>(
+            predicate: #Predicate {
+                channelIds.contains($0.channelId) && $0.end > windowStart && $0.start < windowEnd
+            },
+            sortBy: [SortDescriptor(\.channelId), SortDescriptor(\.start)]
+        )
+        guard let listings = try? context.fetch(descriptor) else { return [:] }
+
+        var grouped: [String: [EPGWindowListing]] = [:]
+        for listing in listings {
+            grouped[listing.channelId, default: []].append(
+                EPGWindowListing(
+                    id: listing.id,
+                    title: listing.title,
+                    detail: listing.listingDescription,
+                    start: listing.start,
+                    end: listing.end
+                )
+            )
+        }
+        return grouped
+    }
+}
