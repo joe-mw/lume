@@ -44,6 +44,23 @@ struct PlayableMedia: Identifiable, Hashable, Codable {
             contentRef: contentRef
         )
     }
+
+    /// Returns a copy with the playback URL replaced. Used by
+    /// `StalkerStreamResolver` to swap a deferred `lumestalker://` placeholder for
+    /// the real, freshly resolved stream URL while keeping the same identity.
+    /// `nonisolated` so the resolver can call it off the main actor.
+    nonisolated func replacingURL(_ newURL: URL) -> PlayableMedia {
+        PlayableMedia(
+            id: id,
+            url: newURL,
+            title: title,
+            subtitle: subtitle,
+            posterURL: posterURL,
+            kind: kind,
+            startTime: startTime,
+            contentRef: contentRef
+        )
+    }
 }
 
 extension PlayableMedia {
@@ -69,8 +86,8 @@ extension PlayableMedia {
                 contentRef: .movie(movie.id)
             )
         }
-        let directURL = movie.directURL.flatMap(URL.init(string:))
-        guard let url = directURL ?? client.buildMovieURL(for: movie, playlist: playlist) else { return nil }
+        guard let url = vodURL(directURL: movie.directURL, playlist: playlist,
+                               build: { client.buildMovieURL(for: movie, playlist: playlist) }) else { return nil }
         return PlayableMedia(
             id: "movie-\(movie.id)",
             url: url,
@@ -81,6 +98,18 @@ extension PlayableMedia {
             startTime: movie.watchProgress,
             contentRef: .movie(movie.id)
         )
+    }
+
+    /// The playback URL for an on-demand item. For Stalker portals the stored
+    /// `directURL` is a `create_link` command, wrapped in a placeholder the
+    /// player resolves at playback time; otherwise it is the m3u direct URL or a
+    /// built Xtream URL.
+    private static func vodURL(directURL: String?, playlist: Playlist, build: () -> URL?) -> URL? {
+        if playlist.sourceType == .stalker {
+            guard let cmd = directURL else { return nil }
+            return StalkerLink.placeholder(type: .vod, cmd: cmd)
+        }
+        return directURL.flatMap(URL.init(string:)) ?? build()
     }
 
     static func from(episode: Episode, playlist: Playlist, client: XtreamClient = XtreamClient()) -> PlayableMedia? {
@@ -101,10 +130,18 @@ extension PlayableMedia {
                 contentRef: .episode(episode.id)
             )
         }
-        let directURL = playlist.sourceType == .m3u
-            ? episode.directSource.flatMap(URL.init(string:))
-            : nil
-        guard let url = directURL ?? client.buildEpisodeURL(for: episode, playlist: playlist) else { return nil }
+        let url: URL
+        switch playlist.sourceType {
+        case .stalker:
+            guard let cmd = episode.directSource, let placeholder = StalkerLink.placeholder(type: .vod, cmd: cmd) else { return nil }
+            url = placeholder
+        case .m3u:
+            guard let resolved = episode.directSource.flatMap(URL.init(string:)) else { return nil }
+            url = resolved
+        case .xtream:
+            guard let built = client.buildEpisodeURL(for: episode, playlist: playlist) else { return nil }
+            url = built
+        }
         let seriesName = episode.series?.name
         let subtitle = "S\(episode.seasonNum) E\(episode.episodeNum) · \(episode.title)"
         return PlayableMedia(
@@ -120,8 +157,15 @@ extension PlayableMedia {
     }
 
     static func from(stream: LiveStream, playlist: Playlist, client: XtreamClient = XtreamClient()) -> PlayableMedia? {
-        let directURL = stream.directURL.flatMap(URL.init(string:))
-        guard let url = directURL ?? client.buildLiveStreamURL(for: stream, playlist: playlist) else { return nil }
+        let url: URL
+        if playlist.sourceType == .stalker {
+            guard let cmd = stream.directURL, let placeholder = StalkerLink.placeholder(type: .itv, cmd: cmd) else { return nil }
+            url = placeholder
+        } else {
+            let directURL = stream.directURL.flatMap(URL.init(string:))
+            guard let resolved = directURL ?? client.buildLiveStreamURL(for: stream, playlist: playlist) else { return nil }
+            url = resolved
+        }
         return PlayableMedia(
             id: "live-\(stream.id)",
             url: url,

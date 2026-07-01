@@ -422,7 +422,7 @@ struct MovieDetailView: View {
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     HStack(spacing: 10) {
-                        if let playlist = moviePlaylist {
+                        if let playlist = moviePlaylist, playlist.supportsDownloads {
                             DownloadGlassButton(
                                 id: movie.id,
                                 downloadStatus: movie.downloadStatus,
@@ -478,7 +478,7 @@ struct MovieDetailView: View {
                     Image(systemName: "arrow.down.circle.fill")
                 }
                 .help("Remove download")
-            } else if let playlist = moviePlaylist {
+            } else if let playlist = moviePlaylist, playlist.supportsDownloads {
                 Button { startDownloadGated(playlist: playlist) } label: {
                     Image(systemName: movie.downloadStatus == .failed ? "exclamationmark.circle" : "arrow.down.circle")
                 }

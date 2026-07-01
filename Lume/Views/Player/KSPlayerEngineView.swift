@@ -197,6 +197,11 @@ struct KSPlayerEngineView: View {
                     }
                     .ignoresSafeArea()
 
+                // KSPlayer decodes the selected subtitle into
+                // `subtitleModel.parts`, but the bare `KSVideoPlayer` above draws
+                // only video — this overlay renders those parts on screen.
+                KSSubtitleOverlay(subtitleModel: coordinator.subtitleModel)
+
                 tapCatcher
 
                 // Suppress the controls (and their Play button) until the stream
@@ -396,6 +401,11 @@ struct KSPlayerEngineView: View {
                         }
                     }
                     .ignoresSafeArea()
+
+                // KSPlayer decodes the selected subtitle into
+                // `subtitleModel.parts`, but the bare `KSVideoPlayer` above draws
+                // only video — this overlay renders those parts on screen.
+                KSSubtitleOverlay(subtitleModel: coordinator.subtitleModel)
 
                 // Hold the controls back until the stream starts, so the loading
                 // indicator stands in for a player that would otherwise look

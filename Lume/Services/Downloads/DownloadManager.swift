@@ -110,6 +110,9 @@ final class DownloadManager: NSObject {
 
     func startDownload(movie: Movie, playlist: Playlist) {
         let id = movie.id
+        // Stalker streams resolve to short-lived URLs per session, so there is no
+        // stable URL to download for offline playback.
+        guard playlist.supportsDownloads else { return }
         guard activeDownloads[id] == nil, !pendingIDs.contains(id) else { return }
         guard movie.downloadStatus != .completed else { return }
 
@@ -124,6 +127,7 @@ final class DownloadManager: NSObject {
 
     func startDownload(episode: Episode, playlist: Playlist) {
         let id = episode.id
+        guard playlist.supportsDownloads else { return }
         guard activeDownloads[id] == nil, !pendingIDs.contains(id) else { return }
         guard episode.downloadStatus != .completed else { return }
 

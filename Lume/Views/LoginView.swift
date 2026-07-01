@@ -35,6 +35,11 @@ struct LoginView: View {
         @State private var showFileImporter = false
     #endif
 
+    // Stalker portal fields. The MAC defaults to a freshly generated MAG-style
+    // address so a user without a provider-issued MAC still gets a valid one.
+    @State private var portalURL = ""
+    @State private var macAddress = StalkerMAC.generate()
+
     @State private var isLoading = false
     @State private var errorMessage: String?
 
@@ -46,6 +51,9 @@ struct LoginView: View {
                 && !password.isEmpty
         case .m3u:
             !m3uURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        case .stalker:
+            !portalURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                && StalkerMAC.isValid(macAddress.trimmingCharacters(in: .whitespacesAndNewlines))
         }
     }
 
@@ -63,8 +71,9 @@ struct LoginView: View {
                 Form {
                     Section {
                         Picker("Playlist Type", selection: $sourceType) {
-                            Text("Xtream Codes").tag(PlaylistSourceType.xtream)
-                            Text("M3U Playlist").tag(PlaylistSourceType.m3u)
+                            Text("Xtream").tag(PlaylistSourceType.xtream)
+                            Text("M3U").tag(PlaylistSourceType.m3u)
+                            Text("Stalker").tag(PlaylistSourceType.stalker)
                         }
                         .pickerStyle(.segmented)
                     }
@@ -72,6 +81,7 @@ struct LoginView: View {
                     switch sourceType {
                     case .xtream: xtreamSection
                     case .m3u: m3uSection
+                    case .stalker: stalkerSection
                     }
 
                     if let errorMessage {
@@ -181,9 +191,61 @@ struct LoginView: View {
                 Text("Enter the playlist URL or choose a local m3u/m3u8 file. The EPG URL is read from the playlist when left empty.")
             }
         }
+
+        private var stalkerSection: some View {
+            Section {
+                TextField("e.g. My IPTV", text: $name)
+                    .textContentType(.name)
+
+                TextField("e.g. http://example.com:8080/c/", text: $portalURL)
+                #if os(iOS)
+                    .textInputAutocapitalization(.never)
+                    .keyboardType(.URL)
+                #endif
+                    .autocorrectionDisabled()
+                    .textContentType(.URL)
+
+                HStack {
+                    TextField("MAC Address", text: $macAddress)
+                    #if os(iOS)
+                        .textInputAutocapitalization(.characters)
+                    #endif
+                        .autocorrectionDisabled()
+                    Button {
+                        macAddress = StalkerMAC.generate()
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel("Generate a new MAC address")
+                }
+
+                TextField("Username (optional)", text: $username)
+                #if os(iOS)
+                    .textInputAutocapitalization(.never)
+                #endif
+                    .autocorrectionDisabled()
+                    .textContentType(.username)
+
+                SecureField("Password (optional)", text: $password)
+                    .textContentType(.password)
+            } header: {
+                Text("Stalker Portal")
+            } footer: {
+                Text("Enter the portal URL and the MAC address your provider authorized. Most portals need only the portal URL and MAC.")
+            }
+        }
     #endif
 
     #if os(tvOS)
+        private var stalkerHint: LocalizedStringKey {
+            switch sourceType {
+            case .xtream: "Your credentials are stored locally on this device."
+            case .m3u: "The EPG URL is read from the playlist when left empty."
+            case .stalker: "Enter the portal URL and the MAC address your provider authorized."
+            }
+        }
+
         private var tvBody: some View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {
@@ -197,27 +259,32 @@ struct LoginView: View {
                     .padding(.horizontal, TVSettingsMetrics.rowHPadding)
 
                     Picker("Playlist Type", selection: $sourceType) {
-                        Text("Xtream Codes").tag(PlaylistSourceType.xtream)
-                        Text("M3U Playlist").tag(PlaylistSourceType.m3u)
+                        Text("Xtream").tag(PlaylistSourceType.xtream)
+                        Text("M3U").tag(PlaylistSourceType.m3u)
+                        Text("Stalker").tag(PlaylistSourceType.stalker)
                     }
                     .pickerStyle(.segmented)
                     .padding(.horizontal, TVSettingsMetrics.rowHPadding)
 
                     VStack(spacing: 22) {
                         TVSettingsField(title: "Name", placeholder: "e.g. My IPTV", text: $name, contentType: .name)
-                        if sourceType == .xtream {
+                        switch sourceType {
+                        case .xtream:
                             TVSettingsField(title: "Server URL", placeholder: "e.g. http://example.com:8080", text: $serverURL, contentType: .URL)
                             TVSettingsField(title: "Username", placeholder: "Username", text: $username, contentType: .username)
                             TVSettingsField(title: "Password", placeholder: "Password", text: $password, isSecure: true, contentType: .password)
-                        } else {
+                        case .m3u:
                             TVSettingsField(title: "Playlist URL", placeholder: "e.g. http://example.com/playlist.m3u", text: $m3uURL, contentType: .URL)
                             TVSettingsField(title: "EPG URL (optional)", placeholder: "e.g. http://example.com/guide.xml", text: $epgURL, contentType: .URL)
+                        case .stalker:
+                            TVSettingsField(title: "Portal URL", placeholder: "e.g. http://example.com:8080/c/", text: $portalURL, contentType: .URL)
+                            TVSettingsField(title: "MAC Address", placeholder: "00:1A:79:xx:xx:xx", text: $macAddress, contentType: nil)
+                            TVSettingsField(title: "Username (optional)", placeholder: "Username", text: $username, contentType: .username)
+                            TVSettingsField(title: "Password (optional)", placeholder: "Password", text: $password, isSecure: true, contentType: .password)
                         }
                     }
 
-                    Text(sourceType == .xtream
-                        ? "Your credentials are stored locally on this device."
-                        : "The EPG URL is read from the playlist when left empty.")
+                    Text(stalkerHint)
                         .font(.system(size: TVSettingsMetrics.secondaryFontSize))
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, TVSettingsMetrics.rowHPadding)
@@ -266,6 +333,7 @@ struct LoginView: View {
         switch sourceType {
         case .xtream: loginXtream()
         case .m3u: addM3UPlaylist()
+        case .stalker: addStalkerPlaylist()
         }
     }
 
@@ -289,22 +357,18 @@ struct LoginView: View {
 
             let client = XtreamClient()
             do {
-                let info = try await client.getInfo(playlist: playlist)
-
-                await MainActor.run {
+                try await withConnectionTimeout {
+                    let info = try await client.getInfo(playlist: playlist)
                     playlist.serverTimezone = info.serverInfo.timezone
                     playlist.userStatus = info.userInfo.status
                     playlist.maxConnections = String(info.userInfo.maxConnections ?? "0")
                     playlist.activeConnections = String(info.userInfo.activeCons ?? "0")
                     playlist.expDate = info.userInfo.expDate
-
                     insertAndFinish(playlist)
                 }
             } catch {
-                await MainActor.run {
-                    errorMessage = error.localizedDescription
-                    isLoading = false
-                }
+                errorMessage = error.localizedDescription
+                isLoading = false
             }
         }
     }
@@ -314,25 +378,57 @@ struct LoginView: View {
         errorMessage = nil
 
         let playlistName = trimmedName.isEmpty ? "My Playlist" : trimmedName
-        let urlString = m3uURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Rewrite Xtream bouquet types (type=gigablue/dreambox → m3u_plus) up
+        // front so the stored URL is the one that actually parses.
+        let urlString = M3UClient.normalizedPlaylistURL(m3uURL.trimmingCharacters(in: .whitespacesAndNewlines))
         let epgURLString = epgURL.trimmingCharacters(in: .whitespacesAndNewlines)
 
         Task {
             do {
-                // Cheap validation: stream just the head of the file and check
-                // for m3u markers, so adding a huge playlist stays instant —
-                // the full download happens during the first sync.
-                try await M3UClient().validatePlaylist(at: urlString)
-
-                await MainActor.run {
+                try await withConnectionTimeout {
+                    // Cheap validation: stream just the head of the file and check
+                    // for m3u markers, so adding a huge playlist stays instant —
+                    // the full download happens during the first sync.
+                    try await M3UClient().validatePlaylist(at: urlString)
                     let playlist = Playlist(name: playlistName, m3uURL: urlString, epgURL: epgURLString)
                     insertAndFinish(playlist)
                 }
             } catch {
-                await MainActor.run {
-                    errorMessage = error.localizedDescription
-                    isLoading = false
+                errorMessage = error.localizedDescription
+                isLoading = false
+            }
+        }
+    }
+
+    private func addStalkerPlaylist() {
+        isLoading = true
+        errorMessage = nil
+
+        let playlistName = trimmedName.isEmpty ? "My Playlist" : trimmedName
+        let portal = portalURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        let mac = macAddress.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+
+        Task {
+            let playlist = Playlist(
+                name: playlistName,
+                portalURL: portal,
+                macAddress: mac,
+                username: username.trimmingCharacters(in: .whitespacesAndNewlines),
+                password: password
+            )
+
+            let client = StalkerClient(configuration: StalkerClient.Configuration(playlist: playlist))
+            do {
+                try await withConnectionTimeout {
+                    // Handshake + profile doubles as the connection test.
+                    let profile = try await client.authenticate()
+                    playlist.userStatus = profile.status
+                    playlist.expDate = profile.expDate
+                    insertAndFinish(playlist)
                 }
+            } catch {
+                errorMessage = error.localizedDescription
+                isLoading = false
             }
         }
     }
@@ -358,11 +454,45 @@ struct LoginView: View {
             dismiss()
         }
     }
+}
 
-    // MARK: - Local file import (iOS / macOS)
+// MARK: - Connection-test timeout
 
-    #if !os(tvOS)
-        private static var playlistFileTypes: [UTType] {
+private extension LoginView {
+    struct ConnectionTimeoutError: LocalizedError {
+        var errorDescription: String? {
+            String(localized: "The connection timed out. Check the URL and your network, then try again.")
+        }
+    }
+
+    /// Runs an add-playlist connection test under an overall deadline, cancelling
+    /// the in-flight request and surfacing a timeout when it's exceeded.
+    ///
+    /// Each client has its own per-request timeout and (for Xtream) retry/backoff
+    /// tuned for *sync*, where retries matter; left unbounded, a wrong URL or
+    /// dead host can hang the add sheet for ~30–90s on a spinner with no way out.
+    /// This caps the test (default 20s) without weakening the sync path.
+    func withConnectionTimeout(_ seconds: Double = 20, _ operation: @escaping () async throws -> Void) async throws {
+        let work = Task { try await operation() }
+        let watchdog = Task {
+            try? await Task.sleep(for: .seconds(seconds))
+            work.cancel()
+        }
+        defer { watchdog.cancel() }
+        do {
+            try await work.value
+        } catch {
+            if work.isCancelled { throw ConnectionTimeoutError() }
+            throw error
+        }
+    }
+}
+
+// MARK: - Local file import (iOS / macOS)
+
+#if !os(tvOS)
+    private extension LoginView {
+        static var playlistFileTypes: [UTType] {
             var types: [UTType] = [.m3uPlaylist]
             if let m3u8 = UTType(filenameExtension: "m3u8") {
                 types.append(m3u8)
@@ -374,7 +504,7 @@ struct LoginView: View {
         /// so it stays readable across launches (the picker's URL is outside
         /// our sandbox and its security scope doesn't persist), then points the
         /// playlist URL field at the copy.
-        private func handleFileImport(_ result: Result<URL, Error>) {
+        func handleFileImport(_ result: Result<URL, Error>) {
             switch result {
             case let .success(pickedURL):
                 let accessing = pickedURL.startAccessingSecurityScopedResource()
@@ -402,8 +532,8 @@ struct LoginView: View {
                 errorMessage = error.localizedDescription
             }
         }
-    #endif
-}
+    }
+#endif
 
 #Preview("Empty") {
     LoginView()
