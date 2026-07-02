@@ -1,3 +1,5 @@
+import AVFoundation
+import Combine
 import KSPlayer
 import SwiftData
 import SwiftUI
@@ -192,6 +194,7 @@ import SwiftUI
         private var secondaryControls: some View {
             HStack(spacing: 4) {
                 if !coordinator.subtitleModel.subtitleInfos.isEmpty { subtitleMenu }
+                if audioTracks.count > 1 { audioTrackMenu }
                 if !media.isLive { playbackRateMenu }
                 contentModeButton
                 favoriteButton
@@ -232,6 +235,33 @@ import SwiftUI
                 }
             } label: {
                 pillGlyph("captions.bubble.fill", dimmed: !hasSelection)
+            }
+            .menuIndicator(.hidden)
+        }
+
+        /// KSPlayer exposes the demuxed audio streams on the player itself —
+        /// unlike subtitles there is no observable model object, so the list is
+        /// re-read on render (the overlay re-renders every time tick) and the
+        /// menu appears once demuxing has surfaced more than one stream.
+        private var audioTracks: [MediaPlayerTrack] {
+            coordinator.playerLayer?.player.tracks(mediaType: .audio) ?? []
+        }
+
+        @ViewBuilder
+        private var audioTrackMenu: some View {
+            let tracks = audioTracks
+            Menu {
+                ForEach(Array(tracks.enumerated()), id: \.offset) { _, track in
+                    Button {
+                        coordinator.playerLayer?.player.select(track: track)
+                        coordinator.objectWillChange.send()
+                        onResetHideTimer()
+                    } label: {
+                        checkmarkLabel(track.name, checked: track.isEnabled)
+                    }
+                }
+            } label: {
+                pillGlyph("waveform")
             }
             .menuIndicator(.hidden)
         }
