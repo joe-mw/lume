@@ -70,12 +70,13 @@ extension ContentSyncManager {
         let context = ModelContext(modelContainer)
         context.autosaveEnabled = false
 
-        // Scope to the playlist via its UUID — a substring that appears in every
-        // id this playlist produced and nowhere else (see PlaylistDeletion) — so
-        // SQLite seeks the playlist's rows instead of hydrating the whole table.
+        // Scope to the playlist via its UUID, which anchors every id this
+        // playlist produced (see PlaylistDeletion). `starts(with:)` compiles to
+        // a range seek on the unique `id` index; the substring match used before
+        // was a LIKE-%…% scan that touched every row on each sync's sweep.
         let prefix = playlistId.uuidString
         let descriptor = FetchDescriptor<Movie>(
-            predicate: #Predicate { $0.id.localizedStandardContains(prefix) }
+            predicate: #Predicate { $0.id.starts(with: prefix) }
         )
         var removed = 0
         for movie in (try? context.fetch(descriptor)) ?? [] where !seenIds.contains(movie.id) {
@@ -95,7 +96,7 @@ extension ContentSyncManager {
 
         let prefix = playlistId.uuidString
         let descriptor = FetchDescriptor<Series>(
-            predicate: #Predicate { $0.id.localizedStandardContains(prefix) }
+            predicate: #Predicate { $0.id.starts(with: prefix) }
         )
         var removed = 0
         for show in (try? context.fetch(descriptor)) ?? [] where !seenIds.contains(show.id) {
@@ -114,7 +115,7 @@ extension ContentSyncManager {
 
         let prefix = playlistId.uuidString
         let descriptor = FetchDescriptor<LiveStream>(
-            predicate: #Predicate { $0.id.localizedStandardContains(prefix) }
+            predicate: #Predicate { $0.id.starts(with: prefix) }
         )
         var removed = 0
         for stream in (try? context.fetch(descriptor)) ?? [] where !seenIds.contains(stream.id) {
@@ -134,11 +135,11 @@ extension ContentSyncManager {
         let context = ModelContext(modelContainer)
         context.autosaveEnabled = false
 
-        // Episode.id is "\(seriesId)-episode-…" and seriesId embeds the playlist
-        // UUID, so the same substring scope applies.
+        // Episode.id is "\(seriesId)-episode-…" and seriesId starts with the
+        // playlist UUID, so the same prefix scope applies.
         let prefix = playlistId.uuidString
         let descriptor = FetchDescriptor<Episode>(
-            predicate: #Predicate { $0.id.localizedStandardContains(prefix) }
+            predicate: #Predicate { $0.id.starts(with: prefix) }
         )
         var removed = 0
         for episode in (try? context.fetch(descriptor)) ?? [] where !seenIds.contains(episode.id) {
