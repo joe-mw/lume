@@ -33,7 +33,11 @@ final class Category {
     // `MainTabView` queries restricted categories on every Category-table change
     // (i.e. every sync) to build the child-profile restriction set; index
     // `isRestricted` so that query seeks instead of scanning all categories.
-    #Index<Category>([\.isRestricted])
+    // The iCloud reconciler exports customized categories (`isHidden ||
+    // customOrder != nil`) on every pass; index both so it seeks the handful
+    // of customized rows (SQLite's OR optimization needs each disjunct
+    // independently indexed).
+    #Index<Category>([\.isRestricted], [\.isHidden], [\.customOrder])
 
     @Attribute(.unique) var id: String
     var apiId: String

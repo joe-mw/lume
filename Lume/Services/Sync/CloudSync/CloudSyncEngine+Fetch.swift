@@ -224,6 +224,60 @@ extension CloudSyncEngine {
         }
     }
 
+    /// Catalog models for `ids` keyed by id — one chunked `IN` fetch per kind
+    /// instead of one single-row fetch per id. The pull path resolves a catalog
+    /// model for every cloud state it applies, so a fresh device pulling a whole
+    /// profile's states (or a profile switch importing its mirrors) would
+    /// otherwise issue thousands of individual fetches.
+    func fetchCatalogModels(byKind idsByKind: [SyncedContentKind: [String]]) throws -> [String: any PersistentModel] {
+        var map: [String: any PersistentModel] = [:]
+        for (kind, ids) in idsByKind {
+            switch kind {
+            case .movie:
+                try batchFetch(ids, into: &map, id: \Movie.id) { chunk in
+                    #Predicate<Movie> { chunk.contains($0.id) }
+                }
+            case .series:
+                try batchFetch(ids, into: &map, id: \Series.id) { chunk in
+                    #Predicate<Series> { chunk.contains($0.id) }
+                }
+            case .episode:
+                try batchFetch(ids, into: &map, id: \Episode.id) { chunk in
+                    #Predicate<Episode> { chunk.contains($0.id) }
+                }
+            case .live:
+                try batchFetch(ids, into: &map, id: \LiveStream.id) { chunk in
+                    #Predicate<LiveStream> { chunk.contains($0.id) }
+                }
+            case .category:
+                try batchFetch(ids, into: &map, id: \Category.id) { chunk in
+                    #Predicate<Category> { chunk.contains($0.id) }
+                }
+            }
+        }
+        return map
+    }
+
+    /// Keeps each `IN` list comfortably under SQLite's bound-variable cap.
+    private static let idChunkSize = 500
+
+    private func batchFetch<T: PersistentModel>(
+        _ ids: [String],
+        into map: inout [String: any PersistentModel],
+        id key: KeyPath<T, String>,
+        predicate: (Set<String>) -> Predicate<T>
+    ) throws {
+        var start = 0
+        while start < ids.count {
+            let end = min(start + Self.idChunkSize, ids.count)
+            let chunk = Set(ids[start ..< end])
+            for model in try catalogContext.fetch(FetchDescriptor<T>(predicate: predicate(chunk))) {
+                map[model[keyPath: key]] = model
+            }
+            start = end
+        }
+    }
+
     func fetchMovie(_ id: String) throws -> Movie? {
         var descriptor = FetchDescriptor<Movie>(predicate: #Predicate { $0.id == id })
         descriptor.fetchLimit = 1
