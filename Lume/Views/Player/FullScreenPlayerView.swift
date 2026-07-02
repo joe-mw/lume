@@ -155,7 +155,18 @@ struct FullScreenPlayerView: View {
         airPlayVideoUnsupported = activeMedia.id
         // Resume the local engine where the cast attempt left off (VOD only).
         if !activeMedia.isLive, clock.current > 1 {
-            activeMedia = activeMedia.resuming(at: clock.current)
+            resumeActiveMedia(at: clock.current)
+        }
+    }
+
+    /// Rebase the active stream to resume at `position`. Also rebases the
+    /// Stalker-resolved stand-in: it shares `activeMedia`'s id, so `displayMedia`
+    /// keeps returning it (and `.task(id:)` won't re-resolve) — without this the
+    /// engine taking over would start from the stand-in's stale `startTime`.
+    private func resumeActiveMedia(at position: TimeInterval) {
+        activeMedia = activeMedia.resuming(at: position)
+        if let resolved = resolvedMedia, resolved.id == activeMedia.id {
+            resolvedMedia = resolved.resuming(at: position)
         }
     }
 
@@ -251,14 +262,23 @@ struct FullScreenPlayerView: View {
                 if phase == .background { closePlayer() }
             #endif
         }
-        .onChange(of: castService.isAirPlayActive) { _, _ in
+        .onChange(of: castService.isAirPlayActive) { _, isActive in
+            // While the audio-only sentinel is set the engine stays on the
+            // user's choice for both route directions — reassigning the media
+            // would only restart a stream that is already playing locally.
+            let engineSwaps = airPlayVideoUnsupported != activeMedia.id
+            if !isActive {
+                // The route is gone; a future cast (possibly to a different,
+                // more capable receiver) should retry AVPlayer video first.
+                airPlayVideoUnsupported = nil
+            }
             // Toggling AirPlay swaps the engine (see `engine`), which rebuilds the
             // player. Carry the current position across so a VOD stream resumes
             // where it was rather than jumping back to the saved resume point.
             // Live streams have no position, and if the user is already on
             // AVPlayer there's no swap to bridge.
-            guard priorityEngine != .avPlayer, !activeMedia.isLive, clock.current > 1 else { return }
-            activeMedia = activeMedia.resuming(at: clock.current)
+            guard engineSwaps, priorityEngine != .avPlayer, !activeMedia.isLive, clock.current > 1 else { return }
+            resumeActiveMedia(at: clock.current)
         }
         .onDisappear {
             // Capture the clock synchronously, then flush off the main thread.
@@ -307,7 +327,11 @@ struct FullScreenPlayerView: View {
                 // During an AirPlay override there's no next engine to try, but
                 // report failure anyway so `handlePlaybackFailure` can revert to
                 // local playback instead of AVPlayer raising its offline overlay.
-                fallbackAvailable: isAirPlayOverride ? true : hasFallbackEngine,
+                // The cast attempt keeps the full startup window: giving up
+                // early would drop slow-to-start streams to audio-only when a
+                // few more seconds would have cast them fine.
+                reportsStartupFailure: isAirPlayOverride || hasFallbackEngine,
+                usesQuickStartupTimeout: hasFallbackEngine,
                 onPlaybackFailed: handlePlaybackFailure,
                 onSelectMedia: switchMedia
             )
@@ -318,7 +342,8 @@ struct FullScreenPlayerView: View {
                 clock: clock,
                 nextUpMedia: nextUpMedia,
                 skipSegments: skipSegments,
-                fallbackAvailable: hasFallbackEngine,
+                reportsStartupFailure: hasFallbackEngine,
+                usesQuickStartupTimeout: hasFallbackEngine,
                 onPlaybackFailed: fallBackToNextEngine,
                 onSelectMedia: switchMedia
             )
@@ -329,7 +354,8 @@ struct FullScreenPlayerView: View {
                 clock: clock,
                 nextUpMedia: nextUpMedia,
                 skipSegments: skipSegments,
-                fallbackAvailable: hasFallbackEngine,
+                reportsStartupFailure: hasFallbackEngine,
+                usesQuickStartupTimeout: hasFallbackEngine,
                 onPlaybackFailed: fallBackToNextEngine,
                 onSelectMedia: switchMedia
             )

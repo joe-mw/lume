@@ -19,13 +19,20 @@ import OSLog
 /// stream through the AVPlayer engine for the duration of the cast. The route
 /// state tracked here is engine-agnostic because AirPlay always reshapes the
 /// shared audio route.
+///
+/// macOS has no `AVAudioSession`, so route observation — and with it the
+/// engine handoff — doesn't exist there: `isAirPlayActive` stays `false` and
+/// AirPlay is available only on the AVPlayer engine, whose overlay binds the
+/// route picker to its player directly (see `AirPlayRouteButton`).
 @MainActor
 @Observable
 final class CastService {
     static let shared = CastService()
 
     /// Whether playback is currently routed to an external AirPlay receiver.
-    private(set) var isAirPlayActive = false
+    var isAirPlayActive: Bool {
+        airPlayRouteName != nil
+    }
 
     /// Display name of the active AirPlay route, when the system reports one.
     private(set) var airPlayRouteName: String?
@@ -69,10 +76,8 @@ final class CastService {
             }
             let name = Self.activeAirPlayName(in: outputs)
             if name != airPlayRouteName {
-                let active = name != nil
                 airPlayRouteName = name
-                isAirPlayActive = active
-                Logger.player.log("AirPlay route changed: active=\(active, privacy: .public)")
+                Logger.player.log("AirPlay route changed: active=\(name != nil, privacy: .public)")
             }
         #endif
     }

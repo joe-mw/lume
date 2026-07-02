@@ -13,9 +13,9 @@
     /// system AirPlay route picker.
     ///
     /// Picking a receiver drives full-screen video: the AVPlayer engine enables
-    /// `allowsExternalPlayback`, and on the KSPlayer/VLCKit engines (which render
-    /// into their own layers) `FullScreenPlayerView` hands the stream to AVPlayer
-    /// for the cast. See `CastService` and #103.
+    /// `allowsExternalPlayback`, and on iOS / visionOS the KSPlayer/VLCKit
+    /// engines (which render into their own layers) get the stream handed to
+    /// AVPlayer by `FullScreenPlayerView`. See `CastService` and #103.
     struct AirPlayRouteButton: View {
         /// The AVPlayer the route picker drives on macOS, where the picker is
         /// bound to a specific player. `nil` on the engines that don't expose an
@@ -28,12 +28,24 @@
         @State private var cast = CastService.shared
 
         var body: some View {
+            // On macOS the picker routes a *specific* AVPlayer, and with no
+            // AVAudioSession there is no route observation to drive the
+            // KSPlayer/VLCKit → AVPlayer handoff either — so without a player
+            // the button would be inert. Show it only on the AVPlayer engine.
+            #if os(macOS)
+                if player != nil { picker }
+            #else
+                picker
+            #endif
+        }
+
+        private var picker: some View {
             RoutePicker(player: player)
                 .frame(width: 44, height: 44)
                 .contentShape(Circle())
                 .glassEffectCompat(.regularInteractive, in: Circle())
                 .accessibilityLabel("AirPlay")
-                .accessibilityValue(cast.isAirPlayActive ? (cast.airPlayRouteName ?? "Connected") : "")
+                .accessibilityValue(cast.isAirPlayActive ? (cast.airPlayRouteName ?? String(localized: "Connected")) : "")
         }
     }
 

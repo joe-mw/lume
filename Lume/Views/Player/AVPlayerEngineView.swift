@@ -30,13 +30,16 @@ struct AVPlayerEngineView: View {
     /// Intro / recap windows for the active episode (from IntroDB), driving the
     /// in-player Skip Intro button. `nil` when there is nothing to skip.
     var skipSegments: IntroSegments?
-    /// Whether the host has another engine to fall back to if this one can't
-    /// start the stream. When true, an initial-load failure reports to the host
-    /// (which switches engines) instead of raising the error overlay, and the
-    /// startup watchdog uses the shorter fallback timeout so the switch is prompt.
-    var fallbackAvailable = false
-    /// Invoked when this engine can't start the stream and a fallback engine is
-    /// available. The host advances to the next engine in the priority list.
+    /// When true, an initial-load failure reports to the host via
+    /// `onPlaybackFailed` (which decides what to try next — another engine, or
+    /// reverting an AirPlay override) instead of raising this engine's own
+    /// error overlay.
+    var reportsStartupFailure = false
+    /// Use the shorter fallback startup window before declaring failure, so a
+    /// switch to the next engine is prompt. Off for attempts that should wait
+    /// out the full startup timeout (last resort, or an AirPlay cast attempt).
+    var usesQuickStartupTimeout = false
+    /// Invoked on an initial-load failure when `reportsStartupFailure` is set.
     var onPlaybackFailed: (() -> Void)?
     /// Invoked when the viewer picks a different stream (another episode, or a
     /// live channel via the Siri remote) from the in-player overlay.
@@ -150,7 +153,7 @@ struct AVPlayerEngineView: View {
                 if total.isFinite, total > 0 { clock.duration = total }
             }
             coordinator.onPlaybackFailure = { reportFailure() }
-            coordinator.startupTimeout = fallbackAvailable ? fallbackStartupTimeout : startupTimeout
+            coordinator.startupTimeout = usesQuickStartupTimeout ? fallbackStartupTimeout : startupTimeout
             coordinator.configure(media: media)
             scheduleHide()
         }
@@ -414,7 +417,7 @@ struct AVPlayerEngineView: View {
     /// switches engines); otherwise raise the failure overlay.
     private func reportFailure() {
         guard !loadFailed else { return }
-        if fallbackAvailable, !coordinator.hasStartedPlayback {
+        if reportsStartupFailure, !coordinator.hasStartedPlayback {
             onPlaybackFailed?()
             return
         }
