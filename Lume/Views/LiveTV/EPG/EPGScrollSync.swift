@@ -39,3 +39,12 @@ struct EPGRealizeWindow: Equatable {
         return EPGRealizeWindow(start: max(0, start), end: max(0, end))
     }
 }
+
+// MARK: - Selection
+
+/// A tapped programme, carried to the guide's detail sheet.
+struct EPGSelection: Identifiable {
+    let id: String
+    let stream: LiveStream
+    let cell: EPGProgramCell
+}

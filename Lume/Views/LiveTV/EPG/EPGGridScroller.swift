@@ -11,15 +11,6 @@
 
 import SwiftUI
 
-// MARK: - Selection
-
-/// A tapped programme, carried to the detail sheet.
-private struct EPGSelection: Identifiable {
-    let id: String
-    let stream: LiveStream
-    let cell: EPGProgramCell
-}
-
 // MARK: - Scroller
 
 /// Lays out the frozen panes (corner, ruler, channel column) beside the single
@@ -338,7 +329,7 @@ private struct EPGGrid: View, Equatable {
             let window = EPGRealizeWindow.around(
                 offset: max(0, new.origin.x),
                 viewport: new.width,
-                blockLength: 60 * metrics.pointsPerMinute
+                blockLength: 30 * metrics.pointsPerMinute
             )
             if sync.window != window {
                 sync.window = window
@@ -346,7 +337,7 @@ private struct EPGGrid: View, Equatable {
             let rowWindow = EPGRealizeWindow.around(
                 offset: max(0, new.origin.y),
                 viewport: new.height,
-                blockLength: 4 * (metrics.rowHeight + metrics.rowSpacing)
+                blockLength: 2 * (metrics.rowHeight + metrics.rowSpacing)
             )
             if sync.rowWindow != rowWindow {
                 sync.rowWindow = rowWindow
@@ -365,12 +356,12 @@ private struct EPGGrid: View, Equatable {
             sync.window = EPGRealizeWindow.around(
                 offset: nowTarget,
                 viewport: 2400,
-                blockLength: 60 * metrics.pointsPerMinute
+                blockLength: 30 * metrics.pointsPerMinute
             )
             sync.rowWindow = EPGRealizeWindow.around(
                 offset: 0,
                 viewport: 1400,
-                blockLength: 4 * (metrics.rowHeight + metrics.rowSpacing)
+                blockLength: 2 * (metrics.rowHeight + metrics.rowSpacing)
             )
             position.scrollTo(x: nowTarget)
         }
@@ -524,12 +515,31 @@ private struct EPGProgramStrip: View {
     let onPlay: (EPGProgramCell) -> Void
     let onShowDetails: (EPGProgramCell) -> Void
 
+    /// The cells overlapping the realization window, plus one neighbour on
+    /// each side. The neighbours matter for focus: from a long programme whose
+    /// tail extends past the window, the *next* cell may start beyond it — if
+    /// it isn't realized, the focus engine has no target and a right-press
+    /// dead-ends.
     private var realizedCells: [EPGProgramCell] {
         let window = sync.window
-        return row.cells.filter { cell in
+        var result: [EPGProgramCell] = []
+        var leading: EPGProgramCell?
+        for cell in row.cells {
             let start = timeline.x(for: cell.start)
-            return start < window.end && start + cell.width > window.start
+            let end = start + cell.width
+            if start < window.end, end > window.start {
+                result.append(cell)
+            } else if end <= window.start {
+                leading = cell
+            } else {
+                result.append(cell)
+                break
+            }
         }
+        if let leading {
+            result.insert(leading, at: 0)
+        }
+        return result
     }
 
     var body: some View {
