@@ -107,6 +107,7 @@ extension CloudSyncEngine {
         try seriesEntries().forEach { map[$0] = $1 }
         try episodeEntries().forEach { map[$0] = $1 }
         try liveEntries().forEach { map[$0] = $1 }
+        try categoryEntries().forEach { map[$0] = $1 }
         return map
     }
 
@@ -172,11 +173,13 @@ extension CloudSyncEngine {
         }
     }
 
-    /// Live streams sync only their favorite flag/order — channel-surfing
-    /// "recently watched" stays device-local to avoid mirror bloat.
+    /// Live streams sync their favorite flag/order and their Content Management
+    /// visibility (`isHidden`) — channel-surfing "recently watched" and the
+    /// per-category `customOrder` stay device-local to avoid mirror bloat (one
+    /// record per channel in a reordered category).
     func liveEntries() throws -> [(String, LocalContentEntry)] {
         let streams = try catalogContext.fetch(FetchDescriptor<LiveStream>(
-            predicate: #Predicate { $0.isFavorite }
+            predicate: #Predicate { $0.isFavorite || $0.isHidden }
         ))
         return streams.map { stream in
             (stream.id, LocalContentEntry(
@@ -186,11 +189,92 @@ extension CloudSyncEngine {
                     lastWatchedDate: nil,
                     isFavorite: stream.isFavorite,
                     addedToWatchlistDate: nil,
-                    favoriteOrder: stream.favoriteOrder
+                    favoriteOrder: stream.favoriteOrder,
+                    isHidden: stream.isHidden
                 ),
                 kind: .live,
                 model: stream
             ))
+        }
+    }
+
+    /// Categories sync their Content Management visibility (`isHidden`) and
+    /// ordering (`customOrder`). Only customized rows are fetched, so a playlist
+    /// the user never touched produces no mirror records. `isRestricted` is a
+    /// device-global parental control and is deliberately excluded.
+    func categoryEntries() throws -> [(String, LocalContentEntry)] {
+        let categories = try catalogContext.fetch(FetchDescriptor<Category>(
+            predicate: #Predicate { $0.isHidden || $0.customOrder != nil }
+        ))
+        return categories.map { category in
+            (category.id, LocalContentEntry(
+                values: ContentStateValues(
+                    watchProgress: 0,
+                    isWatched: false,
+                    lastWatchedDate: nil,
+                    isFavorite: false,
+                    addedToWatchlistDate: nil,
+                    favoriteOrder: nil,
+                    isHidden: category.isHidden,
+                    customOrder: category.customOrder
+                ),
+                kind: .category,
+                model: category
+            ))
+        }
+    }
+
+    /// Catalog models for `ids` keyed by id — one chunked `IN` fetch per kind
+    /// instead of one single-row fetch per id. The pull path resolves a catalog
+    /// model for every cloud state it applies, so a fresh device pulling a whole
+    /// profile's states (or a profile switch importing its mirrors) would
+    /// otherwise issue thousands of individual fetches.
+    func fetchCatalogModels(byKind idsByKind: [SyncedContentKind: [String]]) throws -> [String: any PersistentModel] {
+        var map: [String: any PersistentModel] = [:]
+        for (kind, ids) in idsByKind {
+            switch kind {
+            case .movie:
+                try batchFetch(ids, into: &map, id: \Movie.id) { chunk in
+                    #Predicate<Movie> { chunk.contains($0.id) }
+                }
+            case .series:
+                try batchFetch(ids, into: &map, id: \Series.id) { chunk in
+                    #Predicate<Series> { chunk.contains($0.id) }
+                }
+            case .episode:
+                try batchFetch(ids, into: &map, id: \Episode.id) { chunk in
+                    #Predicate<Episode> { chunk.contains($0.id) }
+                }
+            case .live:
+                try batchFetch(ids, into: &map, id: \LiveStream.id) { chunk in
+                    #Predicate<LiveStream> { chunk.contains($0.id) }
+                }
+            case .category:
+                try batchFetch(ids, into: &map, id: \Category.id) { chunk in
+                    #Predicate<Category> { chunk.contains($0.id) }
+                }
+            }
+        }
+        return map
+    }
+
+    /// Keeps each `IN` list comfortably under SQLite's bound-variable cap.
+    private static let idChunkSize = 500
+
+    private func batchFetch<T: PersistentModel>(
+        _ ids: [String],
+        into map: inout [String: any PersistentModel],
+        id key: KeyPath<T, String>,
+        predicate: (Set<String>) -> Predicate<T>
+    ) throws {
+        var start = 0
+        while start < ids.count {
+            let end = min(start + Self.idChunkSize, ids.count)
+            let chunk = Set(ids[start ..< end])
+            for model in try catalogContext.fetch(FetchDescriptor<T>(predicate: predicate(chunk))) {
+                map[model[keyPath: key]] = model
+            }
+            start = end
         }
     }
 
@@ -214,6 +298,12 @@ extension CloudSyncEngine {
 
     func fetchLiveStream(_ id: String) throws -> LiveStream? {
         var descriptor = FetchDescriptor<LiveStream>(predicate: #Predicate { $0.id == id })
+        descriptor.fetchLimit = 1
+        return try catalogContext.fetch(descriptor).first
+    }
+
+    func fetchCategory(_ id: String) throws -> Category? {
+        var descriptor = FetchDescriptor<Category>(predicate: #Predicate { $0.id == id })
         descriptor.fetchLimit = 1
         return try catalogContext.fetch(descriptor).first
     }
