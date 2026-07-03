@@ -163,8 +163,18 @@ private extension CloudSyncEngine {
     }
 
     func importProfileState(_ profileID: UUID) throws {
-        for (id, mirror) in try fetchMirrors(forProfile: profileID) {
-            _ = try applyContentToLocal(Self.values(from: mirror), id: id, kind: mirror.kind, loaded: nil)
+        let mirrors = try fetchMirrors(forProfile: profileID)
+        var idsByKind: [SyncedContentKind: [String]] = [:]
+        for (id, mirror) in mirrors {
+            idsByKind[mirror.kind, default: []].append(id)
+        }
+        // One batched fetch per kind instead of one single-row fetch per mirror.
+        // A mirror whose catalog item hasn't synced here yet simply doesn't
+        // project — same outcome as the old per-id miss, without the fetch.
+        let loaded = try fetchCatalogModels(byKind: idsByKind)
+        for (id, mirror) in mirrors {
+            guard let model = loaded[id] else { continue }
+            _ = try applyContentToLocal(Self.values(from: mirror), id: id, kind: mirror.kind, loaded: model)
         }
     }
 
@@ -185,6 +195,8 @@ private extension CloudSyncEngine {
             mirror.addedToWatchlistDate = values.addedToWatchlistDate
             mirror.favoriteOrder = values.favoriteOrder
             mirror.recommendationVoteRaw = values.recommendationVoteRaw
+            mirror.isHidden = values.isHidden
+            mirror.customOrder = values.customOrder
             mirror.updatedAt = Date()
         } else {
             let mirror = UserContentState(
@@ -197,7 +209,9 @@ private extension CloudSyncEngine {
                 isFavorite: values.isFavorite,
                 addedToWatchlistDate: values.addedToWatchlistDate,
                 favoriteOrder: values.favoriteOrder,
-                recommendationVoteRaw: values.recommendationVoteRaw
+                recommendationVoteRaw: values.recommendationVoteRaw,
+                isHidden: values.isHidden,
+                customOrder: values.customOrder
             )
             cloudContext.insert(mirror)
             map[id] = mirror
