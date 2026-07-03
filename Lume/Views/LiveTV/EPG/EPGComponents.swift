@@ -127,10 +127,13 @@ struct EPGTimeRuler: View {
 // MARK: - Channel cell
 
 /// The frozen left-column entry for a channel: logo + name. Opaque so programme
-/// blocks scrolling underneath (on touch platforms) stay hidden.
+/// blocks scrolling underneath (on touch platforms) stay hidden. On tvOS the
+/// cell is focusable (the column is the guide's navigation hub) and adopts the
+/// system focus idiom: solid white fill, dark text.
 struct EPGChannelCell: View {
     let row: EPGChannelRow
     let metrics: EPGMetrics
+    var isFocused = false
 
     var body: some View {
         HStack(spacing: 10) {
@@ -142,9 +145,10 @@ struct EPGChannelCell: View {
         }
         .padding(.horizontal, 12)
         #if os(tvOS)
+            .foregroundStyle(isFocused ? .black : .white)
             .frame(width: metrics.channelColumnWidth, height: metrics.rowHeight, alignment: .leading)
             .background(
-                .white.opacity(0.06),
+                isFocused ? AnyShapeStyle(.white) : AnyShapeStyle(.white.opacity(0.06)),
                 in: RoundedRectangle(cornerRadius: 14, style: .continuous)
             )
         #else
@@ -406,6 +410,33 @@ struct EPGBlockButtonStyle: ButtonStyle {
         }
     }
 }
+
+#if os(tvOS)
+    /// Focus-aware wrapper for a channel-column cell. No scale lift: the column
+    /// is clipped at its own bounds, so a scaled cell would truncate at the
+    /// leading edge — the solid-white focus fill carries the state on its own.
+    struct EPGChannelButtonStyle: ButtonStyle {
+        let row: EPGChannelRow
+        let metrics: EPGMetrics
+
+        func makeBody(configuration: Configuration) -> some View {
+            StyleBody(row: row, metrics: metrics, isPressed: configuration.isPressed)
+        }
+
+        private struct StyleBody: View {
+            let row: EPGChannelRow
+            let metrics: EPGMetrics
+            let isPressed: Bool
+            @Environment(\.isFocused) private var isFocused
+
+            var body: some View {
+                EPGChannelCell(row: row, metrics: metrics, isFocused: isFocused)
+                    .opacity(isPressed ? 0.8 : 1)
+                    .animation(.easeOut(duration: 0.18), value: isFocused)
+            }
+        }
+    }
+#endif
 
 // MARK: - Now indicator
 
