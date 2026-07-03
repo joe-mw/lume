@@ -100,6 +100,10 @@ struct EPGGuideView: View {
         EPGGridBuilder.rows(streams: channels, cellsByChannel: cellsByChannel, timeline: timeline)
     }
 
+    /// Loads the window's listings in two chunks: a few hours around "now"
+    /// first, so a large category paints its opening viewport immediately,
+    /// then the full window in the background. Each phase fetches *and* tiles
+    /// off-main and lands as one `dataVersion` bump.
     private func loadListings(for channels: [LiveStream]) async {
         let channelIds = Array(Set(channels.compactMap(\.epgChannelId).filter { !$0.isEmpty }))
         guard !channelIds.isEmpty else {
@@ -109,15 +113,30 @@ struct EPGGuideView: View {
         }
         let container = modelContext.container
         let timeline = timeline
-        cellsByChannel = await Task.detached(priority: .userInitiated) {
-            let listings = EPGGuideLoader.load(
-                container: container,
-                channelIds: channelIds,
-                windowStart: timeline.start,
-                windowEnd: timeline.end
-            )
-            return listings.mapValues { EPGGridBuilder.cells(for: $0, timeline: timeline) }
-        }.value
+        let now = Date()
+
+        func loadChunk(from start: Date, to end: Date) async -> [String: [EPGProgramCell]] {
+            await Task.detached(priority: .userInitiated) {
+                let listings = EPGGuideLoader.load(
+                    container: container,
+                    channelIds: channelIds,
+                    windowStart: start,
+                    windowEnd: end
+                )
+                return listings.mapValues { EPGGridBuilder.cells(for: $0, timeline: timeline) }
+            }.value
+        }
+
+        let quickStart = max(timeline.start, now.addingTimeInterval(-2 * 3600))
+        let quickEnd = min(timeline.end, now.addingTimeInterval(6 * 3600))
+        let quick = await loadChunk(from: quickStart, to: quickEnd)
+        guard !Task.isCancelled else { return }
+        cellsByChannel = quick
+        dataVersion += 1
+
+        let full = await loadChunk(from: timeline.start, to: timeline.end)
+        guard !Task.isCancelled else { return }
+        cellsByChannel = full
         dataVersion += 1
     }
 }

@@ -560,8 +560,9 @@ private struct EPGProgramStrip: View {
             .accessibilityLabel(Text(row.name))
             .accessibilityHint(Text("No programme information"))
         } else {
-            let canReplay = cell.isPast(at: now)
-                && PlayableMedia.isCatchupAvailable(stream: row.stream, start: cell.start, now: now)
+            // Snapshot-based: cell realization runs mid-scroll, where a
+            // SwiftData model read could fault to SQLite on the main thread.
+            let canReplay = cell.isPast(at: now) && row.isReplayable(start: cell.start, now: now)
             Button {
                 onPlay(cell)
             } label: {

@@ -111,17 +111,28 @@ nonisolated struct EPGProgramCell: Identifiable, Equatable {
 }
 
 /// A single channel and its tiled programme cells for the current window.
+///
+/// Everything the grid renders while scrolling is snapshotted into plain
+/// values at build time: SwiftData model property reads can fault to SQLite
+/// on the main thread, and cell realization during a scroll does hundreds of
+/// them — a source of scroll hitches on device. `stream` stays only as the
+/// playback target, touched when the user selects, never while rendering.
 struct EPGChannelRow: Identifiable {
     let id: String
     let stream: LiveStream
+    let name: String
+    let logoURL: URL?
+    /// Whether the channel can serve catch-up at all (advertised archive,
+    /// Xtream stream) — mirrors the `PlayableMedia.catchup` guards.
+    let catchupCapable: Bool
+    /// How many days the archive reaches back (≥ 1 when `catchupCapable`).
+    let archiveDays: Int
     let cells: [EPGProgramCell]
 
-    var name: String {
-        stream.name
-    }
-
-    var logoURL: URL? {
-        URL(string: stream.streamIcon ?? "")
+    /// Snapshot equivalent of `PlayableMedia.isCatchupAvailable` for the
+    /// scroll path: whether a programme starting at `start` is replayable.
+    func isReplayable(start: Date, now: Date) -> Bool {
+        catchupCapable && start >= now.addingTimeInterval(-TimeInterval(archiveDays) * 86400)
     }
 }
 
@@ -144,6 +155,10 @@ enum EPGGridBuilder {
             return EPGChannelRow(
                 id: stream.id,
                 stream: stream,
+                name: stream.name,
+                logoURL: URL(string: stream.streamIcon ?? ""),
+                catchupCapable: stream.tvArchive > 0 && stream.directURL == nil,
+                archiveDays: max(1, stream.tvArchiveDuration),
                 cells: cells
             )
         }

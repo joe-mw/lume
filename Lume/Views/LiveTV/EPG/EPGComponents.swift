@@ -408,8 +408,11 @@ struct EPGBlockButtonStyle: ButtonStyle {
         var body: some View {
             let focused = isFocused && !suppressFocus
             let scale = focused ? 1.04 : (isPressed ? 0.97 : 1.0)
+            // Radius 0 when unfocused: a transparent radius-10 shadow still
+            // sits in the render tree of every realized cell, and hundreds of
+            // shadowed cells is what made focus-scrolling stutter (#27).
             EPGProgramBlockView(cell: cell, metrics: metrics, now: now, isFocused: focused, canReplay: canReplay)
-                .shadow(color: .black.opacity(focused ? 0.4 : 0), radius: 10, y: 6)
+                .shadow(color: .black.opacity(0.4), radius: focused ? 10 : 0, y: focused ? 6 : 0)
                 .scaleEffect(scale)
                 .animation(.easeOut(duration: 0.18), value: focused)
                 .animation(.easeOut(duration: 0.12), value: isPressed)
