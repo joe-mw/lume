@@ -447,6 +447,21 @@ struct EPGBlockButtonStyle: ButtonStyle {
     }
 #endif
 
+/// The red "Now" capsule shown on the time ruler, centred on the current
+/// moment's tick.
+struct EPGNowPill: View {
+    var body: some View {
+        Text("Now")
+            .font(.caption2.weight(.bold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 2)
+            .background(Capsule().fill(Color.red))
+            .fixedSize()
+            .alignmentGuide(.leading) { $0.width / 2 }
+    }
+}
+
 // MARK: - Now indicator
 
 /// The vertical "now" line drawn over the grid content. A small cap at the top

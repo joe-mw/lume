@@ -37,14 +37,7 @@ struct EPGRulerStrip: View {
     }
 
     private var nowPill: some View {
-        Text("Now")
-            .font(.caption2.weight(.bold))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 2)
-            .background(Capsule().fill(Color.red))
-            .fixedSize()
-            .alignmentGuide(.leading) { $0.width / 2 }
+        EPGNowPill()
     }
 }
 

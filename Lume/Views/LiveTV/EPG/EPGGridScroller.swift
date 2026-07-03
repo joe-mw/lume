@@ -32,204 +32,104 @@ struct EPGGridScroller: View {
     @State private var sync = EPGScrollSync()
     @State private var selection: EPGSelection?
     @State private var jumpToken = 0
-    #if os(tvOS)
-        /// The focused channel-column row. The column is the tvOS navigation
-        /// hub: focus lands here on entry, and Menu from inside the grid
-        /// returns here instead of leaving the screen.
-        @FocusState private var focusedChannelID: String?
-        /// When the column last handed focus away, so grid focus arriving
-        /// right afterwards can be told apart from focus entering the guide
-        /// from outside (see the bounce in `body`).
-        @State private var columnLostFocusAt: Date?
-        /// True while focus sits outside the guide: grid cells render
-        /// unfocused during it, so the bounce's transient grid focus never
-        /// flashes — the user only sees the channel light up.
-        @State private var entryGrace = true
-    #endif
     /// Which row's programme currently holds focus, reported by every cell
     /// button (used by the tvOS Menu escape and entry bounce).
     @FocusState private var focusedGridRowID: String?
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Header: corner + time ruler. Touch/pointer get a jump-to-now
-            // button in the corner; tvOS auto-scrolls to now on appear and has
-            // no use for a corner button it can't easily reach, so the corner
-            // is left empty there.
-            HStack(spacing: 0) {
-                corner
-                    .frame(width: metrics.channelColumnWidth, height: metrics.headerHeight)
-
-                EPGRulerStrip(timeline: timeline, metrics: metrics, now: now, sync: sync)
-            }
-            .frame(height: metrics.headerHeight)
-
-            #if !os(tvOS)
-                Divider()
-            #endif
-
-            // Body: frozen channel column + scrollable programme grid.
-            HStack(spacing: 0) {
-                #if os(tvOS)
-                    EPGFrozenColumn(
-                        rows: rows,
-                        metrics: metrics,
-                        sync: sync,
-                        onPlay: { onPlay($0.stream) },
-                        focusedChannelID: $focusedChannelID
-                    )
-                #else
-                    EPGFrozenColumn(rows: rows, metrics: metrics, sync: sync)
-                #endif
-
-                EPGGrid(
-                    rows: rows,
-                    timeline: timeline,
-                    metrics: metrics,
+        content
+            .sheet(item: $selection) { selection in
+                EPGProgramDetailView(
+                    stream: selection.stream,
+                    cell: selection.cell,
                     now: now,
-                    sync: sync,
-                    dataVersion: dataVersion,
-                    jumpToken: jumpToken,
-                    nowTarget: nowScrollTarget,
-                    focusedRowIndex: focusedRowIndex,
-                    focusedGridRowID: $focusedGridRowID,
-                    suppressFocusFlash: suppressFocusFlash,
-                    onExit: exitGridFocus,
-                    // A past programme still inside the channel's archive plays
-                    // as catch-up; everything else plays the channel live.
-                    onPlay: { row, cell in
-                        if !cell.isGap, cell.isPast(at: now),
-                           PlayableMedia.isCatchupAvailable(stream: row.stream, start: cell.start, now: now)
-                        {
-                            onPlayCatchup(row.stream, cell)
-                        } else {
-                            onPlay(row.stream)
-                        }
-                    },
-                    onShowDetails: { row, cell in
-                        selection = EPGSelection(id: cell.id, stream: row.stream, cell: cell)
-                    }
+                    onPlay: { onPlay(selection.stream) },
+                    onPlayCatchup: { onPlayCatchup(selection.stream, selection.cell) }
                 )
-                .equatable()
             }
-        }
-        #if os(tvOS)
-        // Land on the channel column when the guide first receives focus (from
-        // the tab bar or the category rail): channels are directly selectable,
-        // the rail is one left-press away, the programmes one right-press.
-        // `.userInitiated` so the suggestion also wins the scene's initial
-        // focus resolution, which otherwise picks a programme cell.
-        .defaultFocus($focusedChannelID, rows.first?.id, priority: .userInitiated)
-        .onChange(of: focusedChannelID) { old, new in
-            if old != nil, new == nil {
-                columnLostFocusAt = Date()
-                if focusedGridRowID == nil {
-                    entryGrace = true
-                }
-            } else if new != nil {
-                entryGrace = false
-            }
-        }
-        // Entry bounce. The focus engine refuses directional entry into the
-        // column's cells (regardless of hosting, sections, styles, or scopes —
-        // all verified on-device) and always drops rail/tab-bar entries onto a
-        // programme cell. When grid focus arrives without the column having
-        // *just* handed it over, treat it as an entry from outside and move
-        // focus to the same row's channel cell, keeping the column the hub.
-        .onChange(of: focusedGridRowID) { old, new in
-            if old != nil, new == nil, focusedChannelID == nil {
-                entryGrace = true
-                return
-            }
-            guard old == nil, let new else { return }
-            let handoff = columnLostFocusAt.map { Date().timeIntervalSince($0) < 0.3 } ?? false
-            guard !handoff else {
-                entryGrace = false
-                return
-            }
-            // The transient grid focus may have dragged the window towards the
-            // cell the engine picked; entering fresh should read as "now".
-            // `entryGrace` stays on until the channel lands, so the transient
-            // cell renders unfocused throughout.
-            jumpToken += 1
-            focusedChannelID = new
-            Task { @MainActor in
-                if focusedChannelID != new {
-                    focusedChannelID = new
-                }
-            }
-        }
-        #else
-        .background(.background)
-        #endif
-        .sheet(item: $selection) { selection in
-            EPGProgramDetailView(
-                stream: selection.stream,
-                cell: selection.cell,
-                now: now,
-                onPlay: { onPlay(selection.stream) },
-                onPlayCatchup: { onPlayCatchup(selection.stream, selection.cell) }
-            )
+    }
+
+    /// Activates a tapped programme: a past one still inside the channel's
+    /// archive plays as catch-up; everything else plays the channel live.
+    private func activate(row: EPGChannelRow, cell: EPGProgramCell) {
+        if !cell.isGap, cell.isPast(at: now),
+           PlayableMedia.isCatchupAvailable(stream: row.stream, start: cell.start, now: now)
+        {
+            onPlayCatchup(row.stream, cell)
+        } else {
+            onPlay(row.stream)
         }
     }
+
+    #if os(tvOS)
+        /// The tvOS grid is UIKit: UICollectionView's native recycling and
+        /// focus handling replace the SwiftUI scroller, whose per-press focus
+        /// bookkeeping and per-frame graph updates dominated device traces on
+        /// large categories no matter how little of the guide's own code ran.
+        private var content: some View {
+            EPGCollectionGrid(
+                rows: rows,
+                timeline: timeline,
+                now: now,
+                dataVersion: dataVersion,
+                nowTarget: nowScrollTarget,
+                onActivate: { row, cell in activate(row: row, cell: cell) },
+                onPlayChannel: { onPlay($0.stream) },
+                onShowDetails: { row, cell in
+                    selection = EPGSelection(id: cell.id, stream: row.stream, cell: cell)
+                }
+            )
+        }
+    #else
+        private var content: some View {
+            VStack(spacing: 0) {
+                // Header: corner (with the jump-to-now button) + time ruler.
+                HStack(spacing: 0) {
+                    corner
+                        .frame(width: metrics.channelColumnWidth, height: metrics.headerHeight)
+
+                    EPGRulerStrip(timeline: timeline, metrics: metrics, now: now, sync: sync)
+                }
+                .frame(height: metrics.headerHeight)
+
+                Divider()
+
+                // Body: frozen channel column + scrollable programme grid.
+                HStack(spacing: 0) {
+                    EPGFrozenColumn(rows: rows, metrics: metrics, sync: sync)
+
+                    EPGGrid(
+                        rows: rows,
+                        timeline: timeline,
+                        metrics: metrics,
+                        now: now,
+                        sync: sync,
+                        dataVersion: dataVersion,
+                        jumpToken: jumpToken,
+                        nowTarget: nowScrollTarget,
+                        focusedRowIndex: nil,
+                        focusedGridRowID: $focusedGridRowID,
+                        suppressFocusFlash: false,
+                        onExit: { _ in },
+                        onPlay: { row, cell in activate(row: row, cell: cell) },
+                        onShowDetails: { row, cell in
+                            selection = EPGSelection(id: cell.id, stream: row.stream, cell: cell)
+                        }
+                    )
+                    .equatable()
+                }
+            }
+            .background(.background)
+        }
+    #endif
 
     /// Scroll offset that places "now" just inside the leading edge of the grid.
     private var nowScrollTarget: CGFloat {
         max(0, timeline.x(for: now) - 12)
     }
 
-    /// While focus is outside the guide (tvOS), grid cells render unfocused so
-    /// the entry bounce's transient focus never flashes.
-    private var suppressFocusFlash: Bool {
-        #if os(tvOS)
-            entryGrace
-        #else
-            false
-        #endif
-    }
-
-    /// Index of the channel-column row holding focus, so the grid can scroll
-    /// vertically to keep it visible (the column itself is not scrollable).
-    private var focusedRowIndex: Int? {
-        #if os(tvOS)
-            guard let focusedChannelID else { return nil }
-            return rows.firstIndex { $0.id == focusedChannelID }
-        #else
-            return nil
-        #endif
-    }
-
-    /// Menu pressed while focus is inside the programme grid: instead of
-    /// leaving the screen, snap the window back to "now" and land focus on the
-    /// focused programme's own channel (or the top visible one as a fallback) —
-    /// one press escapes any scroll depth, and the category rail is then a
-    /// single left-press away.
-    private func exitGridFocus(from gridRowID: String?) {
-        #if os(tvOS)
-            jumpToken += 1
-            let rowStride = metrics.rowHeight + metrics.rowSpacing
-            let topIndex = max(0, min(rows.count - 1, Int((sync.offset.y / rowStride).rounded())))
-            let fallback = rows.indices.contains(topIndex) ? rows[topIndex].id : nil
-            guard let target = gridRowID ?? fallback else { return }
-            // Same-cycle write first (no intermediate frame); the exit command
-            // arrives inside the focus engine's update, where a same-frame
-            // focus write can be dropped — the deferred pass re-asserts it.
-            focusedChannelID = target
-            Task { @MainActor in
-                if focusedChannelID != target {
-                    focusedChannelID = target
-                }
-            }
-        #else
-            _ = gridRowID
-        #endif
-    }
-
-    @ViewBuilder
-    private var corner: some View {
-        #if os(tvOS)
-            Color.clear
-        #else
+    #if !os(tvOS)
+        private var corner: some View {
             Button {
                 jumpToken += 1
             } label: {
@@ -242,8 +142,8 @@ struct EPGGridScroller: View {
             }
             .buttonStyle(.plain)
             .overlay(alignment: .trailing) { Rectangle().fill(.quaternary).frame(width: 1) }
-        #endif
-    }
+        }
+    #endif
 }
 
 // MARK: - Grid
