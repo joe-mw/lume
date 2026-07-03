@@ -33,6 +33,10 @@ struct EPGGuideView: View {
     /// the freeze-on-open and stutter-while-scrolling this fixes; tiling on
     /// main was a further open-freeze on categories with hundreds of channels.
     @State private var cellsByChannel: [String: [EPGProgramCell]] = [:]
+    /// Bumped whenever `cellsByChannel` is replaced. The scroller's subtrees
+    /// are `Equatable`-gated on it (plus the row count), so remote presses
+    /// never re-evaluate the grid — only actual data changes do.
+    @State private var dataVersion = 0
     /// Observed so the guide refreshes once a guide import settles.
     @State private var epgSync = EPGSyncService.shared
 
@@ -73,7 +77,13 @@ struct EPGGuideView: View {
                     description: Text("This category has no channels")
                 )
             } else {
-                EPGGridScroller(rows: buildRows(for: channels), timeline: timeline, onPlay: onPlay, onPlayCatchup: onPlayCatchup)
+                EPGGridScroller(
+                    rows: buildRows(for: channels),
+                    timeline: timeline,
+                    dataVersion: dataVersion,
+                    onPlay: onPlay,
+                    onPlayCatchup: onPlayCatchup
+                )
             }
         }
         // Reload when the channel set changes or a guide import settles. Keyed on
@@ -94,6 +104,7 @@ struct EPGGuideView: View {
         let channelIds = Array(Set(channels.compactMap(\.epgChannelId).filter { !$0.isEmpty }))
         guard !channelIds.isEmpty else {
             cellsByChannel = [:]
+            dataVersion += 1
             return
         }
         let container = modelContext.container
@@ -107,6 +118,7 @@ struct EPGGuideView: View {
             )
             return listings.mapValues { EPGGridBuilder.cells(for: $0, timeline: timeline) }
         }.value
+        dataVersion += 1
     }
 }
 

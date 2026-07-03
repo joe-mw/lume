@@ -20,39 +20,6 @@ private struct EPGSelection: Identifiable {
     let cell: EPGProgramCell
 }
 
-// MARK: - Scroll sync
-
-/// Shared, observable scroll offset. Only the ruler and channel column observe
-/// it, so panning the grid updates *their* offset modifiers without re-running
-/// the (expensive) programme grid. See `skills/swiftui-performance.md`.
-///
-/// `window` is the horizontal realization window for programme rows and
-/// `rowWindow` the vertical one for the channel column, both quantized to
-/// blocks so they change on block crossings — not per scrolled frame.
-/// Observation tracks the properties independently: the ruler/column offsets
-/// read only `offset`, the rows read only `window`, the column cells only
-/// `rowWindow`, so per-frame offset writes never re-evaluate a row or cell.
-@MainActor
-@Observable
-final class EPGScrollSync {
-    var offset = CGPoint.zero
-    var window = EPGRealizeWindow(start: 0, end: 0)
-    var rowWindow = EPGRealizeWindow(start: 0, end: 0)
-}
-
-/// The range along one scroll axis worth realizing: the viewport plus one
-/// block on both sides, snapped to block boundaries.
-struct EPGRealizeWindow: Equatable {
-    var start: CGFloat
-    var end: CGFloat
-
-    static func around(offset: CGFloat, viewport: CGFloat, blockLength: CGFloat) -> EPGRealizeWindow {
-        let start = ((offset - blockLength) / blockLength).rounded(.down) * blockLength
-        let end = ((offset + viewport + blockLength) / blockLength).rounded(.up) * blockLength
-        return EPGRealizeWindow(start: max(0, start), end: max(0, end))
-    }
-}
-
 // MARK: - Scroller
 
 /// Lays out the frozen panes (corner, ruler, channel column) beside the single
@@ -62,6 +29,9 @@ struct EPGRealizeWindow: Equatable {
 struct EPGGridScroller: View {
     let rows: [EPGChannelRow]
     let timeline: EPGTimeline
+    /// Bumped by `EPGGuideView` when the underlying cells change; the grid
+    /// subtree is `Equatable`-gated on it.
+    let dataVersion: Int
     let onPlay: (LiveStream) -> Void
     let onPlayCatchup: (LiveStream, EPGProgramCell) -> Void
 
@@ -127,6 +97,7 @@ struct EPGGridScroller: View {
                     metrics: metrics,
                     now: now,
                     sync: sync,
+                    dataVersion: dataVersion,
                     jumpToken: jumpToken,
                     nowTarget: nowScrollTarget,
                     focusedRowIndex: focusedRowIndex,
@@ -148,6 +119,7 @@ struct EPGGridScroller: View {
                         selection = EPGSelection(id: cell.id, stream: row.stream, cell: cell)
                     }
                 )
+                .equatable()
             }
         }
         #if os(tvOS)
@@ -289,12 +261,18 @@ struct EPGGridScroller: View {
 /// programmatic jump-to-now) and publishes its offset to the shared sync. Its
 /// programme rows live in a separate child so the per-frame scroll-position
 /// write-back never rebuilds them.
-private struct EPGGrid: View {
+///
+/// `Equatable` (wrapped in `.equatable()` by the scroller): the scroller's
+/// body re-runs on every remote press (its focus states live there), and
+/// without the gate each press would re-evaluate this whole subtree. The
+/// comparison covers everything the subtree renders or reacts to.
+private struct EPGGrid: View, Equatable {
     let rows: [EPGChannelRow]
     let timeline: EPGTimeline
     let metrics: EPGMetrics
     let now: Date
     let sync: EPGScrollSync
+    let dataVersion: Int
     let jumpToken: Int
     let nowTarget: CGFloat
     /// The channel-column row holding focus (tvOS). The grid scrolls to keep it
@@ -310,6 +288,16 @@ private struct EPGGrid: View {
     let onExit: (String?) -> Void
     let onPlay: (EPGChannelRow, EPGProgramCell) -> Void
     let onShowDetails: (EPGChannelRow, EPGProgramCell) -> Void
+
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.dataVersion == rhs.dataVersion
+            && lhs.rows.count == rhs.rows.count
+            && lhs.jumpToken == rhs.jumpToken
+            && lhs.focusedRowIndex == rhs.focusedRowIndex
+            && lhs.suppressFocusFlash == rhs.suppressFocusFlash
+            && lhs.nowTarget == rhs.nowTarget
+            && lhs.timeline == rhs.timeline
+    }
 
     @State private var position = ScrollPosition()
     @State private var didInitialScroll = false
@@ -328,11 +316,13 @@ private struct EPGGrid: View {
                 metrics: metrics,
                 now: now,
                 sync: sync,
+                dataVersion: dataVersion,
                 focusedGridRowID: focusedGridRowID,
                 suppressFocusFlash: suppressFocusFlash,
                 onPlay: onPlay,
                 onShowDetails: onShowDetails
             )
+            .equatable()
             .frame(minHeight: viewportHeight, alignment: .topLeading)
         }
         .background {
@@ -424,42 +414,79 @@ private struct EPGGrid: View {
     }
 }
 
-/// The programme rows plus the now line. Free of any per-frame scroll-offset
-/// dependency, so it builds once and lazily loads rows as they scroll into
-/// view; the strips inside re-realize their cells only on hour-block crossings.
-private struct EPGRows: View {
+/// The programme rows plus the now line. Rows realize only inside the shared
+/// vertical row window and sit at their exact offsets — a `LazyVStack` here
+/// instead diffed every channel's row identity on each update and did
+/// per-frame bookkeeping across them all while scrolling, which large
+/// categories could feel on the Apple TV.
+///
+/// `Equatable` (wrapped in `.equatable()` by the grid) so parent updates skip
+/// this subtree unless the data or render-relevant flags changed; Observation
+/// still re-runs the body directly on row-window block crossings.
+private struct EPGRows: View, Equatable {
     let rows: [EPGChannelRow]
     let timeline: EPGTimeline
     let metrics: EPGMetrics
     let now: Date
+    /// Observed for `rowWindow` only (per-property tracking).
     let sync: EPGScrollSync
+    let dataVersion: Int
     var focusedGridRowID: FocusState<String?>.Binding
     let suppressFocusFlash: Bool
     let onPlay: (EPGChannelRow, EPGProgramCell) -> Void
     let onShowDetails: (EPGChannelRow, EPGProgramCell) -> Void
 
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.dataVersion == rhs.dataVersion
+            && lhs.rows.count == rhs.rows.count
+            && lhs.suppressFocusFlash == rhs.suppressFocusFlash
+            && lhs.timeline == rhs.timeline
+    }
+
+    private struct IndexedRow: Identifiable {
+        let index: Int
+        let row: EPGChannelRow
+        var id: String {
+            row.id
+        }
+    }
+
+    private var rowStride: CGFloat {
+        metrics.rowHeight + metrics.rowSpacing
+    }
+
     private var contentHeight: CGFloat {
         guard !rows.isEmpty else { return 0 }
-        return CGFloat(rows.count) * metrics.rowHeight + CGFloat(rows.count - 1) * metrics.rowSpacing
+        return CGFloat(rows.count) * rowStride - metrics.rowSpacing
+    }
+
+    private var realizedRows: [IndexedRow] {
+        let window = sync.rowWindow
+        guard rowStride > 0, !rows.isEmpty else { return [] }
+        let first = max(0, Int((window.start / rowStride).rounded(.down)))
+        let last = min(rows.count - 1, Int((window.end / rowStride).rounded(.up)))
+        guard first <= last else { return [] }
+        return (first ... last).map { IndexedRow(index: $0, row: rows[$0]) }
     }
 
     var body: some View {
-        LazyVStack(spacing: metrics.rowSpacing) {
-            ForEach(rows) { row in
+        ZStack(alignment: .topLeading) {
+            ForEach(realizedRows) { entry in
                 EPGProgramStrip(
-                    row: row,
+                    row: entry.row,
                     timeline: timeline,
                     metrics: metrics,
                     now: now,
                     sync: sync,
                     focusedGridRowID: focusedGridRowID,
                     suppressFocusFlash: suppressFocusFlash,
-                    onPlay: { cell in onPlay(row, cell) },
-                    onShowDetails: { cell in onShowDetails(row, cell) }
+                    onPlay: { cell in onPlay(entry.row, cell) },
+                    onShowDetails: { cell in onShowDetails(entry.row, cell) }
                 )
+                .offset(y: CGFloat(entry.index) * rowStride)
             }
         }
-        .frame(width: timeline.totalWidth, alignment: .topLeading)
+        .frame(width: timeline.totalWidth, height: contentHeight, alignment: .topLeading)
         .overlay(alignment: .topLeading) {
             TimelineView(.everyMinute) { context in
                 EPGNowIndicator(height: contentHeight)
