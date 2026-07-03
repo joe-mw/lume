@@ -25,12 +25,14 @@ struct EPGGuideView: View {
 
     private let timeline: EPGTimeline
 
-    /// The guide window's listings, grouped by channel and resolved in one
-    /// off-main fetch scoped to *this category's* channels (see `EPGGuideLoader`).
-    /// A view-context `@Query<EPGListing>` here instead pulled the entire guide
-    /// window across every playlist onto the main thread and re-fired on every
-    /// sync write — the freeze-on-open and stutter-while-scrolling this fixes.
-    @State private var listingsByChannel: [String: [EPGWindowListing]] = [:]
+    /// The guide window's programme cells, grouped by channel. Fetched *and*
+    /// tiled in one off-main pass scoped to *this category's* channels (see
+    /// `EPGGuideLoader` / `EPGGridBuilder.cells`). A view-context
+    /// `@Query<EPGListing>` here instead pulled the entire guide window across
+    /// every playlist onto the main thread and re-fired on every sync write —
+    /// the freeze-on-open and stutter-while-scrolling this fixes; tiling on
+    /// main was a further open-freeze on categories with hundreds of channels.
+    @State private var cellsByChannel: [String: [EPGProgramCell]] = [:]
     /// Observed so the guide refreshes once a guide import settles.
     @State private var epgSync = EPGSyncService.shared
 
@@ -82,28 +84,28 @@ struct EPGGuideView: View {
         }
     }
 
-    /// Tiles each scoped stream into a row from the pre-fetched window snapshots.
-    /// Runs only when the streams or loaded listings change — not on scroll.
+    /// Zips each scoped stream with its pre-tiled cells.
+    /// Runs only when the streams or loaded cells change — not on scroll.
     private func buildRows(for channels: [LiveStream]) -> [EPGChannelRow] {
-        EPGGridBuilder.rows(streams: channels, listingsByChannel: listingsByChannel, timeline: timeline)
+        EPGGridBuilder.rows(streams: channels, cellsByChannel: cellsByChannel, timeline: timeline)
     }
 
     private func loadListings(for channels: [LiveStream]) async {
         let channelIds = Array(Set(channels.compactMap(\.epgChannelId).filter { !$0.isEmpty }))
         guard !channelIds.isEmpty else {
-            listingsByChannel = [:]
+            cellsByChannel = [:]
             return
         }
         let container = modelContext.container
-        let windowStart = timeline.start
-        let windowEnd = timeline.end
-        listingsByChannel = await Task.detached(priority: .userInitiated) {
-            EPGGuideLoader.load(
+        let timeline = timeline
+        cellsByChannel = await Task.detached(priority: .userInitiated) {
+            let listings = EPGGuideLoader.load(
                 container: container,
                 channelIds: channelIds,
-                windowStart: windowStart,
-                windowEnd: windowEnd
+                windowStart: timeline.start,
+                windowEnd: timeline.end
             )
+            return listings.mapValues { EPGGridBuilder.cells(for: $0, timeline: timeline) }
         }.value
     }
 }

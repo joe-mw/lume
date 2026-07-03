@@ -18,7 +18,8 @@ import Foundation
 // MARK: - Timeline
 
 /// A fixed window of time laid out horizontally at a constant scale.
-struct EPGTimeline: Equatable {
+/// `nonisolated`: cell tiling runs on a background task for large categories.
+nonisolated struct EPGTimeline: Equatable {
     let start: Date
     let end: Date
     /// Horizontal points per minute. Higher = more zoomed-in.
@@ -81,7 +82,8 @@ struct EPGTimeline: Equatable {
 
 /// One cell in a channel row: either a real programme or a gap filler that keeps
 /// the row tiled edge-to-edge so columns stay aligned with neighbouring rows.
-struct EPGProgramCell: Identifiable, Equatable {
+/// `nonisolated`: built on a background task for large categories.
+nonisolated struct EPGProgramCell: Identifiable, Equatable {
     let id: String
     let title: String
     let detail: String
@@ -126,28 +128,31 @@ struct EPGChannelRow: Identifiable {
 // MARK: - Builder
 
 enum EPGGridBuilder {
-    /// Builds one row per stream, tiling each channel's listings across the
-    /// window. `listingsByChannel` is expected to be grouped by `channelId` and
-    /// sorted ascending by `start`.
+    /// Builds one row per stream from pre-tiled cells. The tiling itself
+    /// (`cells(for:timeline:)`) runs off-main for large categories — this
+    /// assembly only zips the streams with their cell arrays.
     @MainActor
     static func rows(
         streams: [LiveStream],
-        listingsByChannel: [String: [EPGWindowListing]],
+        cellsByChannel: [String: [EPGProgramCell]],
         timeline: EPGTimeline
     ) -> [EPGChannelRow] {
-        streams.map { stream in
-            let listings = stream.epgChannelId.flatMap { listingsByChannel[$0] } ?? []
+        // One shared full-window gap row for channels without guide data.
+        let gapRow = cells(for: [], timeline: timeline)
+        return streams.map { stream in
+            let cells = stream.epgChannelId.flatMap { cellsByChannel[$0] } ?? gapRow
             return EPGChannelRow(
                 id: stream.id,
                 stream: stream,
-                cells: cells(for: listings, timeline: timeline)
+                cells: cells
             )
         }
     }
 
     /// Turns a channel's sorted listings into contiguous cells spanning the
     /// whole window, inserting gap fillers wherever data is missing.
-    static func cells(for listings: [EPGWindowListing], timeline: EPGTimeline) -> [EPGProgramCell] {
+    /// `nonisolated`: runs on a background task for large categories.
+    nonisolated static func cells(for listings: [EPGWindowListing], timeline: EPGTimeline) -> [EPGProgramCell] {
         var cells: [EPGProgramCell] = []
         var cursor = timeline.start
 
@@ -180,7 +185,7 @@ enum EPGGridBuilder {
         return cells
     }
 
-    private static func gap(from start: Date, to end: Date, timeline: EPGTimeline) -> EPGProgramCell {
+    private nonisolated static func gap(from start: Date, to end: Date, timeline: EPGTimeline) -> EPGProgramCell {
         EPGProgramCell(
             id: "gap-\(start.timeIntervalSince1970)-\(end.timeIntervalSince1970)",
             title: "",

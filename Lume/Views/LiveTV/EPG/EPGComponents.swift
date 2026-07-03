@@ -387,9 +387,13 @@ struct EPGBlockButtonStyle: ButtonStyle {
     let metrics: EPGMetrics
     let now: Date
     var canReplay = false
+    /// Render as unfocused even while focused — the tvOS guide's entry bounce
+    /// briefly parks focus on a cell before handing it to the channel column,
+    /// and that transient must not flash.
+    var suppressFocus = false
 
     func makeBody(configuration: Configuration) -> some View {
-        StyleBody(cell: cell, metrics: metrics, now: now, canReplay: canReplay, isPressed: configuration.isPressed)
+        StyleBody(cell: cell, metrics: metrics, now: now, canReplay: canReplay, suppressFocus: suppressFocus, isPressed: configuration.isPressed)
     }
 
     private struct StyleBody: View {
@@ -397,15 +401,17 @@ struct EPGBlockButtonStyle: ButtonStyle {
         let metrics: EPGMetrics
         let now: Date
         let canReplay: Bool
+        let suppressFocus: Bool
         let isPressed: Bool
         @Environment(\.isFocused) private var isFocused
 
         var body: some View {
-            let scale = isFocused ? 1.04 : (isPressed ? 0.97 : 1.0)
-            EPGProgramBlockView(cell: cell, metrics: metrics, now: now, isFocused: isFocused, canReplay: canReplay)
-                .shadow(color: .black.opacity(isFocused ? 0.4 : 0), radius: 10, y: 6)
+            let focused = isFocused && !suppressFocus
+            let scale = focused ? 1.04 : (isPressed ? 0.97 : 1.0)
+            EPGProgramBlockView(cell: cell, metrics: metrics, now: now, isFocused: focused, canReplay: canReplay)
+                .shadow(color: .black.opacity(focused ? 0.4 : 0), radius: 10, y: 6)
                 .scaleEffect(scale)
-                .animation(.easeOut(duration: 0.18), value: isFocused)
+                .animation(.easeOut(duration: 0.18), value: focused)
                 .animation(.easeOut(duration: 0.12), value: isPressed)
         }
     }

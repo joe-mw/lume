@@ -26,28 +26,30 @@ private struct EPGSelection: Identifiable {
 /// it, so panning the grid updates *their* offset modifiers without re-running
 /// the (expensive) programme grid. See `skills/swiftui-performance.md`.
 ///
-/// `window` is the horizontal realization window for programme rows, quantized
-/// to hour blocks so it changes on block crossings — not per scrolled frame.
-/// Observation tracks the two properties independently: the ruler/column read
-/// only `offset`, the rows read only `window`, so per-frame offset writes never
-/// re-evaluate a row.
+/// `window` is the horizontal realization window for programme rows and
+/// `rowWindow` the vertical one for the channel column, both quantized to
+/// blocks so they change on block crossings — not per scrolled frame.
+/// Observation tracks the properties independently: the ruler/column offsets
+/// read only `offset`, the rows read only `window`, the column cells only
+/// `rowWindow`, so per-frame offset writes never re-evaluate a row or cell.
 @MainActor
 @Observable
 final class EPGScrollSync {
     var offset = CGPoint.zero
-    var window = EPGRealizeWindow(startX: 0, endX: 0)
+    var window = EPGRealizeWindow(start: 0, end: 0)
+    var rowWindow = EPGRealizeWindow(start: 0, end: 0)
 }
 
-/// The x-range of programme cells worth realizing: the viewport plus one hour
+/// The range along one scroll axis worth realizing: the viewport plus one
 /// block on both sides, snapped to block boundaries.
 struct EPGRealizeWindow: Equatable {
-    var startX: CGFloat
-    var endX: CGFloat
+    var start: CGFloat
+    var end: CGFloat
 
-    static func around(offsetX: CGFloat, viewportWidth: CGFloat, blockWidth: CGFloat) -> EPGRealizeWindow {
-        let start = ((offsetX - blockWidth) / blockWidth).rounded(.down) * blockWidth
-        let end = ((offsetX + viewportWidth + blockWidth) / blockWidth).rounded(.up) * blockWidth
-        return EPGRealizeWindow(startX: max(0, start), endX: max(0, end))
+    static func around(offset: CGFloat, viewport: CGFloat, blockLength: CGFloat) -> EPGRealizeWindow {
+        let start = ((offset - blockLength) / blockLength).rounded(.down) * blockLength
+        let end = ((offset + viewport + blockLength) / blockLength).rounded(.up) * blockLength
+        return EPGRealizeWindow(start: max(0, start), end: max(0, end))
     }
 }
 
@@ -78,6 +80,10 @@ struct EPGGridScroller: View {
         /// right afterwards can be told apart from focus entering the guide
         /// from outside (see the bounce in `body`).
         @State private var columnLostFocusAt: Date?
+        /// True while focus sits outside the guide: grid cells render
+        /// unfocused during it, so the bounce's transient grid focus never
+        /// flashes — the user only sees the channel light up.
+        @State private var entryGrace = true
     #endif
     /// Which row's programme currently holds focus, reported by every cell
     /// button (used by the tvOS Menu escape and entry bounce).
@@ -125,6 +131,7 @@ struct EPGGridScroller: View {
                     nowTarget: nowScrollTarget,
                     focusedRowIndex: focusedRowIndex,
                     focusedGridRowID: $focusedGridRowID,
+                    suppressFocusFlash: suppressFocusFlash,
                     onExit: exitGridFocus,
                     // A past programme still inside the channel's archive plays
                     // as catch-up; everything else plays the channel live.
@@ -153,6 +160,11 @@ struct EPGGridScroller: View {
         .onChange(of: focusedChannelID) { old, new in
             if old != nil, new == nil {
                 columnLostFocusAt = Date()
+                if focusedGridRowID == nil {
+                    entryGrace = true
+                }
+            } else if new != nil {
+                entryGrace = false
             }
         }
         // Entry bounce. The focus engine refuses directional entry into the
@@ -162,14 +174,26 @@ struct EPGGridScroller: View {
         // *just* handed it over, treat it as an entry from outside and move
         // focus to the same row's channel cell, keeping the column the hub.
         .onChange(of: focusedGridRowID) { old, new in
+            if old != nil, new == nil, focusedChannelID == nil {
+                entryGrace = true
+                return
+            }
             guard old == nil, let new else { return }
             let handoff = columnLostFocusAt.map { Date().timeIntervalSince($0) < 0.3 } ?? false
-            guard !handoff else { return }
+            guard !handoff else {
+                entryGrace = false
+                return
+            }
             // The transient grid focus may have dragged the window towards the
             // cell the engine picked; entering fresh should read as "now".
+            // `entryGrace` stays on until the channel lands, so the transient
+            // cell renders unfocused throughout.
             jumpToken += 1
+            focusedChannelID = new
             Task { @MainActor in
-                focusedChannelID = new
+                if focusedChannelID != new {
+                    focusedChannelID = new
+                }
             }
         }
         #else
@@ -189,6 +213,16 @@ struct EPGGridScroller: View {
     /// Scroll offset that places "now" just inside the leading edge of the grid.
     private var nowScrollTarget: CGFloat {
         max(0, timeline.x(for: now) - 12)
+    }
+
+    /// While focus is outside the guide (tvOS), grid cells render unfocused so
+    /// the entry bounce's transient focus never flashes.
+    private var suppressFocusFlash: Bool {
+        #if os(tvOS)
+            entryGrace
+        #else
+            false
+        #endif
     }
 
     /// Index of the channel-column row holding focus, so the grid can scroll
@@ -214,10 +248,14 @@ struct EPGGridScroller: View {
             let topIndex = max(0, min(rows.count - 1, Int((sync.offset.y / rowStride).rounded())))
             let fallback = rows.indices.contains(topIndex) ? rows[topIndex].id : nil
             guard let target = gridRowID ?? fallback else { return }
-            // Deferred: the exit command arrives inside the focus engine's
-            // update, and a same-frame focus write can be dropped.
+            // Same-cycle write first (no intermediate frame); the exit command
+            // arrives inside the focus engine's update, where a same-frame
+            // focus write can be dropped — the deferred pass re-asserts it.
+            focusedChannelID = target
             Task { @MainActor in
-                focusedChannelID = target
+                if focusedChannelID != target {
+                    focusedChannelID = target
+                }
             }
         #else
             _ = gridRowID
@@ -245,99 +283,6 @@ struct EPGGridScroller: View {
     }
 }
 
-// MARK: - Ruler strip
-
-/// The time ruler, shifted to mirror the grid's horizontal offset. Observes the
-/// shared sync so only its offset updates while scrolling — the ruler's own
-/// content is built once.
-private struct EPGRulerStrip: View {
-    let timeline: EPGTimeline
-    let metrics: EPGMetrics
-    let now: Date
-    let sync: EPGScrollSync
-
-    var body: some View {
-        Color.clear
-            .frame(maxWidth: .infinity)
-            .frame(height: metrics.headerHeight)
-            .overlay(alignment: .leading) {
-                ZStack(alignment: .topLeading) {
-                    EPGTimeRuler(timeline: timeline, metrics: metrics)
-                    nowPill.offset(x: timeline.x(for: now))
-                }
-                .frame(width: timeline.totalWidth, alignment: .leading)
-                .offset(x: -sync.offset.x)
-            }
-            .clipped()
-    }
-
-    private var nowPill: some View {
-        Text("Now")
-            .font(.caption2.weight(.bold))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 2)
-            .background(Capsule().fill(Color.red))
-            .fixedSize()
-            .alignmentGuide(.leading) { $0.width / 2 }
-    }
-}
-
-// MARK: - Frozen column
-
-/// The channel column, shifted to mirror the grid's vertical offset. Built once;
-/// only the offset modifier changes as the grid scrolls.
-///
-/// On tvOS the column is the guide's navigation hub: its cells are focusable
-/// buttons (select plays the channel), the category rail sits one left-press
-/// away and the programme grid one right-press away. The column itself never
-/// scrolls — `EPGGridScroller` scrolls the grid to follow the focused channel,
-/// and this view mirrors that offset.
-private struct EPGFrozenColumn: View {
-    let rows: [EPGChannelRow]
-    let metrics: EPGMetrics
-    let sync: EPGScrollSync
-    #if os(tvOS)
-        let onPlay: (EPGChannelRow) -> Void
-        var focusedChannelID: FocusState<String?>.Binding
-    #endif
-
-    var body: some View {
-        Color.clear
-            .frame(width: metrics.channelColumnWidth)
-            .frame(maxHeight: .infinity)
-            .overlay(alignment: .top) {
-                cells
-                    .offset(y: -sync.offset.y)
-            }
-            .clipped()
-        #if !os(tvOS)
-            // The channel cards on tvOS already read as a separate rail, so
-            // a vertical rule would only add visual weight.
-            .overlay(alignment: .trailing) { Rectangle().fill(.quaternary).frame(width: 1) }
-        #endif
-    }
-
-    private var cells: some View {
-        VStack(spacing: metrics.rowSpacing) {
-            ForEach(rows) { row in
-                #if os(tvOS)
-                    Button {
-                        onPlay(row)
-                    } label: {
-                        Color.clear.frame(width: metrics.channelColumnWidth, height: metrics.rowHeight)
-                    }
-                    .buttonStyle(EPGChannelButtonStyle(row: row, metrics: metrics))
-                    .focused(focusedChannelID, equals: row.id)
-                    .accessibilityLabel(Text(row.name))
-                #else
-                    EPGChannelCell(row: row, metrics: metrics)
-                #endif
-            }
-        }
-    }
-}
-
 // MARK: - Grid
 
 /// The single scrollable surface. Owns its scroll position (used only for
@@ -357,6 +302,8 @@ private struct EPGGrid: View {
     let focusedRowIndex: Int?
     /// The scroller-owned focus binding every cell button reports into.
     var focusedGridRowID: FocusState<String?>.Binding
+    /// Render cells unfocused while the guide's entry grace is active (tvOS).
+    let suppressFocusFlash: Bool
     /// Menu pressed while focus is inside the grid (tvOS); carries the id of
     /// the row whose programme held focus, so the escape can land on the same
     /// channel in the column.
@@ -382,6 +329,7 @@ private struct EPGGrid: View {
                 now: now,
                 sync: sync,
                 focusedGridRowID: focusedGridRowID,
+                suppressFocusFlash: suppressFocusFlash,
                 onPlay: onPlay,
                 onShowDetails: onShowDetails
             )
@@ -398,12 +346,20 @@ private struct EPGGrid: View {
         .onScrollGeometryChange(for: CGRect.self) { CGRect(origin: $0.contentOffset, size: $0.containerSize) } action: { _, new in
             sync.offset = CGPoint(x: max(0, new.origin.x), y: max(0, new.origin.y))
             let window = EPGRealizeWindow.around(
-                offsetX: max(0, new.origin.x),
-                viewportWidth: new.width,
-                blockWidth: 60 * metrics.pointsPerMinute
+                offset: max(0, new.origin.x),
+                viewport: new.width,
+                blockLength: 60 * metrics.pointsPerMinute
             )
             if sync.window != window {
                 sync.window = window
+            }
+            let rowWindow = EPGRealizeWindow.around(
+                offset: max(0, new.origin.y),
+                viewport: new.height,
+                blockLength: 4 * (metrics.rowHeight + metrics.rowSpacing)
+            )
+            if sync.rowWindow != rowWindow {
+                sync.rowWindow = rowWindow
             }
         }
         #if os(tvOS)
@@ -413,22 +369,35 @@ private struct EPGGrid: View {
         .onAppear {
             guard !didInitialScroll else { return }
             didInitialScroll = true
-            // Seed the realization window around the initial scroll target so
-            // the first row build already realizes the right cells; the width
-            // over-estimates a hair and the first geometry event corrects it.
+            // Seed the realization windows around the initial scroll target so
+            // the first build already realizes the right cells; the viewports
+            // over-estimate a hair and the first geometry event corrects them.
             sync.window = EPGRealizeWindow.around(
-                offsetX: nowTarget,
-                viewportWidth: 2400,
-                blockWidth: 60 * metrics.pointsPerMinute
+                offset: nowTarget,
+                viewport: 2400,
+                blockLength: 60 * metrics.pointsPerMinute
+            )
+            sync.rowWindow = EPGRealizeWindow.around(
+                offset: 0,
+                viewport: 1400,
+                blockLength: 4 * (metrics.rowHeight + metrics.rowSpacing)
             )
             position.scrollTo(x: nowTarget)
         }
         .onChange(of: jumpToken) {
             // Point-scroll: the single-axis scrollTo variants reset the other
             // axis to zero, which would also fling the grid vertically.
-            withAnimation(.easeInOut(duration: 0.4)) {
-                position.scrollTo(point: CGPoint(x: nowTarget, y: sync.offset.y))
-            }
+            let target = CGPoint(x: nowTarget, y: sync.offset.y)
+            #if os(tvOS)
+                // Instant: the snap can span many hours, and animating it walks
+                // the realization window through every hour block on the way —
+                // pointless churn the Apple TV can feel.
+                position.scrollTo(point: target)
+            #else
+                withAnimation(.easeInOut(duration: 0.4)) {
+                    position.scrollTo(point: target)
+                }
+            #endif
         }
         .onChange(of: focusedRowIndex) { _, index in
             guard let index else { return }
@@ -465,6 +434,7 @@ private struct EPGRows: View {
     let now: Date
     let sync: EPGScrollSync
     var focusedGridRowID: FocusState<String?>.Binding
+    let suppressFocusFlash: Bool
     let onPlay: (EPGChannelRow, EPGProgramCell) -> Void
     let onShowDetails: (EPGChannelRow, EPGProgramCell) -> Void
 
@@ -483,6 +453,7 @@ private struct EPGRows: View {
                     now: now,
                     sync: sync,
                     focusedGridRowID: focusedGridRowID,
+                    suppressFocusFlash: suppressFocusFlash,
                     onPlay: { cell in onPlay(row, cell) },
                     onShowDetails: { cell in onShowDetails(row, cell) }
                 )
@@ -522,6 +493,7 @@ private struct EPGProgramStrip: View {
     /// writes never re-evaluate a row.
     let sync: EPGScrollSync
     var focusedGridRowID: FocusState<String?>.Binding
+    let suppressFocusFlash: Bool
     let onPlay: (EPGProgramCell) -> Void
     let onShowDetails: (EPGProgramCell) -> Void
 
@@ -529,7 +501,7 @@ private struct EPGProgramStrip: View {
         let window = sync.window
         return row.cells.filter { cell in
             let start = timeline.x(for: cell.start)
-            return start < window.endX && start + cell.width > window.startX
+            return start < window.end && start + cell.width > window.start
         }
     }
 
@@ -556,7 +528,7 @@ private struct EPGProgramStrip: View {
             } label: {
                 Color.clear.frame(width: cell.width, height: metrics.rowHeight)
             }
-            .buttonStyle(EPGBlockButtonStyle(cell: cell, metrics: metrics, now: now))
+            .buttonStyle(EPGBlockButtonStyle(cell: cell, metrics: metrics, now: now, suppressFocus: suppressFocusFlash))
             .focused(focusedGridRowID, equals: row.id)
             .accessibilityLabel(Text(row.name))
             .accessibilityHint(Text("No programme information"))
@@ -568,7 +540,7 @@ private struct EPGProgramStrip: View {
             } label: {
                 Color.clear.frame(width: cell.width, height: metrics.rowHeight)
             }
-            .buttonStyle(EPGBlockButtonStyle(cell: cell, metrics: metrics, now: now, canReplay: canReplay))
+            .buttonStyle(EPGBlockButtonStyle(cell: cell, metrics: metrics, now: now, canReplay: canReplay, suppressFocus: suppressFocusFlash))
             .focused(focusedGridRowID, equals: row.id)
             // Long press (press-and-hold Select on tvOS) opens the detail
             // sheet. The gesture takes the press once it recognizes, so a
