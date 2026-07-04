@@ -3,18 +3,18 @@
 //  Lume
 //
 //  The guide's frozen edges: the time ruler across the top and the channel
-//  column on the left. Both mirror the grid's scroll offset via the shared
+//  column on the left. Both mirror the grid's scroll position via the shared
 //  sync; the column's cells realize only inside the quantized row window. On
-//  tvOS the column doubles as the guide's focus hub.
+//  tvOS the column is part of the guide's virtual navigation space — its
+//  highlight is driven by the scroller, not by real focus.
 //
 
 import SwiftUI
 
 // MARK: - Ruler strip
 
-/// The time ruler, shifted to mirror the grid's horizontal offset. Observes the
-/// shared sync so only its offset updates while scrolling — the ruler's own
-/// content is built once.
+/// The time ruler, shifted to mirror the grid's horizontal position. Observes
+/// the shared sync's `mirror` only, so its content is built once.
 struct EPGRulerStrip: View {
     let timeline: EPGTimeline
     let metrics: EPGMetrics
@@ -31,34 +31,34 @@ struct EPGRulerStrip: View {
                     nowPill.offset(x: timeline.x(for: now))
                 }
                 .frame(width: timeline.totalWidth, alignment: .leading)
-                .offset(x: -sync.offset.x)
+                .offset(x: -sync.mirror.x)
             }
             .clipped()
     }
 
     private var nowPill: some View {
-        EPGNowPill()
+        Text("Now")
+            .font(.caption2.weight(.bold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 2)
+            .background(Capsule().fill(Color.red))
+            .fixedSize()
+            .alignmentGuide(.leading) { $0.width / 2 }
     }
 }
 
 // MARK: - Frozen column
 
-/// The channel column, shifted to mirror the grid's vertical offset. Built once;
-/// only the offset modifier changes as the grid scrolls.
-///
-/// On tvOS the column is the guide's navigation hub: its cells are focusable
-/// buttons (select plays the channel), the category rail sits one left-press
-/// away and the programme grid one right-press away. The column itself never
-/// scrolls — `EPGGridScroller` scrolls the grid to follow the focused channel,
-/// and this view mirrors that offset.
+/// The channel column, shifted to mirror the grid's vertical position. Built
+/// once; only the mirror offset changes as the grid scrolls, and the cells
+/// realize inside the quantized row window.
 struct EPGFrozenColumn: View {
     let rows: [EPGChannelRow]
     let metrics: EPGMetrics
     let sync: EPGScrollSync
-    #if os(tvOS)
-        let onPlay: (EPGChannelRow) -> Void
-        var focusedChannelID: FocusState<String?>.Binding
-    #endif
+    /// The row the guide's virtual focus highlights in the column (tvOS).
+    let focusedRowIndex: Int?
 
     var body: some View {
         Color.clear
@@ -67,11 +67,11 @@ struct EPGFrozenColumn: View {
             .overlay(alignment: .top) {
                 // The offset lives here, on the parent that observes it, while
                 // the cells are a separate child keyed off the quantized row
-                // window — a per-frame offset write shifts the child without
-                // re-running its body (a re-diff of one item per channel, per
-                // frame, on big categories otherwise).
-                columnCells
-                    .offset(y: -sync.offset.y)
+                // window — a per-frame mirror write shifts the child without
+                // re-running its body.
+                EPGColumnCells(rows: rows, metrics: metrics, sync: sync, focusedRowIndex: focusedRowIndex)
+                    .equatable()
+                    .offset(y: -sync.mirror.y)
             }
             .clipped()
         #if !os(tvOS)
@@ -80,45 +80,28 @@ struct EPGFrozenColumn: View {
             .overlay(alignment: .trailing) { Rectangle().fill(.quaternary).frame(width: 1) }
         #endif
     }
-
-    @ViewBuilder
-    private var columnCells: some View {
-        #if os(tvOS)
-            EPGColumnCells(rows: rows, metrics: metrics, sync: sync, onPlay: onPlay, focusedChannelID: focusedChannelID)
-                .equatable()
-        #else
-            EPGColumnCells(rows: rows, metrics: metrics, sync: sync)
-                .equatable()
-        #endif
-    }
 }
 
 /// The column's channel cells, realized only inside the shared vertical row
 /// window and placed at their exact offsets — a plain `VStack` over every
-/// channel built one focusable button (and one logo load) per channel up
-/// front, which is what made large categories heavy on tvOS.
+/// channel built one cell (and one logo load) per channel up front, which is
+/// what made large categories heavy on tvOS.
 ///
 /// `Equatable` (and wrapped in `.equatable()` by the parent) so the parent's
-/// per-frame offset re-evaluation skips this body: the stored closures defeat
-/// SwiftUI's reflection-based comparison otherwise. Observation still re-runs
-/// the body directly whenever `rowWindow` changes, independent of the parent.
+/// mirror-driven re-evaluations skip this body; Observation still re-runs it
+/// directly whenever `rowWindow` changes.
 struct EPGColumnCells: View, Equatable {
     let rows: [EPGChannelRow]
     let metrics: EPGMetrics
     /// Observed for `rowWindow` only (per-property tracking).
     let sync: EPGScrollSync
-    #if os(tvOS)
-        let onPlay: (EPGChannelRow) -> Void
-        var focusedChannelID: FocusState<String?>.Binding
-    #endif
+    let focusedRowIndex: Int?
 
-    /// Within one guide instance the row set only changes on a listings
-    /// reload (same channels, new cells) — and the column renders channel
-    /// identity only, so boundary ids + count identify the set.
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.rows.count == rhs.rows.count
             && lhs.rows.first?.id == rhs.rows.first?.id
             && lhs.rows.last?.id == rhs.rows.last?.id
+            && lhs.focusedRowIndex == rhs.focusedRowIndex
     }
 
     private struct IndexedRow: Identifiable {
@@ -145,7 +128,7 @@ struct EPGColumnCells: View, Equatable {
     var body: some View {
         ZStack(alignment: .topLeading) {
             ForEach(realizedRows) { entry in
-                cell(entry.row)
+                EPGChannelCell(row: entry.row, metrics: metrics, isFocused: entry.index == focusedRowIndex)
                     .offset(y: CGFloat(entry.index) * rowStride)
             }
         }
@@ -154,21 +137,5 @@ struct EPGColumnCells: View, Equatable {
             height: max(0, CGFloat(rows.count) * rowStride - metrics.rowSpacing),
             alignment: .topLeading
         )
-    }
-
-    @ViewBuilder
-    private func cell(_ row: EPGChannelRow) -> some View {
-        #if os(tvOS)
-            Button {
-                onPlay(row)
-            } label: {
-                Color.clear.frame(width: metrics.channelColumnWidth, height: metrics.rowHeight)
-            }
-            .buttonStyle(EPGChannelButtonStyle(row: row, metrics: metrics))
-            .focused(focusedChannelID, equals: row.id)
-            .accessibilityLabel(Text(row.name))
-        #else
-            EPGChannelCell(row: row, metrics: metrics)
-        #endif
     }
 }

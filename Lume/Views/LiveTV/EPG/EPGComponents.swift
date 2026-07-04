@@ -387,13 +387,9 @@ struct EPGBlockButtonStyle: ButtonStyle {
     let metrics: EPGMetrics
     let now: Date
     var canReplay = false
-    /// Render as unfocused even while focused — the tvOS guide's entry bounce
-    /// briefly parks focus on a cell before handing it to the channel column,
-    /// and that transient must not flash.
-    var suppressFocus = false
 
     func makeBody(configuration: Configuration) -> some View {
-        StyleBody(cell: cell, metrics: metrics, now: now, canReplay: canReplay, suppressFocus: suppressFocus, isPressed: configuration.isPressed)
+        StyleBody(cell: cell, metrics: metrics, now: now, canReplay: canReplay, isPressed: configuration.isPressed)
     }
 
     private struct StyleBody: View {
@@ -401,12 +397,11 @@ struct EPGBlockButtonStyle: ButtonStyle {
         let metrics: EPGMetrics
         let now: Date
         let canReplay: Bool
-        let suppressFocus: Bool
         let isPressed: Bool
         @Environment(\.isFocused) private var isFocused
 
         var body: some View {
-            let focused = isFocused && !suppressFocus
+            let focused = isFocused
             let scale = focused ? 1.04 : (isPressed ? 0.97 : 1.0)
             // Radius 0 when unfocused: a transparent radius-10 shadow still
             // sits in the render tree of every realized cell, and hundreds of
@@ -417,48 +412,6 @@ struct EPGBlockButtonStyle: ButtonStyle {
                 .animation(.easeOut(duration: 0.18), value: focused)
                 .animation(.easeOut(duration: 0.12), value: isPressed)
         }
-    }
-}
-
-#if os(tvOS)
-    /// Focus-aware wrapper for a channel-column cell. No scale lift: the column
-    /// is clipped at its own bounds, so a scaled cell would truncate at the
-    /// leading edge — the solid-white focus fill carries the state on its own.
-    struct EPGChannelButtonStyle: ButtonStyle {
-        let row: EPGChannelRow
-        let metrics: EPGMetrics
-
-        func makeBody(configuration: Configuration) -> some View {
-            StyleBody(row: row, metrics: metrics, isPressed: configuration.isPressed)
-        }
-
-        private struct StyleBody: View {
-            let row: EPGChannelRow
-            let metrics: EPGMetrics
-            let isPressed: Bool
-            @Environment(\.isFocused) private var isFocused
-
-            var body: some View {
-                EPGChannelCell(row: row, metrics: metrics, isFocused: isFocused)
-                    .opacity(isPressed ? 0.8 : 1)
-                    .animation(.easeOut(duration: 0.18), value: isFocused)
-            }
-        }
-    }
-#endif
-
-/// The red "Now" capsule shown on the time ruler, centred on the current
-/// moment's tick.
-struct EPGNowPill: View {
-    var body: some View {
-        Text("Now")
-            .font(.caption2.weight(.bold))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 2)
-            .background(Capsule().fill(Color.red))
-            .fixedSize()
-            .alignmentGuide(.leading) { $0.width / 2 }
     }
 }
 
