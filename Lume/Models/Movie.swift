@@ -107,6 +107,12 @@ final class Movie {
     var directURL: String?
 
     var isFavorite: Bool = false
+    /// A user-defined order for the unified Favorites collection, spanning movies,
+    /// series and live channels. `nil` means "follow the default order"; once the
+    /// favorites are reordered in Content Management, every favorite (of any type)
+    /// gets a dense value so a movie can sit above a channel and the arrangement
+    /// survives re-syncs. Mirrors `LiveStream.favoriteOrder`.
+    var favoriteOrder: Int?
     var watchProgress: Double = 0.0
     var isWatched: Bool = false
 

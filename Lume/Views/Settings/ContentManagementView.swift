@@ -36,7 +36,7 @@ struct ContentManagementView: View {
         /// row's NavigationLink) so the push survives the List reloading its rows.
         @State private var selectedCategory: Category?
         /// Drives the drill-in to favorites reordering, same rationale as above.
-        @State private var favoritesRoute: FavoriteChannelsRoute?
+        @State private var favoritesRoute: FavoritesRoute?
     #endif
 
     var body: some View {
@@ -56,8 +56,8 @@ struct ContentManagementView: View {
         .navigationDestination(for: Category.self) { category in
             ChannelManagementView(category: category)
         }
-        .navigationDestination(for: FavoriteChannelsRoute.self) { _ in
-            FavoriteChannelManagementView()
+        .navigationDestination(for: FavoritesRoute.self) { _ in
+            FavoriteManagementView()
         }
         #else
                 // iOS/macOS drives the drill-in from view-owned @State rather than a
@@ -70,7 +70,7 @@ struct ContentManagementView: View {
                     ChannelManagementView(category: category)
                 }
                 .navigationDestination(item: $favoritesRoute) { _ in
-                    FavoriteChannelManagementView()
+                    FavoriteManagementView()
                 }
         #endif
     }
@@ -132,8 +132,8 @@ struct ContentManagementView: View {
 
                         tvTypePicker
 
-                        if selectedType == .live, !isReordering {
-                            NavigationLink(value: FavoriteChannelsRoute()) {
+                        if !isReordering {
+                            NavigationLink(value: FavoritesRoute()) {
                                 HStack(spacing: 14) {
                                     Image(systemName: "heart.fill")
                                     Text("Favorites")
@@ -224,28 +224,26 @@ struct ContentManagementView: View {
                     .listRowBackground(Color.clear)
                 }
 
-                if selectedType == .live {
-                    Section {
-                        Button {
-                            favoritesRoute = FavoriteChannelsRoute()
-                        } label: {
-                            HStack(spacing: 12) {
-                                Image(systemName: "heart.fill")
-                                    .foregroundStyle(.red)
-                                Text("Favorites")
-                                    .foregroundStyle(.primary)
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(.caption2)
-                                    .fontWeight(.semibold)
-                                    .foregroundStyle(.secondary)
-                            }
-                            .contentShape(Rectangle())
+                Section {
+                    Button {
+                        favoritesRoute = FavoritesRoute()
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "heart.fill")
+                                .foregroundStyle(.red)
+                            Text("Favorites")
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption2)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(.secondary)
                         }
-                        .buttonStyle(.plain)
-                    } footer: {
-                        Text("Reorder the channels in your Favorites category.")
+                        .contentShape(Rectangle())
                     }
+                    .buttonStyle(.plain)
+                } footer: {
+                    Text("Reorder all your favorite channels, movies, and series in one list.")
                 }
 
                 Section {

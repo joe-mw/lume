@@ -86,6 +86,48 @@ struct ContentOrganizerTests {
         #expect(sorted.map(\.name) == ["A", "B"]) // num 1 before num 2
     }
 
+    // MARK: - Cross-type favorites ordering
+
+    @Test func `reorder favorites stamps a dense order spanning types`() {
+        let channel = LiveStream(id: "p-live-1", streamId: 1, name: "Channel", num: 1)
+        let movie = Movie(id: "p-movie-1", streamId: 2, name: "Movie", num: 1)
+        let series = Series(id: "p-series-1", seriesId: 3, name: "Series", num: 1)
+        let favorites: [any FavoriteOrderable] = [channel, movie, series]
+
+        // Move the movie (index 1) to the front — above the channel.
+        ContentOrganizer.reorderFavorites(favorites, from: IndexSet(integer: 1), to: 0)
+
+        #expect(movie.favoriteOrder == 0) // a movie can sit above a channel
+        #expect(channel.favoriteOrder == 1)
+        #expect(series.favoriteOrder == 2)
+    }
+
+    @Test func `commit favorites order interleaves the types in the given arrangement`() {
+        let channel = LiveStream(id: "p-live-1", streamId: 1, name: "Channel", num: 1)
+        let movie = Movie(id: "p-movie-1", streamId: 2, name: "Movie", num: 1)
+        let series = Series(id: "p-series-1", seriesId: 3, name: "Series", num: 1)
+
+        // The user placed the movie first, then the channel, then the series.
+        ContentOrganizer.commitFavoriteOrder([movie, channel, series])
+
+        #expect(movie.favoriteOrder == 0)
+        #expect(channel.favoriteOrder == 1)
+        #expect(series.favoriteOrder == 2)
+    }
+
+    @Test func `reset favorites order clears every type`() {
+        let channel = LiveStream(id: "p-live-1", streamId: 1, name: "Channel", num: 1)
+        let movie = Movie(id: "p-movie-1", streamId: 2, name: "Movie", num: 1)
+        let series = Series(id: "p-series-1", seriesId: 3, name: "Series", num: 1)
+        let favorites: [any FavoriteOrderable] = [channel, movie, series]
+
+        ContentOrganizer.commitFavoriteOrder(favorites)
+        #expect(favorites.allSatisfy { $0.favoriteOrder != nil })
+
+        ContentOrganizer.resetFavoriteOrder(favorites)
+        #expect(favorites.allSatisfy { $0.favoriteOrder == nil })
+    }
+
     // MARK: - Helpers
 
     private func makeCategories(_ names: [String]) -> [Lume.Category] {
