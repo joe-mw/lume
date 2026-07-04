@@ -68,9 +68,7 @@ struct EPGGridScroller: View {
                 Divider()
             #endif
 
-            // Body: frozen channel column + scrollable programme grid. On
-            // tvOS the focus surface spans both — the column is part of the
-            // virtual navigation space.
+            // Body: frozen channel column + scrollable programme grid.
             HStack(spacing: 0) {
                 EPGFrozenColumn(
                     rows: rows,
@@ -79,21 +77,18 @@ struct EPGGridScroller: View {
                     focusedRowIndex: columnFocusRowIndex
                 )
 
-                #if os(tvOS)
-                    // The focus section around grid + strip is what wins
-                    // directional entry from the rail (a bare focusable —
-                    // SwiftUI or UIKit — loses to the rail's mode switch, a
-                    // nearer diagonal candidate). The strip's position is
-                    // invisible and irrelevant once focused — remote commands
-                    // follow focus, and entry always lands on the channel
-                    // hub via `landOnChannel`.
-                    grid
-                        .overlay(alignment: .leading) { focusSurface }
-                        .focusSection()
-                #else
-                    grid
-                #endif
+                grid
             }
+            // On tvOS the focus strip overlays the channel column — the
+            // guide's leftmost band, directly beside the rail. Being adjacent
+            // to the rail is what makes entry (right from a category) and exit
+            // (left back to it) land naturally, without guessing where focus
+            // came from. The focus section wrapping the whole body wins the
+            // directional entry contest against the rail's mode switch.
+            #if os(tvOS)
+            .overlay(alignment: .leading) { focusSurface }
+            .focusSection()
+            #endif
         }
         #if os(tvOS)
         .onChange(of: surfaceFocused) { _, focused in
@@ -233,9 +228,10 @@ struct EPGGridScroller: View {
         /// The guide's single focusable view — a UIKit strip over the channel
         /// column. Focus stays parked on it for the whole guide session; its
         /// `shouldUpdateFocus` veto turns the engine's movement requests
-        /// (button presses *and* Siri remote swipes) into virtual navigation,
-        /// and returning `true` at the guide's edges lets the engine carry
-        /// focus out to the rail naturally.
+        /// (button presses *and* Siri remote swipes) into virtual navigation.
+        /// The one exit — left from the hub — hands focus to the rail through
+        /// `onExitLeft` rather than the engine, which can't project the
+        /// full-height strip onto the top-aligned rail.
         private var focusSurface: some View {
             EPGFocusStrip(
                 isFocused: $surfaceFocused,

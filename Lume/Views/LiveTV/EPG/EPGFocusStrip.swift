@@ -6,16 +6,19 @@
 //  engine only consults `shouldUpdateFocus` when a move has a candidate
 //  target — with nothing focusable inside the guide, moves towards its
 //  interior would be silently ignored. The sentinels hug the strip so every
-//  interior direction always yields a proposal: proposals onto a sentinel are
-//  vetoed and forwarded to the guide's virtual navigation (covering remote
-//  presses *and* swipes).
+//  interior direction always yields a proposal; the veto then reads the
+//  move's *heading* (not which view the engine picked) and forwards it to the
+//  guide's virtual navigation, covering remote presses *and* swipes even when
+//  a strong neighbour like the tab bar is the engine's proposed target.
 //
-//  Leaving the guide is a separate mechanism: a full-height view projects its
-//  focus from screen centre, so a plain leftward move rarely finds the rail.
-//  A `UIFocusGuide` pinned to the leading edge, targeting the view focus came
-//  *from* (the rail item), makes the left exit land exactly back where the
-//  user entered — deterministically, and without any programmatic focus
-//  transfer (which the engine drops when made from its own callbacks).
+//  The one move that leaves the guide is left from the channel hub. A
+//  full-height view projects its focus from screen centre, so the engine
+//  finds no candidate on the top-aligned rail; and driving the SwiftUI rail's
+//  focus state from here loses a fight with the UIKit strip (focus falls back
+//  to the tab bar). So a `UIFocusGuide` at the leading edge points at the
+//  rail's *container* view (the left-adjacent sibling, found by walking up):
+//  the engine descends into it and focuses a category — pure UIKit, no
+//  SwiftUI focus fight, and independent of where focus entered from.
 //
 
 #if os(tvOS)
@@ -58,13 +61,13 @@
             view.setExitsLeft(exitsLeft)
         }
 
-        /// The strip, its interior sentinels, and the leading exit guide.
+        /// The strip, its interior sentinels, and the left-exit guide.
         final class ContainerView: UIView {
             let strip = StripView()
             private var sentinels: [MoveCommandDirection: SentinelView] = [:]
-            /// Redirects a left exit back to the rail item focus came from.
+            /// The guaranteed left candidate when leaving the hub; targets the
+            /// rail's container so the engine descends and focuses a category.
             private let exitGuide = UIFocusGuide()
-            private var exitsLeft = false
 
             override init(frame: CGRect) {
                 super.init(frame: frame)
@@ -73,15 +76,6 @@
                     sentinel.strip = strip
                     sentinels[direction] = sentinel
                     addSubview(sentinel)
-                }
-                strip.sentinelDirection = { [weak self] view in
-                    self?.sentinels.first { $0.value === view }?.key
-                }
-                // Remember where focus came from so the left exit returns there.
-                strip.onEnter = { [weak self] origin in
-                    guard let self, let origin, !(origin is SentinelView) else { return }
-                    exitGuide.preferredFocusEnvironments = [origin]
-                    updateExitGuide()
                 }
                 addSubview(strip)
 
@@ -101,15 +95,44 @@
             }
 
             func setExitsLeft(_ exits: Bool) {
-                exitsLeft = exits
-                // The left sentinel (interior veto) and the exit guide occupy
-                // the same leading strip; exactly one is active at a time.
+                strip.exitsLeft = exits
+                // On the hub the left sentinel yields to the exit guide so a
+                // left move leaves; on a cell it stays as the interior veto.
                 sentinels[.left]?.isFocusEnabled = !exits
-                updateExitGuide()
+                if exits, let rail = railContainer() {
+                    exitGuide.preferredFocusEnvironments = [rail]
+                    exitGuide.isEnabled = true
+                } else {
+                    exitGuide.isEnabled = false
+                }
             }
 
-            private func updateExitGuide() {
-                exitGuide.isEnabled = exitsLeft && !exitGuide.preferredFocusEnvironments.isEmpty
+            /// The rail's container: the *leftmost* sibling lying wholly to the
+            /// strip's left, across every ancestor level. Taking the smallest
+            /// `minX` skips the guide's own channel column (a nearer left
+            /// sibling) and reaches the rail outside the guide. Walked from the
+            /// tree so the UIKit strip needs no direct reference to the SwiftUI
+            /// rail; pointing a focus guide at the container (not a leaf) lets
+            /// the engine descend and focus the rail's remembered category.
+            private func railContainer() -> UIFocusEnvironment? {
+                guard let window else { return nil }
+                let stripFrame = strip.convert(strip.bounds, to: window)
+                var best: UIView?
+                var bestMinX = CGFloat.greatestFiniteMagnitude
+                var node: UIView = self
+                while let parent = node.superview {
+                    for sibling in parent.subviews where sibling !== node {
+                        let frame = sibling.convert(sibling.bounds, to: window)
+                        if frame.maxX <= stripFrame.minX + 1, frame.width > 100, frame.height > 100,
+                           frame.minX < bestMinX
+                        {
+                            best = sibling
+                            bestMinX = frame.minX
+                        }
+                    }
+                    node = parent
+                }
+                return best
             }
 
             override func layoutSubviews() {
@@ -125,7 +148,8 @@
 
         /// A proposal target the strip vetoes moves onto; never actually
         /// focused. Only a candidate while the strip itself holds focus, so
-        /// entry into the guide always lands on the strip.
+        /// it guarantees every interior direction has something to move
+        /// toward (triggering the veto) without stealing entry focus.
         final class SentinelView: UIView {
             var isFocusEnabled = true
             weak var strip: StripView?
@@ -151,11 +175,8 @@
             var onSelect: (() -> Void)?
             var onLongSelect: (() -> Void)?
             var onMenu: (() -> Bool)?
-            /// Called when focus enters the strip, with the view it came from.
-            var onEnter: ((UIFocusEnvironment?) -> Void)?
-            /// Resolves a proposed focus target to the sentinel direction it
-            /// represents, if any.
-            var sentinelDirection: ((UIView) -> MoveCommandDirection?)?
+            /// Whether a left move leaves the guide (hub) or navigates (cell).
+            var exitsLeft = false
 
             private(set) var isEngineFocused = false
             private var longPressFired = false
@@ -190,7 +211,6 @@
                 super.didUpdateFocus(in: context, with: coordinator)
                 if context.nextFocusedView === self {
                     isEngineFocused = true
-                    onEnter?(context.previouslyFocusedView)
                     onFocusChange?(true)
                 } else if context.previouslyFocusedView === self {
                     isEngineFocused = false
@@ -201,22 +221,35 @@
             override func shouldUpdateFocus(in context: UIFocusUpdateContext) -> Bool {
                 guard isEngineFocused, context.previouslyFocusedView === self else { return true }
                 // After a veto the engine synchronously retries with further
-                // candidates; without this the same press would both fire a
-                // second virtual move and let the retry carry real focus out
-                // of the guide.
+                // candidates; without this the same press would fire a second
+                // action and let the retry carry real focus out of the guide.
                 if moveConsumed { return false }
-                guard let next = context.nextFocusedView,
-                      let direction = sentinelDirection?(next)
-                else { return true }
-                // A move onto a sentinel is ours: veto the real focus change
-                // and navigate virtually instead. Deferred — the veto runs
-                // inside the engine's update.
+                // Decide from the *heading*, not from which view the engine
+                // proposed: near a strong external neighbour (the tab bar
+                // above, the rail beside) the engine may target it rather than
+                // our edge sentinel, but the move is still ours to interpret.
+                guard let direction = Self.direction(from: context.focusHeading) else { return true }
+                // Left from the hub leaves the guide: allow the move so the
+                // engine carries focus to the exit guide (→ the rail).
+                if direction == .left, exitsLeft { return true }
+                // Every other direction stays inside: veto and navigate
+                // virtually, even when the engine targeted the tab bar.
                 moveConsumed = true
                 Task { @MainActor in
                     self.moveConsumed = false
                     self.onMove?(direction)
                 }
                 return false
+            }
+
+            private static func direction(from heading: UIFocusHeading) -> MoveCommandDirection? {
+                switch heading {
+                case .up: .up
+                case .down: .down
+                case .left: .left
+                case .right: .right
+                default: nil
+                }
             }
 
             override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
