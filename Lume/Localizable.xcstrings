@@ -7481,6 +7481,7 @@
       }
     },
     "Drag to reorder your favorite channels — this sets the order shown in the Favorites category. Tap the heart to remove one. Reset restores the provider's order." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -10003,6 +10004,7 @@
       }
     },
     "Favorite Channels" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -17218,6 +17220,7 @@
       }
     },
     "No favorite channels yet." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -17270,6 +17273,7 @@
       }
     },
     "No favorite channels yet. Mark channels as favorites to manage their order here." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -21996,6 +22000,7 @@
       }
     },
     "Reorder the channels in your Favorites category." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {

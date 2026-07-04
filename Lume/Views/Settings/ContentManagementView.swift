@@ -130,8 +130,6 @@ struct ContentManagementView: View {
                                 .padding(.horizontal, TVSettingsMetrics.rowHPadding)
                         }
 
-                        tvTypePicker
-
                         if !isReordering {
                             NavigationLink(value: FavoritesRoute()) {
                                 HStack(spacing: 14) {
@@ -144,6 +142,8 @@ struct ContentManagementView: View {
                             .buttonStyle(TVContentActionButtonStyle())
                             .focusSection()
                         }
+
+                        tvTypePicker
 
                         tvCategoryList(proxy: proxy)
                     }
@@ -214,17 +214,6 @@ struct ContentManagementView: View {
         private var content: some View {
             List {
                 Section {
-                    Picker("Type", selection: $selectedType) {
-                        ForEach(CategoryType.allCases) { type in
-                            Text(type.label).tag(type)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
-                    .listRowBackground(Color.clear)
-                }
-
-                Section {
                     Button {
                         favoritesRoute = FavoritesRoute()
                     } label: {
@@ -244,6 +233,17 @@ struct ContentManagementView: View {
                     .buttonStyle(.plain)
                 } footer: {
                     Text("Reorder all your favorite channels, movies, and series in one list.")
+                }
+
+                Section {
+                    Picker("Type", selection: $selectedType) {
+                        ForEach(CategoryType.allCases) { type in
+                            Text(type.label).tag(type)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
+                    .listRowBackground(Color.clear)
                 }
 
                 Section {
