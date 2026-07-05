@@ -247,6 +247,11 @@
             LiveTVLayoutMode(rawValue: layoutModeRaw) ?? .list
         }
 
+        /// Bumped when the user activates a rail category, asking the guide to
+        /// take focus (landing on the first channel). Reset to 0 once claimed,
+        /// so unrelated guide rebuilds (sort changes) never steal focus.
+        @State private var guideFocusToken = 0
+
         var body: some View {
             HStack(spacing: 0) {
                 // The rail owns its own focus state. Keeping it in a child means
@@ -256,7 +261,8 @@
                 TVCategoryRail(
                     sections: sections,
                     selectedSection: $selectedSection,
-                    layoutModeRaw: $layoutModeRaw
+                    layoutModeRaw: $layoutModeRaw,
+                    onCategoryActivated: { guideFocusToken += 1 }
                 )
                 content
             }
@@ -267,9 +273,17 @@
             if let section = displayedSection {
                 switch layoutMode {
                 case .guide:
-                    EPGGuideView(scope: section.scope, playlistPrefix: playlistPrefix, sort: contentSort, onPlay: onPlay, onPlayCatchup: onPlayCatchup)
-                        .id("\(section.id)-\(contentSort.rawValue)-guide")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    EPGGuideView(
+                        scope: section.scope,
+                        playlistPrefix: playlistPrefix,
+                        sort: contentSort,
+                        onPlay: onPlay,
+                        onPlayCatchup: onPlayCatchup,
+                        focusToken: guideFocusToken,
+                        onDidClaimFocus: { guideFocusToken = 0 }
+                    )
+                    .id("\(section.id)-\(contentSort.rawValue)-guide")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 case .list:
                     TVChannelsList(scope: section.scope, playlistPrefix: playlistPrefix, sort: contentSort, onPlay: onPlay)
                         .id("\(section.id)-\(contentSort.rawValue)-list")
@@ -295,6 +309,8 @@
         let sections: [LiveTVSection]
         @Binding var selectedSection: LiveTVSection?
         @Binding var layoutModeRaw: String
+        /// Fired when the user activates (clicks) a category.
+        var onCategoryActivated: () -> Void = {}
 
         /// Which rail control currently holds focus — drives the highlight.
         private enum RailItem: Hashable {
@@ -337,6 +353,16 @@
             }
             .frame(width: railWidth, alignment: .leading)
             .frame(maxHeight: .infinity, alignment: .top)
+            .onChange(of: focused) { oldValue, newValue in
+                // Focus entering the rail from outside (the guide's left exit,
+                // the tab bar) lands on the geometrically nearest category, not
+                // the active one — snap to the selection so returning to the
+                // rail reads as returning to the current category.
+                guard oldValue == nil, case let .category(id) = newValue,
+                      let selectedID = selectedSection?.id, id != selectedID
+                else { return }
+                focused = .category(selectedID)
+            }
         }
 
         // MARK: View-mode switch
@@ -400,6 +426,7 @@
             let isItemFocused = focused == .category(section.id)
             return Button {
                 selectedSection = section
+                onCategoryActivated()
             } label: {
                 HStack(spacing: 8) {
                     if let icon = section.icon {

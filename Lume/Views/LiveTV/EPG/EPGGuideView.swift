@@ -19,6 +19,10 @@ struct EPGGuideView: View {
     let playlistPrefix: String
     let onPlay: (LiveStream) -> Void
     let onPlayCatchup: (LiveStream, EPGProgramCell) -> Void
+    /// tvOS: non-zero asks the guide to take real focus (a rail category was
+    /// just activated); `onDidClaimFocus` resets it once claimed.
+    let focusToken: Int
+    let onDidClaimFocus: () -> Void
 
     @Environment(\.modelContext) private var modelContext
     @Query private var streams: [LiveStream]
@@ -45,12 +49,16 @@ struct EPGGuideView: View {
         playlistPrefix: String,
         sort: ContentSortOption,
         onPlay: @escaping (LiveStream) -> Void,
-        onPlayCatchup: @escaping (LiveStream, EPGProgramCell) -> Void = { _, _ in }
+        onPlayCatchup: @escaping (LiveStream, EPGProgramCell) -> Void = { _, _ in },
+        focusToken: Int = 0,
+        onDidClaimFocus: @escaping () -> Void = {}
     ) {
         self.scope = scope
         self.playlistPrefix = playlistPrefix
         self.onPlay = onPlay
         self.onPlayCatchup = onPlayCatchup
+        self.focusToken = focusToken
+        self.onDidClaimFocus = onDidClaimFocus
 
         // A longer reach into the past than the default: aired programmes on
         // archive channels are replayable from here, so the window doubles as a
@@ -82,7 +90,9 @@ struct EPGGuideView: View {
                     timeline: timeline,
                     dataVersion: dataVersion,
                     onPlay: onPlay,
-                    onPlayCatchup: onPlayCatchup
+                    onPlayCatchup: onPlayCatchup,
+                    focusToken: focusToken,
+                    onDidClaimFocus: onDidClaimFocus
                 )
             }
         }

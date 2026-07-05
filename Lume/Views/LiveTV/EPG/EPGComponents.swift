@@ -142,6 +142,14 @@ struct EPGChannelCell: View {
                 .font(nameFont)
                 .lineLimit(2)
                 .frame(maxWidth: .infinity, alignment: .leading)
+            // Flag channels with an archive so the viewer knows the row
+            // offers replays — same idiom as the player's channel overlay.
+            if row.catchupCapable {
+                Image(systemName: "clock.arrow.circlepath")
+                    .font(catchupFont)
+                    .foregroundStyle(catchupColor)
+                    .accessibilityLabel(Text("Catch-up available"))
+            }
         }
         .padding(.horizontal, 12)
         #if os(tvOS)
@@ -199,6 +207,24 @@ struct EPGChannelCell: View {
             .system(size: 24, weight: .semibold)
         #else
             .subheadline.weight(.medium)
+        #endif
+    }
+
+    private var catchupFont: Font {
+        #if os(tvOS)
+            .system(size: 18, weight: .semibold)
+        #else
+            .caption.weight(.semibold)
+        #endif
+    }
+
+    private var catchupColor: Color {
+        #if os(tvOS)
+            // The focused cell's white fill would swallow blue-on-white; the
+            // black foreground keeps the glyph legible in both states.
+            isFocused ? .black : .blue
+        #else
+            .blue
         #endif
     }
 }

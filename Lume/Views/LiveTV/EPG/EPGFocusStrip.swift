@@ -18,7 +18,16 @@
 //  to the tab bar). So a `UIFocusGuide` at the leading edge points at the
 //  rail's *container* view (the left-adjacent sibling, found by walking up):
 //  the engine descends into it and focuses a category — pure UIKit, no
-//  SwiftUI focus fight, and independent of where focus entered from.
+//  SwiftUI focus fight, and independent of where focus entered from. The
+//  guide is live only while the strip holds focus: enabled on the unfocused
+//  strip it would swallow every entry move from the rail instead.
+//
+//  Menu is deliberately *not* handled here. A responder-chain `pressesBegan`
+//  loses to an enclosing NavigationStack's own Menu recognizer (focus hops to
+//  the tab bar), and a competing recognizer with blanket precedence freezes
+//  the engine's directional recognizers. The scroller handles Menu with
+//  SwiftUI's `onExitCommand`, which takes the press before the stack does;
+//  `railExitToken` is its hand-off back into UIKit for the hub → rail step.
 //
 
 #if os(tvOS)
@@ -35,20 +44,23 @@
         let onMove: (MoveCommandDirection) -> Void
         let onSelect: () -> Void
         let onLongSelect: () -> Void
-        /// Returns whether the Menu press was consumed.
-        let onMenu: () -> Bool
+        /// Bumped by the scroller to hand real focus to the rail (Menu from
+        /// the hub). A token, not a call: the UIKit move must run outside the
+        /// SwiftUI action that requested it.
+        let railExitToken: Int
 
-        func makeUIView(context _: Context) -> ContainerView {
+        func makeUIView(context: Context) -> ContainerView {
             let view = ContainerView()
-            apply(to: view)
+            view.lastRailExitToken = railExitToken
+            apply(to: view, context: context)
             return view
         }
 
-        func updateUIView(_ view: ContainerView, context _: Context) {
-            apply(to: view)
+        func updateUIView(_ view: ContainerView, context: Context) {
+            apply(to: view, context: context)
         }
 
-        private func apply(to view: ContainerView) {
+        private func apply(to view: ContainerView, context _: Context) {
             view.strip.onFocusChange = { focused in
                 Task { @MainActor in
                     isFocused = focused
@@ -57,17 +69,31 @@
             view.strip.onMove = onMove
             view.strip.onSelect = onSelect
             view.strip.onLongSelect = onLongSelect
-            view.strip.onMenu = onMenu
             view.setExitsLeft(exitsLeft)
+            if view.lastRailExitToken != railExitToken {
+                view.lastRailExitToken = railExitToken
+                view.moveFocusToRail()
+            }
         }
 
-        /// The strip, its interior sentinels, and the left-exit guide.
+        /// The strip, its interior sentinels, and the leading-edge guide.
         final class ContainerView: UIView {
             let strip = StripView()
             private var sentinels: [MoveCommandDirection: SentinelView] = [:]
-            /// The guaranteed left candidate when leaving the hub; targets the
-            /// rail's container so the engine descends and focuses a category.
-            private let exitGuide = UIFocusGuide()
+            /// The leading-edge focus guide, retargeted by focus state. While
+            /// the strip is unfocused it points *at the strip*: a rightward
+            /// move from the rail lands here (the engine finds no candidate on
+            /// the strip itself under some hosting hierarchies, e.g. inside a
+            /// NavigationStack) and is redirected in — deterministic entry.
+            /// While the strip is focused on the hub it points at the rail's
+            /// container, carrying the left exit out.
+            private let edgeGuide = UIFocusGuide()
+            private var exitsLeft = false
+            /// Last applied rail-exit token (see `EPGFocusStrip.railExitToken`).
+            var lastRailExitToken = 0
+            /// Temporarily overrides the container's preferred focus for a
+            /// programmatic hand-off to the rail.
+            private var preferredOverride: [UIFocusEnvironment] = []
 
             override init(frame: CGRect) {
                 super.init(frame: frame)
@@ -77,15 +103,18 @@
                     sentinels[direction] = sentinel
                     addSubview(sentinel)
                 }
+                strip.onEngineFocusChanged = { [weak self] in
+                    self?.refreshEdgeGuide()
+                }
                 addSubview(strip)
 
-                addLayoutGuide(exitGuide)
-                exitGuide.isEnabled = false
+                addLayoutGuide(edgeGuide)
+                edgeGuide.isEnabled = false
                 NSLayoutConstraint.activate([
-                    exitGuide.leadingAnchor.constraint(equalTo: leadingAnchor),
-                    exitGuide.topAnchor.constraint(equalTo: topAnchor),
-                    exitGuide.bottomAnchor.constraint(equalTo: bottomAnchor),
-                    exitGuide.widthAnchor.constraint(equalToConstant: 2)
+                    edgeGuide.leadingAnchor.constraint(equalTo: leadingAnchor),
+                    edgeGuide.topAnchor.constraint(equalTo: topAnchor),
+                    edgeGuide.bottomAnchor.constraint(equalTo: bottomAnchor),
+                    edgeGuide.widthAnchor.constraint(equalToConstant: 2)
                 ])
             }
 
@@ -95,15 +124,41 @@
             }
 
             func setExitsLeft(_ exits: Bool) {
+                exitsLeft = exits
                 strip.exitsLeft = exits
-                // On the hub the left sentinel yields to the exit guide so a
+                // On the hub the left sentinel yields to the edge guide so a
                 // left move leaves; on a cell it stays as the interior veto.
                 sentinels[.left]?.isFocusEnabled = !exits
-                if exits, let rail = railContainer() {
-                    exitGuide.preferredFocusEnvironments = [rail]
-                    exitGuide.isEnabled = true
+                refreshEdgeGuide()
+            }
+
+            override var preferredFocusEnvironments: [UIFocusEnvironment] {
+                preferredOverride.isEmpty ? super.preferredFocusEnvironments : preferredOverride
+            }
+
+            /// Hands real focus to the rail (Menu from the hub): a
+            /// programmatic focus update requested from outside the engine's
+            /// own callbacks, which the engine honours.
+            func moveFocusToRail() {
+                guard strip.isEngineFocused, let rail = railContainer() else { return }
+                preferredOverride = [rail]
+                setNeedsFocusUpdate()
+                updateFocusIfNeeded()
+                preferredOverride = []
+            }
+
+            private func refreshEdgeGuide() {
+                // Exit only — and only while the strip actually holds focus.
+                // An enabled guide on the *unfocused* strip sits at the
+                // guide's leading edge and swallows every entry move from the
+                // rail, redirecting it straight back (a visual no-op): that
+                // was the "right does nothing" bug. Entry needs no guide; the
+                // engine finds the strip through the guide's focus section.
+                if strip.isEngineFocused, exitsLeft, let rail = railContainer() {
+                    edgeGuide.preferredFocusEnvironments = [rail]
+                    edgeGuide.isEnabled = true
                 } else {
-                    exitGuide.isEnabled = false
+                    edgeGuide.isEnabled = false
                 }
             }
 
@@ -174,7 +229,8 @@
             var onMove: ((MoveCommandDirection) -> Void)?
             var onSelect: (() -> Void)?
             var onLongSelect: (() -> Void)?
-            var onMenu: (() -> Bool)?
+            /// Notifies the container of engine focus changes (guide retarget).
+            var onEngineFocusChanged: (() -> Void)?
             /// Whether a left move leaves the guide (hub) or navigates (cell).
             var exitsLeft = false
 
@@ -211,9 +267,11 @@
                 super.didUpdateFocus(in: context, with: coordinator)
                 if context.nextFocusedView === self {
                     isEngineFocused = true
+                    onEngineFocusChanged?()
                     onFocusChange?(true)
                 } else if context.previouslyFocusedView === self {
                     isEngineFocused = false
+                    onEngineFocusChanged?()
                     onFocusChange?(false)
                 }
             }
@@ -249,15 +307,6 @@
                 case .left: .left
                 case .right: .right
                 default: nil
-                }
-            }
-
-            override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
-                guard isEngineFocused, presses.contains(where: { $0.type == .menu }) else {
-                    return super.pressesBegan(presses, with: event)
-                }
-                if onMenu?() != true {
-                    super.pressesBegan(presses, with: event)
                 }
             }
 

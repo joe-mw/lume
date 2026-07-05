@@ -32,6 +32,10 @@ struct EPGGridScroller: View {
     let dataVersion: Int
     let onPlay: (LiveStream) -> Void
     let onPlayCatchup: (LiveStream, EPGProgramCell) -> Void
+    /// tvOS: non-zero asks the guide to take real focus (a rail category was
+    /// just activated); `onDidClaimFocus` resets it once claimed.
+    var focusToken = 0
+    var onDidClaimFocus: () -> Void = {}
 
     private let metrics = EPGMetrics.current
     private let now = Date()
@@ -48,6 +52,13 @@ struct EPGGridScroller: View {
         /// The x a run of vertical cell moves keeps aiming at, so rows with
         /// different programme boundaries don't make focus drift sideways.
         @State private var preferredX: CGFloat?
+        /// Bumped to hand real focus to the rail (Menu from the hub).
+        @State private var railExitToken = 0
+        /// SwiftUI-side focus binding for the strip. Written to claim focus
+        /// after a rail category activation — at that moment SwiftUI owns
+        /// focus (the rail button), so a focus-state write is honoured, where
+        /// a raw `UIFocusSystem.requestFocusUpdate` is silently ignored.
+        @FocusState private var surfaceClaimsFocus: Bool
     #endif
 
     var body: some View {
@@ -229,9 +240,9 @@ struct EPGGridScroller: View {
         /// column. Focus stays parked on it for the whole guide session; its
         /// `shouldUpdateFocus` veto turns the engine's movement requests
         /// (button presses *and* Siri remote swipes) into virtual navigation.
-        /// The one exit — left from the hub — hands focus to the rail through
-        /// `onExitLeft` rather than the engine, which can't project the
-        /// full-height strip onto the top-aligned rail.
+        /// Menu is handled here via `onExitCommand` — the SwiftUI layer that
+        /// takes the press before an enclosing NavigationStack can pop or hop
+        /// focus to the tab bar.
         private var focusSurface: some View {
             EPGFocusStrip(
                 isFocused: $surfaceFocused,
@@ -245,13 +256,23 @@ struct EPGGridScroller: View {
                 onLongSelect: {
                     showVirtualCellDetails()
                 },
-                onMenu: {
-                    decideMenu()
-                }
+                railExitToken: railExitToken
             )
             .frame(width: metrics.channelColumnWidth)
             .frame(maxHeight: .infinity)
+            .focused($surfaceClaimsFocus)
             .accessibilityLabel(Text(virtualFocusDescription))
+            .onExitCommand {
+                handleMenu()
+            }
+            // Runs on appear *and* on token change: a category activation both
+            // rebuilds the guide (fresh scroller) and bumps the token, and the
+            // same-category case only bumps the token.
+            .task(id: focusToken) {
+                guard focusToken != 0 else { return }
+                surfaceClaimsFocus = true
+                onDidClaimFocus()
+            }
         }
 
         /// Left from the channel hub leaves the guide towards the rail; from
@@ -262,14 +283,14 @@ struct EPGGridScroller: View {
             return false
         }
 
-        /// Menu from the programmes collapses to the channel hub (consumed);
-        /// from the hub it stays unhandled so the system navigates back.
-        private func decideMenu() -> Bool {
-            guard case .cell = virtualFocus else { return false }
-            Task { @MainActor in
+        /// Menu steps back one level: from a programme it collapses to the
+        /// channel hub; from the hub it hands focus to the category rail.
+        private func handleMenu() {
+            if case .cell = virtualFocus {
                 handleExitCommand()
+            } else {
+                railExitToken += 1
             }
-            return true
         }
 
         private var topVisibleRowIndex: Int {
