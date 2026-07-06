@@ -85,7 +85,8 @@ struct EPGGridScroller: View {
                     rows: rows,
                     metrics: metrics,
                     sync: sync,
-                    focusedRowIndex: columnFocusRowIndex
+                    focusedRowIndex: columnFocusRowIndex,
+                    onSelectChannel: { onPlay($0.stream) }
                 )
 
                 grid

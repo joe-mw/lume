@@ -59,6 +59,10 @@ struct EPGFrozenColumn: View {
     let sync: EPGScrollSync
     /// The row the guide's virtual focus highlights in the column (tvOS).
     let focusedRowIndex: Int?
+    /// Touch/pointer: tapping a channel plays it live — the same action the
+    /// tvOS channel hub performs on select. Unused on tvOS, where the focus
+    /// strip owns activation.
+    var onSelectChannel: (EPGChannelRow) -> Void = { _ in }
 
     var body: some View {
         Color.clear
@@ -69,9 +73,15 @@ struct EPGFrozenColumn: View {
                 // the cells are a separate child keyed off the quantized row
                 // window — a per-frame mirror write shifts the child without
                 // re-running its body.
-                EPGColumnCells(rows: rows, metrics: metrics, sync: sync, focusedRowIndex: focusedRowIndex)
-                    .equatable()
-                    .offset(y: -sync.mirror.y)
+                EPGColumnCells(
+                    rows: rows,
+                    metrics: metrics,
+                    sync: sync,
+                    focusedRowIndex: focusedRowIndex,
+                    onSelectChannel: onSelectChannel
+                )
+                .equatable()
+                .offset(y: -sync.mirror.y)
             }
             .clipped()
         #if !os(tvOS)
@@ -96,6 +106,9 @@ struct EPGColumnCells: View, Equatable {
     /// Observed for `rowWindow` only (per-property tracking).
     let sync: EPGScrollSync
     let focusedRowIndex: Int?
+    /// Deliberately outside `==` — a fresh closure identity alone must not
+    /// re-run the body.
+    var onSelectChannel: (EPGChannelRow) -> Void = { _ in }
 
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.rows.count == rhs.rows.count
@@ -128,7 +141,7 @@ struct EPGColumnCells: View, Equatable {
     var body: some View {
         ZStack(alignment: .topLeading) {
             ForEach(realizedRows) { entry in
-                EPGChannelCell(row: entry.row, metrics: metrics, isFocused: entry.index == focusedRowIndex)
+                cell(for: entry)
                     .offset(y: CGFloat(entry.index) * rowStride)
             }
         }
@@ -137,5 +150,23 @@ struct EPGColumnCells: View, Equatable {
             height: max(0, CGFloat(rows.count) * rowStride - metrics.rowSpacing),
             alignment: .topLeading
         )
+    }
+
+    /// On tvOS the cell stays a plain view — the focus strip is the guide's
+    /// only focusable and owns activation. Everywhere else it's a button that
+    /// plays the channel live.
+    @ViewBuilder
+    private func cell(for entry: IndexedRow) -> some View {
+        #if os(tvOS)
+            EPGChannelCell(row: entry.row, metrics: metrics, isFocused: entry.index == focusedRowIndex)
+        #else
+            Button {
+                onSelectChannel(entry.row)
+            } label: {
+                EPGChannelCell(row: entry.row, metrics: metrics, isFocused: entry.index == focusedRowIndex)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        #endif
     }
 }
