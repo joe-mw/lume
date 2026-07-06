@@ -117,6 +117,7 @@ struct SettingsView: View {
                     #if DEBUG && !SIDE_LOAD
                         developerSection
                     #endif
+                    diagnosticsSection
                 }
                 #if os(macOS)
                 .listStyle(.inset(alternatesRowBackgrounds: true))
