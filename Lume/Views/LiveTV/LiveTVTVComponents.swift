@@ -237,6 +237,7 @@
         @Binding var layoutModeRaw: String
         let contentSort: ContentSortOption
         let onPlay: (LiveStream) -> Void
+        let onPlayCatchup: (LiveStream, EPGProgramCell) -> Void
 
         /// The active playlist's id prefix, needed to scope the virtual
         /// (favorites / recently watched) collections in-memory.
@@ -245,6 +246,11 @@
         private var layoutMode: LiveTVLayoutMode {
             LiveTVLayoutMode(rawValue: layoutModeRaw) ?? .list
         }
+
+        /// Bumped when the user activates a rail category, asking the guide to
+        /// take focus (landing on the first channel). Reset to 0 once claimed,
+        /// so unrelated guide rebuilds (sort changes) never steal focus.
+        @State private var guideFocusToken = 0
 
         var body: some View {
             HStack(spacing: 0) {
@@ -255,7 +261,8 @@
                 TVCategoryRail(
                     sections: sections,
                     selectedSection: $selectedSection,
-                    layoutModeRaw: $layoutModeRaw
+                    layoutModeRaw: $layoutModeRaw,
+                    onCategoryActivated: { guideFocusToken += 1 }
                 )
                 content
             }
@@ -266,9 +273,17 @@
             if let section = displayedSection {
                 switch layoutMode {
                 case .guide:
-                    EPGGuideView(scope: section.scope, playlistPrefix: playlistPrefix, sort: contentSort, onPlay: onPlay)
-                        .id("\(section.id)-\(contentSort.rawValue)-guide")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    EPGGuideView(
+                        scope: section.scope,
+                        playlistPrefix: playlistPrefix,
+                        sort: contentSort,
+                        onPlay: onPlay,
+                        onPlayCatchup: onPlayCatchup,
+                        focusToken: guideFocusToken,
+                        onDidClaimFocus: { guideFocusToken = 0 }
+                    )
+                    .id("\(section.id)-\(contentSort.rawValue)-guide")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 case .list:
                     TVChannelsList(scope: section.scope, playlistPrefix: playlistPrefix, sort: contentSort, onPlay: onPlay)
                         .id("\(section.id)-\(contentSort.rawValue)-list")
@@ -294,6 +309,8 @@
         let sections: [LiveTVSection]
         @Binding var selectedSection: LiveTVSection?
         @Binding var layoutModeRaw: String
+        /// Fired when the user activates (clicks) a category.
+        var onCategoryActivated: () -> Void = {}
 
         /// Which rail control currently holds focus — drives the highlight.
         private enum RailItem: Hashable {
@@ -302,6 +319,14 @@
         }
 
         @FocusState private var focused: RailItem?
+        /// Whether focus is settled inside the rail. Cleared when focus
+        /// leaves, so it is already false — and rendered — before the engine
+        /// hands focus back. Entry lands on the geometrically nearest
+        /// category, not the selected one (`prefersDefaultFocus` can't steer
+        /// the UIKit hand-off), and the snap to the selection only runs a
+        /// commit later: without the pre-armed mask the wrong category
+        /// flashes fully styled for that first frame.
+        @State private var railOwnsFocus = false
 
         private let railWidth: CGFloat = 280
 
@@ -336,6 +361,22 @@
             }
             .frame(width: railWidth, alignment: .leading)
             .frame(maxHeight: .infinity, alignment: .top)
+            .onChange(of: focused) { oldValue, newValue in
+                guard let newValue else {
+                    // Focus left the rail — pre-arm the mask for re-entry.
+                    railOwnsFocus = false
+                    return
+                }
+                if case let .category(id) = newValue, oldValue == nil,
+                   let selectedID = selectedSection?.id, id != selectedID
+                {
+                    // Entry landed on the wrong category (masked, so it never
+                    // rendered styled) — snap to the selection.
+                    focused = .category(selectedID)
+                } else {
+                    railOwnsFocus = true
+                }
+            }
         }
 
         // MARK: View-mode switch
@@ -396,9 +437,13 @@
 
         private func categoryButton(_ section: LiveTVSection) -> some View {
             let isSelected = selectedSection?.id == section.id
-            let isItemFocused = focused == .category(section.id)
+            // The selected category is exempt: when entry lands there
+            // directly, it should read as focused from the first frame.
+            let suppressed = !railOwnsFocus && !isSelected
+            let isItemFocused = focused == .category(section.id) && !suppressed
             return Button {
                 selectedSection = section
+                onCategoryActivated()
             } label: {
                 HStack(spacing: 8) {
                     if let icon = section.icon {
@@ -423,7 +468,7 @@
                         .fill(categoryFill(isFocused: isItemFocused, isSelected: isSelected))
                 )
             }
-            .buttonStyle(TVCardButtonStyle(focusScale: 1.03))
+            .buttonStyle(TVCardButtonStyle(focusScale: 1.03, suppressFocusEffects: suppressed))
             .focused($focused, equals: .category(section.id))
             .animation(.easeOut(duration: 0.18), value: isItemFocused)
         }

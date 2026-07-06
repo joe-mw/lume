@@ -13,7 +13,17 @@ import SwiftUI
 extension HomeView {
     // MARK: - Trending
 
-    func loadTrending() async {
+    func loadTrending(cacheKey: String) async {
+        // Session cache: the tab's view (and this state) is torn down on every
+        // tvOS tab switch; a matching cache entry restores the hero carousel
+        // instantly instead of refetching TMDB and popping in again.
+        if let cached = HomeTrendingCache.shared.trendingEntry(for: cacheKey) {
+            heroItems = cached.heroes
+            trendingMovies = cached.movies
+            trendingSeries = cached.series
+            trendingState = .loaded
+            return
+        }
         let client = TMDBClient.shared
         guard client.isConfigured else {
             trendingState = .loaded
@@ -25,47 +35,59 @@ extension HomeView {
             async let tvTitles = client.trending(.tvShow)
             let (movies, tvSeries) = try await (movieTitles, tvTitles)
 
-            // Match the catalog in two batched queries instead of one indexed
-            // fetch per trending title.
-            let moviesByTmdbId = fetchMovies(tmdbIds: movies.map(\.id))
-            let seriesByTmdbId = fetchSeries(tmdbIds: tvSeries.map(\.id))
-
-            var movieItems: [HomeMediaItem] = []
-            var seriesItems: [HomeMediaItem] = []
-            var heroes: [HeroItem] = []
-            let maxCount = max(movies.count, tvSeries.count)
-            for index in 0 ..< maxCount {
-                if index < movies.count {
-                    let title = movies[index]
-                    if let movie = moviesByTmdbId[title.id] {
-                        movieItems.append(.movie(movie))
-                        heroes.append(.movie(
-                            movie,
-                            backdropURL: TMDBClient.backdropURL(title.backdropPath),
-                            overview: title.overview
-                        ))
-                    }
-                }
-                if index < tvSeries.count {
-                    let title = tvSeries[index]
-                    if let series = seriesByTmdbId[title.id] {
-                        seriesItems.append(.series(series))
-                        heroes.append(.series(
-                            series,
-                            backdropURL: TMDBClient.backdropURL(title.backdropPath),
-                            overview: title.overview
-                        ))
-                    }
-                }
-            }
+            let (movieItems, seriesItems, heroes) = matchTrending(movies: movies, tvSeries: tvSeries)
             trendingMovies = Array(movieItems.prefix(20))
             trendingSeries = Array(seriesItems.prefix(20))
             heroItems = Array(heroes.prefix(8))
             trendingState = .loaded
+            HomeTrendingCache.shared.storeTrending(
+                key: cacheKey, heroes: heroItems, movies: trendingMovies, series: trendingSeries
+            )
             await enrichHeroLogos()
         } catch {
             trendingState = .failed
         }
+    }
+
+    /// Matches the trending titles against the local catalog (two batched
+    /// queries instead of one indexed fetch per title) and interleaves the
+    /// hero candidates.
+    private func matchTrending(
+        movies: [TrendingTitle],
+        tvSeries: [TrendingTitle]
+    ) -> (movies: [HomeMediaItem], series: [HomeMediaItem], heroes: [HeroItem]) {
+        let moviesByTmdbId = fetchMovies(tmdbIds: movies.map(\.id))
+        let seriesByTmdbId = fetchSeries(tmdbIds: tvSeries.map(\.id))
+
+        var movieItems: [HomeMediaItem] = []
+        var seriesItems: [HomeMediaItem] = []
+        var heroes: [HeroItem] = []
+        let maxCount = max(movies.count, tvSeries.count)
+        for index in 0 ..< maxCount {
+            if index < movies.count {
+                let title = movies[index]
+                if let movie = moviesByTmdbId[title.id] {
+                    movieItems.append(.movie(movie))
+                    heroes.append(.movie(
+                        movie,
+                        backdropURL: TMDBClient.backdropURL(title.backdropPath),
+                        overview: title.overview
+                    ))
+                }
+            }
+            if index < tvSeries.count {
+                let title = tvSeries[index]
+                if let series = seriesByTmdbId[title.id] {
+                    seriesItems.append(.series(series))
+                    heroes.append(.series(
+                        series,
+                        backdropURL: TMDBClient.backdropURL(title.backdropPath),
+                        overview: title.overview
+                    ))
+                }
+            }
+        }
+        return (movieItems, seriesItems, heroes)
     }
 
     /// The TMDB trending feed carries no logo artwork, so a hero title shows
@@ -109,7 +131,11 @@ extension HomeView {
     /// Loads the connected user's Trakt watchlist and keeps only the titles the
     /// user actually owns in the active playlist — matched by TMDB id, the same
     /// way the trending rows work.
-    func loadWatchlist() async {
+    func loadWatchlist(cacheKey: String) async {
+        if let cached = HomeTrendingCache.shared.watchlistEntry(for: cacheKey) {
+            watchlist = cached
+            return
+        }
         guard trakt.isConnected else {
             watchlist = []
             return
@@ -133,6 +159,7 @@ extension HomeView {
             }
         }
         watchlist = Array(matched.prefix(20))
+        HomeTrendingCache.shared.storeWatchlist(key: cacheKey, items: watchlist)
     }
 
     // MARK: - Batched catalog lookup

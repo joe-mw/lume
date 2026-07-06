@@ -100,40 +100,57 @@ struct MainTabView: View {
         private func tabView(selection: Binding<AppTab>) -> some View {
             TabView(selection: selection) {
                 Tab(value: AppTab.search) {
-                    SearchView()
+                    activeOnly(.search, selection: selection.wrappedValue) { SearchView() }
                 } label: {
                     Image(systemName: "magnifyingglass")
                 }
 
                 Tab(value: AppTab.home) {
-                    HomeView()
+                    activeOnly(.home, selection: selection.wrappedValue) { HomeView() }
                 } label: {
                     Text("Home")
                 }
 
                 Tab(value: AppTab.movies) {
-                    MoviesView()
+                    activeOnly(.movies, selection: selection.wrappedValue) { MoviesView() }
                 } label: {
                     Text("Movies")
                 }
 
                 Tab(value: AppTab.series) {
-                    SeriesView()
+                    activeOnly(.series, selection: selection.wrappedValue) { SeriesView() }
                 } label: {
                     Text("Series")
                 }
 
                 Tab(value: AppTab.liveTV) {
-                    LiveTVView()
+                    activeOnly(.liveTV, selection: selection.wrappedValue) { LiveTVView() }
                 } label: {
                     Text("Live TV")
                 }
 
                 Tab(value: AppTab.settings) {
-                    SettingsView()
+                    activeOnly(.settings, selection: selection.wrappedValue) { SettingsView() }
                 } label: {
                     Image(systemName: "gear")
                 }
+            }
+        }
+
+        /// tvOS `TabView` keeps every *visited* tab's view hierarchy alive, and
+        /// each remote press triggers a focus/accessibility responder walk over
+        /// the whole window — a device trace showed those walks dominating the
+        /// EPG guide's scroll time once Home (hero + card rails) had been
+        /// visited. Rendering only the selected tab keeps the walked hierarchy
+        /// small; tab-local view state resets on switch, which is the usual
+        /// tvOS behaviour anyway (navigation paths live in `DeepLinkRouter`
+        /// and survive).
+        @ViewBuilder
+        private func activeOnly(_ tab: AppTab, selection: AppTab, @ViewBuilder content: () -> some View) -> some View {
+            if selection == tab {
+                content()
+            } else {
+                Color.clear
             }
         }
     #else

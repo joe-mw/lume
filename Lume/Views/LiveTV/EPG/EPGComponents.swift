@@ -127,10 +127,13 @@ struct EPGTimeRuler: View {
 // MARK: - Channel cell
 
 /// The frozen left-column entry for a channel: logo + name. Opaque so programme
-/// blocks scrolling underneath (on touch platforms) stay hidden.
+/// blocks scrolling underneath (on touch platforms) stay hidden. On tvOS the
+/// cell is focusable (the column is the guide's navigation hub) and adopts the
+/// system focus idiom: solid white fill, dark text.
 struct EPGChannelCell: View {
     let row: EPGChannelRow
     let metrics: EPGMetrics
+    var isFocused = false
 
     var body: some View {
         HStack(spacing: 10) {
@@ -139,12 +142,21 @@ struct EPGChannelCell: View {
                 .font(nameFont)
                 .lineLimit(2)
                 .frame(maxWidth: .infinity, alignment: .leading)
+            // Flag channels with an archive so the viewer knows the row
+            // offers replays — same idiom as the player's channel overlay.
+            if row.catchupCapable {
+                Image(systemName: "clock.arrow.circlepath")
+                    .font(catchupFont)
+                    .foregroundStyle(catchupColor)
+                    .accessibilityLabel(Text("Catch-up available"))
+            }
         }
         .padding(.horizontal, 12)
         #if os(tvOS)
+            .foregroundStyle(isFocused ? .black : .white)
             .frame(width: metrics.channelColumnWidth, height: metrics.rowHeight, alignment: .leading)
             .background(
-                .white.opacity(0.06),
+                isFocused ? AnyShapeStyle(.white) : AnyShapeStyle(.white.opacity(0.06)),
                 in: RoundedRectangle(cornerRadius: 14, style: .continuous)
             )
         #else
@@ -197,17 +209,38 @@ struct EPGChannelCell: View {
             .subheadline.weight(.medium)
         #endif
     }
+
+    private var catchupFont: Font {
+        #if os(tvOS)
+            .system(size: 18, weight: .semibold)
+        #else
+            .caption.weight(.semibold)
+        #endif
+    }
+
+    private var catchupColor: Color {
+        #if os(tvOS)
+            // The focused cell's white fill would swallow blue-on-white; the
+            // black foreground keeps the glyph legible in both states.
+            isFocused ? .black : .blue
+        #else
+            .blue
+        #endif
+    }
 }
 
 // MARK: - Programme block
 
 /// A single programme in the grid. Live programmes are tinted and carry a
-/// progress bar; past programmes are dimmed; gaps are inert.
+/// progress bar; past programmes are dimmed — except replayable ones (inside
+/// the channel's catch-up archive), which stay brighter and carry a replay
+/// glyph; gaps are inert.
 struct EPGProgramBlockView: View {
     let cell: EPGProgramCell
     let metrics: EPGMetrics
     let now: Date
     let isFocused: Bool
+    var canReplay = false
 
     private var isLive: Bool {
         cell.isLive(at: now)
@@ -232,9 +265,14 @@ struct EPGProgramBlockView: View {
                     .lineLimit(lineLimit)
 
                 if showsTime {
-                    Text(cell.start, format: .dateTime.hour().minute())
-                        .font(timeFont)
-                        .foregroundStyle(timeColor)
+                    HStack(spacing: 4) {
+                        if canReplay {
+                            Image(systemName: "clock.arrow.circlepath")
+                        }
+                        Text(cell.start, format: .dateTime.hour().minute())
+                    }
+                    .font(timeFont)
+                    .foregroundStyle(timeColor)
                 }
             }
             .padding(.horizontal, metrics.blockInset)
@@ -248,7 +286,7 @@ struct EPGProgramBlockView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(background)
         .clipShape(RoundedRectangle(cornerRadius: metrics.blockCornerRadius, style: .continuous))
-        .opacity(cell.isGap ? 0.5 : (isPast && !isFocused ? 0.55 : 1))
+        .opacity(cell.isGap ? 0.5 : (isPast && !isFocused ? (canReplay ? 0.8 : 0.55) : 1))
         .padding(.trailing, gap)
         .padding(.vertical, gap / 2)
         .frame(width: cell.width, height: metrics.rowHeight, alignment: .leading)
@@ -374,24 +412,30 @@ struct EPGBlockButtonStyle: ButtonStyle {
     let cell: EPGProgramCell
     let metrics: EPGMetrics
     let now: Date
+    var canReplay = false
 
     func makeBody(configuration: Configuration) -> some View {
-        StyleBody(cell: cell, metrics: metrics, now: now, isPressed: configuration.isPressed)
+        StyleBody(cell: cell, metrics: metrics, now: now, canReplay: canReplay, isPressed: configuration.isPressed)
     }
 
     private struct StyleBody: View {
         let cell: EPGProgramCell
         let metrics: EPGMetrics
         let now: Date
+        let canReplay: Bool
         let isPressed: Bool
         @Environment(\.isFocused) private var isFocused
 
         var body: some View {
-            let scale = isFocused ? 1.04 : (isPressed ? 0.97 : 1.0)
-            EPGProgramBlockView(cell: cell, metrics: metrics, now: now, isFocused: isFocused)
-                .shadow(color: .black.opacity(isFocused ? 0.4 : 0), radius: 10, y: 6)
+            let focused = isFocused
+            let scale = focused ? 1.04 : (isPressed ? 0.97 : 1.0)
+            // Radius 0 when unfocused: a transparent radius-10 shadow still
+            // sits in the render tree of every realized cell, and hundreds of
+            // shadowed cells is what made focus-scrolling stutter (#27).
+            EPGProgramBlockView(cell: cell, metrics: metrics, now: now, isFocused: focused, canReplay: canReplay)
+                .shadow(color: .black.opacity(0.4), radius: focused ? 10 : 0, y: focused ? 6 : 0)
                 .scaleEffect(scale)
-                .animation(.easeOut(duration: 0.18), value: isFocused)
+                .animation(.easeOut(duration: 0.18), value: focused)
                 .animation(.easeOut(duration: 0.12), value: isPressed)
         }
     }

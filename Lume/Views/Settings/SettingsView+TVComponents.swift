@@ -97,8 +97,6 @@ import SwiftUI
 
                 tvSupportSection
 
-                TVDiagnosticsSection()
-
                 tvCreditsSection
             }
         }

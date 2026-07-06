@@ -9,9 +9,9 @@
 //  private values, and writes a text file.
 //
 //  iOS gets a native Mail composer (falling back to the share sheet when Mail
-//  isn't set up); macOS uses ShareLink plus a mailto link. tvOS can neither
-//  attach a file nor compose mail, so its section (in the About pane) offers the
-//  toggle and points the user at the support address.
+//  isn't set up); macOS uses ShareLink plus a mailto link. tvOS has no
+//  diagnostics UI — it can neither attach a file nor compose mail, and the
+//  captured logs add little value there.
 //
 
 import SwiftUI
@@ -227,35 +227,6 @@ extension SettingsView {
     struct ExportedLog: Identifiable {
         let id = UUID()
         let url: URL
-    }
-
-#endif
-
-// MARK: - tvOS
-
-#if os(tvOS)
-
-    /// tvOS diagnostics live in the About pane: Apple TV can't attach a file or
-    /// compose mail, so the section offers the logging toggle and points the user
-    /// at the support address to describe the problem from another device.
-    struct TVDiagnosticsSection: View {
-        @AppStorage(DebugLogSettings.enabledKey) private var loggingEnabled = false
-
-        var body: some View {
-            VStack(alignment: .leading, spacing: 16) {
-                TVSettingsSectionLabel("Troubleshooting")
-
-                TVOptionToggleRow(title: "Debug Logging", isOn: $loggingEnabled)
-                    .onChange(of: loggingEnabled) { _, isOn in
-                        if isOn { DebugLogSettings.markEnabled(at: Date()) }
-                    }
-
-                Text("Turn on debug logging, reproduce the problem, then email us at \(SupportInfo.email) with a description. Logs help us diagnose issues on Apple TV.")
-                    .font(.system(size: 22))
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, TVSettingsMetrics.rowHPadding)
-            }
-        }
     }
 
 #endif

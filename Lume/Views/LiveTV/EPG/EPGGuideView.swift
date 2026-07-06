@@ -18,27 +18,54 @@ struct EPGGuideView: View {
     let scope: LiveChannelScope
     let playlistPrefix: String
     let onPlay: (LiveStream) -> Void
+    let onPlayCatchup: (LiveStream, EPGProgramCell) -> Void
+    /// tvOS: non-zero asks the guide to take real focus (a rail category was
+    /// just activated); `onDidClaimFocus` resets it once claimed.
+    let focusToken: Int
+    let onDidClaimFocus: () -> Void
 
     @Environment(\.modelContext) private var modelContext
     @Query private var streams: [LiveStream]
 
     private let timeline: EPGTimeline
 
-    /// The guide window's listings, grouped by channel and resolved in one
-    /// off-main fetch scoped to *this category's* channels (see `EPGGuideLoader`).
-    /// A view-context `@Query<EPGListing>` here instead pulled the entire guide
-    /// window across every playlist onto the main thread and re-fired on every
-    /// sync write — the freeze-on-open and stutter-while-scrolling this fixes.
-    @State private var listingsByChannel: [String: [EPGWindowListing]] = [:]
+    /// The guide window's programme cells, grouped by channel. Fetched *and*
+    /// tiled in one off-main pass scoped to *this category's* channels (see
+    /// `EPGGuideLoader` / `EPGGridBuilder.cells`). A view-context
+    /// `@Query<EPGListing>` here instead pulled the entire guide window across
+    /// every playlist onto the main thread and re-fired on every sync write —
+    /// the freeze-on-open and stutter-while-scrolling this fixes; tiling on
+    /// main was a further open-freeze on categories with hundreds of channels.
+    @State private var cellsByChannel: [String: [EPGProgramCell]] = [:]
+    /// Bumped whenever `cellsByChannel` is replaced. The scroller's subtrees
+    /// are `Equatable`-gated on it (plus the row count), so remote presses
+    /// never re-evaluate the grid — only actual data changes do.
+    @State private var dataVersion = 0
     /// Observed so the guide refreshes once a guide import settles.
     @State private var epgSync = EPGSyncService.shared
 
-    init(scope: LiveChannelScope, playlistPrefix: String, sort: ContentSortOption, onPlay: @escaping (LiveStream) -> Void) {
+    init(
+        scope: LiveChannelScope,
+        playlistPrefix: String,
+        sort: ContentSortOption,
+        onPlay: @escaping (LiveStream) -> Void,
+        onPlayCatchup: @escaping (LiveStream, EPGProgramCell) -> Void = { _, _ in },
+        focusToken: Int = 0,
+        onDidClaimFocus: @escaping () -> Void = {}
+    ) {
         self.scope = scope
         self.playlistPrefix = playlistPrefix
         self.onPlay = onPlay
+        self.onPlayCatchup = onPlayCatchup
+        self.focusToken = focusToken
+        self.onDidClaimFocus = onDidClaimFocus
 
-        let timeline = EPGTimeline.live(now: Date(), pointsPerMinute: EPGMetrics.current.pointsPerMinute)
+        // A longer reach into the past than the default: aired programmes on
+        // archive channels are replayable from here, so the window doubles as a
+        // catch-up browser.
+        let timeline = EPGTimeline.live(
+            now: Date(), pointsPerMinute: EPGMetrics.current.pointsPerMinute, hoursBehind: 12
+        )
         self.timeline = timeline
 
         _streams = Query(LiveChannelQuery.descriptor(for: scope, sort: sort))
@@ -58,7 +85,15 @@ struct EPGGuideView: View {
                     description: Text("This category has no channels")
                 )
             } else {
-                EPGGridScroller(rows: buildRows(for: channels), timeline: timeline, onPlay: onPlay)
+                EPGGridScroller(
+                    rows: buildRows(for: channels),
+                    timeline: timeline,
+                    dataVersion: dataVersion,
+                    onPlay: onPlay,
+                    onPlayCatchup: onPlayCatchup,
+                    focusToken: focusToken,
+                    onDidClaimFocus: onDidClaimFocus
+                )
             }
         }
         // Reload when the channel set changes or a guide import settles. Keyed on
@@ -69,377 +104,50 @@ struct EPGGuideView: View {
         }
     }
 
-    /// Tiles each scoped stream into a row from the pre-fetched window snapshots.
-    /// Runs only when the streams or loaded listings change — not on scroll.
+    /// Zips each scoped stream with its pre-tiled cells.
+    /// Runs only when the streams or loaded cells change — not on scroll.
     private func buildRows(for channels: [LiveStream]) -> [EPGChannelRow] {
-        EPGGridBuilder.rows(streams: channels, listingsByChannel: listingsByChannel, timeline: timeline)
+        EPGGridBuilder.rows(streams: channels, cellsByChannel: cellsByChannel, timeline: timeline)
     }
 
+    /// Loads the window's listings in two chunks: a few hours around "now"
+    /// first, so a large category paints its opening viewport immediately,
+    /// then the full window in the background. Each phase fetches *and* tiles
+    /// off-main and lands as one `dataVersion` bump.
     private func loadListings(for channels: [LiveStream]) async {
         let channelIds = Array(Set(channels.compactMap(\.epgChannelId).filter { !$0.isEmpty }))
         guard !channelIds.isEmpty else {
-            listingsByChannel = [:]
+            cellsByChannel = [:]
+            dataVersion += 1
             return
         }
         let container = modelContext.container
-        let windowStart = timeline.start
-        let windowEnd = timeline.end
-        listingsByChannel = await Task.detached(priority: .userInitiated) {
-            EPGGuideLoader.load(
-                container: container,
-                channelIds: channelIds,
-                windowStart: windowStart,
-                windowEnd: windowEnd
-            )
-        }.value
-    }
-}
+        let timeline = timeline
+        let now = Date()
 
-// MARK: - Selection
-
-/// A tapped programme, carried to the detail sheet.
-private struct EPGSelection: Identifiable {
-    let id: String
-    let stream: LiveStream
-    let cell: EPGProgramCell
-}
-
-// MARK: - Scroll sync
-
-/// Shared, observable scroll offset. Only the ruler and channel column observe
-/// it, so panning the grid updates *their* offset modifiers without re-running
-/// the (expensive) programme grid. See `skills/swiftui-performance.md`.
-@MainActor
-@Observable
-final class EPGScrollSync {
-    var offset = CGPoint.zero
-}
-
-// MARK: - Scroller
-
-/// Lays out the frozen panes (corner, ruler, channel column) beside the single
-/// scrollable grid. The same layout serves every platform: touch and pointer
-/// drag the grid, tvOS moves it by focus, and the frozen column sits *beside*
-/// the grid so a focused programme is never hidden behind it.
-private struct EPGGridScroller: View {
-    let rows: [EPGChannelRow]
-    let timeline: EPGTimeline
-    let onPlay: (LiveStream) -> Void
-
-    private let metrics = EPGMetrics.current
-    private let now = Date()
-
-    @State private var sync = EPGScrollSync()
-    @State private var selection: EPGSelection?
-    @State private var jumpToken = 0
-
-    var body: some View {
-        VStack(spacing: 0) {
-            // Header: corner + time ruler. Touch/pointer get a jump-to-now
-            // button in the corner; tvOS auto-scrolls to now on appear and has
-            // no use for a corner button it can't easily reach, so the corner
-            // is left empty there.
-            HStack(spacing: 0) {
-                corner
-                    .frame(width: metrics.channelColumnWidth, height: metrics.headerHeight)
-
-                EPGRulerStrip(timeline: timeline, metrics: metrics, now: now, sync: sync)
-            }
-            .frame(height: metrics.headerHeight)
-
-            #if !os(tvOS)
-                Divider()
-            #endif
-
-            // Body: frozen channel column + scrollable programme grid.
-            HStack(spacing: 0) {
-                EPGFrozenColumn(rows: rows, metrics: metrics, sync: sync)
-
-                EPGGrid(
-                    rows: rows,
-                    timeline: timeline,
-                    metrics: metrics,
-                    now: now,
-                    sync: sync,
-                    jumpToken: jumpToken,
-                    nowTarget: nowScrollTarget,
-                    onPlay: { row, _ in onPlay(row.stream) },
-                    onShowDetails: { row, cell in
-                        selection = EPGSelection(id: cell.id, stream: row.stream, cell: cell)
-                    }
+        func loadChunk(from start: Date, to end: Date) async -> [String: [EPGProgramCell]] {
+            await Task.detached(priority: .userInitiated) {
+                let listings = EPGGuideLoader.load(
+                    container: container,
+                    channelIds: channelIds,
+                    windowStart: start,
+                    windowEnd: end
                 )
-            }
+                return listings.mapValues { EPGGridBuilder.cells(for: $0, timeline: timeline) }
+            }.value
         }
-        #if !os(tvOS)
-        .background(.background)
-        #endif
-        .sheet(item: $selection) { selection in
-            EPGProgramDetailView(
-                stream: selection.stream,
-                cell: selection.cell,
-                now: now,
-                onPlay: { onPlay(selection.stream) }
-            )
-        }
-    }
 
-    /// Scroll offset that places "now" just inside the leading edge of the grid.
-    private var nowScrollTarget: CGFloat {
-        max(0, timeline.x(for: now) - 12)
-    }
+        let quickStart = max(timeline.start, now.addingTimeInterval(-2 * 3600))
+        let quickEnd = min(timeline.end, now.addingTimeInterval(6 * 3600))
+        let quick = await loadChunk(from: quickStart, to: quickEnd)
+        guard !Task.isCancelled else { return }
+        cellsByChannel = quick
+        dataVersion += 1
 
-    @ViewBuilder
-    private var corner: some View {
-        #if os(tvOS)
-            Color.clear
-        #else
-            Button {
-                jumpToken += 1
-            } label: {
-                Label("Now", systemImage: "smallcircle.filled.circle")
-                    .font(.subheadline.weight(.semibold))
-                    .labelStyle(.titleAndIcon)
-                    .foregroundStyle(Color.accentColor)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .overlay(alignment: .trailing) { Rectangle().fill(.quaternary).frame(width: 1) }
-        #endif
-    }
-}
-
-// MARK: - Ruler strip
-
-/// The time ruler, shifted to mirror the grid's horizontal offset. Observes the
-/// shared sync so only its offset updates while scrolling — the ruler's own
-/// content is built once.
-private struct EPGRulerStrip: View {
-    let timeline: EPGTimeline
-    let metrics: EPGMetrics
-    let now: Date
-    let sync: EPGScrollSync
-
-    var body: some View {
-        Color.clear
-            .frame(maxWidth: .infinity)
-            .frame(height: metrics.headerHeight)
-            .overlay(alignment: .leading) {
-                ZStack(alignment: .topLeading) {
-                    EPGTimeRuler(timeline: timeline, metrics: metrics)
-                    nowPill.offset(x: timeline.x(for: now))
-                }
-                .frame(width: timeline.totalWidth, alignment: .leading)
-                .offset(x: -sync.offset.x)
-            }
-            .clipped()
-    }
-
-    private var nowPill: some View {
-        Text("Now")
-            .font(.caption2.weight(.bold))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 2)
-            .background(Capsule().fill(Color.red))
-            .fixedSize()
-            .alignmentGuide(.leading) { $0.width / 2 }
-    }
-}
-
-// MARK: - Frozen column
-
-/// The channel column, shifted to mirror the grid's vertical offset. Built once;
-/// only the offset modifier changes as the grid scrolls.
-private struct EPGFrozenColumn: View {
-    let rows: [EPGChannelRow]
-    let metrics: EPGMetrics
-    let sync: EPGScrollSync
-
-    var body: some View {
-        Color.clear
-            .frame(width: metrics.channelColumnWidth)
-            .frame(maxHeight: .infinity)
-            .overlay(alignment: .top) {
-                ColumnCells(rows: rows, metrics: metrics)
-                    .offset(y: -sync.offset.y)
-            }
-            .clipped()
-        #if !os(tvOS)
-            // The channel cards on tvOS already read as a separate rail, so
-            // a vertical rule would only add visual weight.
-            .overlay(alignment: .trailing) { Rectangle().fill(.quaternary).frame(width: 1) }
-        #endif
-    }
-
-    private struct ColumnCells: View {
-        let rows: [EPGChannelRow]
-        let metrics: EPGMetrics
-
-        var body: some View {
-            VStack(spacing: metrics.rowSpacing) {
-                ForEach(rows) { row in
-                    EPGChannelCell(row: row, metrics: metrics)
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Grid
-
-/// The single scrollable surface. Owns its scroll position (used only for
-/// programmatic jump-to-now) and publishes its offset to the shared sync. Its
-/// programme rows live in a separate child so the per-frame scroll-position
-/// write-back never rebuilds them.
-private struct EPGGrid: View {
-    let rows: [EPGChannelRow]
-    let timeline: EPGTimeline
-    let metrics: EPGMetrics
-    let now: Date
-    let sync: EPGScrollSync
-    let jumpToken: Int
-    let nowTarget: CGFloat
-    let onPlay: (EPGChannelRow, EPGProgramCell) -> Void
-    let onShowDetails: (EPGChannelRow, EPGProgramCell) -> Void
-
-    @State private var position = ScrollPosition()
-    @State private var didInitialScroll = false
-    /// A combined horizontal+vertical ScrollView centers content that is shorter
-    /// than the viewport. The frozen channel column pins its cells to the top, so
-    /// without this the two panes drift apart when a category has only a few
-    /// channels. Pinning the rows to at least the viewport height (top-aligned)
-    /// keeps them level on every platform.
-    @State private var viewportHeight: CGFloat = 0
-
-    var body: some View {
-        ScrollView([.horizontal, .vertical]) {
-            EPGRows(rows: rows, timeline: timeline, metrics: metrics, now: now, onPlay: onPlay, onShowDetails: onShowDetails)
-                .frame(minHeight: viewportHeight, alignment: .topLeading)
-        }
-        .background {
-            GeometryReader { geo in
-                Color.clear
-                    .onAppear { viewportHeight = geo.size.height }
-                    .onChange(of: geo.size.height) { viewportHeight = $1 }
-            }
-        }
-        .scrollPosition($position)
-        .onScrollGeometryChange(for: CGPoint.self) { $0.contentOffset } action: { _, new in
-            sync.offset = CGPoint(x: max(0, new.x), y: max(0, new.y))
-        }
-        #if os(tvOS)
-        .focusSection()
-        #endif
-        .onAppear {
-            guard !didInitialScroll else { return }
-            didInitialScroll = true
-            position.scrollTo(x: nowTarget)
-        }
-        .onChange(of: jumpToken) {
-            withAnimation(.easeInOut(duration: 0.4)) {
-                position.scrollTo(x: nowTarget)
-            }
-        }
-    }
-}
-
-/// The programme rows plus the now line. Free of any scroll-offset dependency,
-/// so it builds once and lazily loads rows as they scroll into view.
-private struct EPGRows: View {
-    let rows: [EPGChannelRow]
-    let timeline: EPGTimeline
-    let metrics: EPGMetrics
-    let now: Date
-    let onPlay: (EPGChannelRow, EPGProgramCell) -> Void
-    let onShowDetails: (EPGChannelRow, EPGProgramCell) -> Void
-
-    private var contentHeight: CGFloat {
-        guard !rows.isEmpty else { return 0 }
-        return CGFloat(rows.count) * metrics.rowHeight + CGFloat(rows.count - 1) * metrics.rowSpacing
-    }
-
-    var body: some View {
-        LazyVStack(spacing: metrics.rowSpacing) {
-            ForEach(rows) { row in
-                EPGProgramStrip(
-                    row: row,
-                    metrics: metrics,
-                    now: now,
-                    contentWidth: timeline.totalWidth,
-                    onPlay: { cell in onPlay(row, cell) },
-                    onShowDetails: { cell in onShowDetails(row, cell) }
-                )
-            }
-        }
-        .frame(width: timeline.totalWidth, alignment: .topLeading)
-        .overlay(alignment: .topLeading) {
-            TimelineView(.everyMinute) { context in
-                EPGNowIndicator(height: contentHeight)
-                    .offset(x: timeline.x(for: context.date) - 4.5)
-                    .allowsHitTesting(false)
-            }
-        }
-    }
-}
-
-// MARK: - Programme strip
-
-/// A single channel's row of programme blocks. Programmes are buttons; gaps are
-/// inert. A quick click plays the channel; a long press opens the programme
-/// detail sheet.
-private struct EPGProgramStrip: View {
-    let row: EPGChannelRow
-    let metrics: EPGMetrics
-    let now: Date
-    /// The full timeline width. Pinned on the lazy stack so the row reserves its
-    /// whole horizontal extent up front — the scroll region and the "now" line
-    /// stay correct even before trailing (off-screen) blocks are realized.
-    let contentWidth: CGFloat
-    let onPlay: (EPGProgramCell) -> Void
-    let onShowDetails: (EPGProgramCell) -> Void
-
-    var body: some View {
-        // Lazy so only the handful of on-screen programmes per row are built and
-        // made focusable. An eager HStack tiles the entire ~25-hour window —
-        // hundreds of shadowed, focusable buttons the tvOS focus engine must
-        // track every frame, which is what made focus-scrolling stutter.
-        LazyHStack(spacing: 0) {
-            ForEach(row.cells) { cell in
-                if cell.isGap {
-                    // A channel with no EPG is a single full-width gap. Gaps must
-                    // still be focusable, playable buttons or the tvOS focus
-                    // engine has nothing to land on and the channel can't be
-                    // selected at all (#27). There's no programme to detail, so
-                    // gaps skip the long-press detail sheet.
-                    Button {
-                        onPlay(cell)
-                    } label: {
-                        Color.clear.frame(width: cell.width, height: metrics.rowHeight)
-                    }
-                    .buttonStyle(EPGBlockButtonStyle(cell: cell, metrics: metrics, now: now))
-                    .accessibilityLabel(Text(row.name))
-                    .accessibilityHint(Text("No programme information"))
-                } else {
-                    Button {
-                        onPlay(cell)
-                    } label: {
-                        Color.clear.frame(width: cell.width, height: metrics.rowHeight)
-                    }
-                    .buttonStyle(EPGBlockButtonStyle(cell: cell, metrics: metrics, now: now))
-                    // Long press (press-and-hold Select on tvOS) opens the detail
-                    // sheet. The gesture takes the press once it recognizes, so a
-                    // hold doesn't also fire the button's play action.
-                    .onLongPressGesture(minimumDuration: 0.4) {
-                        onShowDetails(cell)
-                    }
-                    .accessibilityLabel(Text(cell.title))
-                    .accessibilityHint(Text("\(cell.start, format: .dateTime.hour().minute()) to \(cell.end, format: .dateTime.hour().minute()) on \(row.name)"))
-                    .accessibilityAction(named: Text("Show Details")) { onShowDetails(cell) }
-                }
-            }
-        }
-        .frame(width: contentWidth, height: metrics.rowHeight, alignment: .leading)
+        let full = await loadChunk(from: timeline.start, to: timeline.end)
+        guard !Task.isCancelled else { return }
+        cellsByChannel = full
+        dataVersion += 1
     }
 }
 
