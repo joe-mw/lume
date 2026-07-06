@@ -55,8 +55,8 @@ Apple's native AVPlayer.
 
 It is built entirely in **SwiftUI** with a single, platform-adaptive codebase that
 runs on iPhone, iPad, Mac, Apple TV, and Apple Vision Pro. Content is enriched with
-artwork, cast, trailers, and ratings from **TMDB** and **OMDb** (IMDb, Rotten Tomatoes,
-Metacritic), and your viewing activity can be scrobbled to **Trakt**.
+artwork, cast, trailers, and ratings from **TMDB** and **MDBList** (IMDb, Rotten Tomatoes,
+Metacritic, Trakt, Letterboxd), and your viewing activity can be scrobbled to **Trakt**.
 
 > **Note** — Lume is a player only. It ships with **no channels, streams, or content**
 > of its own. You bring your own Xtream Codes credentials or M3U playlist from a
@@ -79,7 +79,7 @@ Metacritic), and your viewing activity can be scrobbled to **Trakt**.
 #### 🎬 Movies & Series
 - Category-based browsing with poster grids and horizontal rails
 - Rich detail views: plot, rating, cast, director, genre, runtime, release date
-- **External ratings** from IMDb, Rotten Tomatoes, and Metacritic (via OMDb)
+- **External ratings** from IMDb, Rotten Tomatoes (critics & audience), Metacritic, Trakt, Letterboxd, and TMDB (via MDBList)
 - Season / episode navigation with **per-episode progress**
 - TMDB-enriched artwork, logos, and trailers
 - Quality / source picker when multiple streams are available
@@ -180,7 +180,7 @@ Lume follows a clean, layered SwiftUI architecture:
 │    ├─ M3UClient/Parser    M3U/M3U8 playlist import       │
 │    ├─ StalkerClient       Stalker portal (MAC auth)       │
 │    ├─ TMDBClient          metadata / artwork enrichment   │
-│    ├─ OMDBClient          IMDb / RT / Metacritic ratings  │
+│    ├─ MDBListClient       aggregator ratings (IMDb, RT, …)│
 │    ├─ TraktService        OAuth device flow + scrobbling  │
 │    ├─ ContentSyncManager  background catalog indexing     │
 │    └─ ImagePipeline        cached async image loading     │
@@ -197,7 +197,7 @@ Lume follows a clean, layered SwiftUI architecture:
 - **Persistence** — SwiftData (8 model types, local catalog index)
 - **Playback** — VLCKit · KSPlayer (FFmpegKit) · AVPlayer
 - **Networking** — `URLSession` with typed endpoints, retry/backoff, and error classification
-- **Integrations** — TMDB (metadata), OMDb (ratings), Trakt (device OAuth + scrobbling)
+- **Integrations** — TMDB (metadata), MDBList (ratings), Trakt (device OAuth + scrobbling)
 - **Localization** — 9 languages via String Catalogs (English, German, French, Spanish, Italian, Portuguese, Japanese, Korean, Simplified Chinese)
 
 **Dependencies** (Swift Package Manager)
@@ -218,7 +218,7 @@ Lume/
 ├── ContentView.swift        Root view / login gate
 ├── Models/                  SwiftData models & sort options
 ├── Services/
-│   ├── Network/             Xtream, M3U, TMDB, OMDb, Trakt clients
+│   ├── Network/             Xtream, M3U, TMDB, MDBList, Trakt clients
 │   ├── Sync/                Content sync manager & progress
 │   ├── Player/              Playable media, settings, history, NextUp
 │   └── Images/              Image cache & pipeline
@@ -249,7 +249,7 @@ The easiest way to use Lume is to [**download it from the App Store**](https://a
 - An **Xtream Codes** account (server URL, username, password), an **M3U/M3U8 playlist URL**, or a **Stalker portal** (portal URL + MAC address)
 - *(Optional)* a [TMDB](https://www.themoviedb.org/settings/api) API access token for metadata enrichment
 - *(Optional)* a [Trakt](https://trakt.tv/oauth/applications) application for scrobbling
-- *(Optional)* an [OMDb](https://www.omdbapi.com/apikey.aspx) API key for IMDb / Rotten Tomatoes / Metacritic ratings
+- *(Optional)* an [MDBList](https://mdblist.com/preferences/) API key for IMDb / Rotten Tomatoes / Metacritic / Trakt / Letterboxd ratings
 - *(Optional)* an [IntroDB](https://introdb.app) API key for intro / recap skip windows
 
 ### Build & run
@@ -276,7 +276,7 @@ simulator-only build. Don't commit these personal signing changes back to the re
 
 ## Configuration
 
-Optional integrations (TMDB, OMDb, IntroDB, and Trakt) are configured through a
+Optional integrations (TMDB, MDBList, IntroDB, and Trakt) are configured through a
 repo-root `.env` file. The `Scripts/inject-env.sh` build phase reads it and injects the
 values into the built app's `Info.plist` — keeping secrets out of source control. `.env`
 is gitignored, and if it is missing the dependent features simply degrade gracefully
@@ -292,8 +292,8 @@ cp .env.example .env
 # TMDB — metadata, artwork & trailers
 TMDB_ACCESS_TOKEN=your_tmdb_v4_read_access_token
 
-# OMDb — IMDb, Rotten Tomatoes & Metacritic ratings
-OMDB_API_KEY=your_omdb_api_key
+# MDBList — IMDb, Rotten Tomatoes, Metacritic, Trakt & Letterboxd ratings
+MDBLIST_API_KEY=your_mdblist_api_key
 
 # IntroDB — intro / recap skip windows (read access works unauthenticated)
 INTRO_DB_API_KEY=your_introdb_api_key
@@ -317,7 +317,7 @@ and UI automation (**XCTest**).
 
 | Target | Framework | Coverage |
 |---|---|---|
-| `LumeTests` | Swift Testing | DTO decoding, URL building, API client & retry, models, sort options, sync progress & content sync, playable media, player settings, Trakt token store, content organizing, **M3U parser/classifier/sync**, **OMDb client**, **Next Episode resolver**, **Gzip file streaming** |
+| `LumeTests` | Swift Testing | DTO decoding, URL building, API client & retry, models, sort options, sync progress & content sync, playable media, player settings, Trakt token store, content organizing, **M3U parser/classifier/sync**, **MDBList client**, **Next Episode resolver**, **Gzip file streaming** |
 | `LumeUITests` | XCTest | App launch & performance, login flow, tab navigation, playlist detail, settings, **M3U playlist import flow** |
 
 Run the full suite:

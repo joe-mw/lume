@@ -310,7 +310,7 @@ nonisolated struct TMDBTitleDetails {
     var videos: [TitleVideo]
     /// Relative path to the title's wordmark logo (transparent PNG), if any.
     var logoPath: String?
-    /// IMDb id (e.g. `tt3896198`), used to query OMDb for aggregator ratings.
+    /// IMDb id (e.g. `tt3896198`), used for IntroDB intro/recap-skip lookups.
     var imdbId: String?
 
     /// Collection this movie belongs to (only for movies, nil for series).

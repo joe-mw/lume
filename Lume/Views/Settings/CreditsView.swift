@@ -68,9 +68,10 @@
                         Label("The Movie Database (TMDB)", systemImage: "film")
                     }
                 }
-                if let url = CreditsInfo.omdbURL {
+                if let url = CreditsInfo.mdblistURL {
                     Link(destination: url) {
-                        Label("OMDb API", systemImage: "star")
+                        // Brand name — never localized.
+                        Label { Text(verbatim: "MDBList") } icon: { Image(systemName: "star") }
                     }
                 }
                 if let url = CreditsInfo.traktURL {

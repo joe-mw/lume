@@ -2583,54 +2583,54 @@
         }
       }
     },
-    "Artwork, ratings and details are provided by TMDB, the OMDb API, and Trakt, and intro/recap skip data by IntroDB. This product uses the TMDB API but is not endorsed or certified by TMDB." : {
+    "Artwork, ratings and details are provided by TMDB, MDBList, and Trakt, and intro/recap skip data by IntroDB. This product uses the TMDB API but is not endorsed or certified by TMDB." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bilder, Bewertungen und Details werden von TMDB, der OMDb-API und Trakt bereitgestellt, Daten zum Überspringen von Intros/Rückblicken von IntroDB. Dieses Produkt nutzt die TMDB-API, wird aber von TMDB weder unterstützt noch zertifiziert."
+            "value" : "Bilder, Bewertungen und Details werden von TMDB, MDBList und Trakt bereitgestellt, Daten zum Überspringen von Intros/Rückblicken von IntroDB. Dieses Produkt nutzt die TMDB-API, wird aber von TMDB weder unterstützt noch zertifiziert."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Las ilustraciones, las valoraciones y los detalles los proporcionan TMDB, la API de OMDb y Trakt, y los datos para saltar introducciones/resúmenes, IntroDB. Este producto utiliza la API de TMDB, pero no cuenta con el respaldo ni la certificación de TMDB."
+            "value" : "Las ilustraciones, las valoraciones y los detalles los proporcionan TMDB, MDBList y Trakt, y los datos para saltar introducciones/resúmenes, IntroDB. Este producto utiliza la API de TMDB, pero no cuenta con el respaldo ni la certificación de TMDB."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Les visuels, les notes et les détails sont fournis par TMDB, l’API OMDb et Trakt, et les données de saut d’intro/résumé par IntroDB. Ce produit utilise l’API TMDB, mais n’est ni approuvé ni certifié par TMDB."
+            "value" : "Les visuels, les notes et les détails sont fournis par TMDB, MDBList et Trakt, et les données de saut d’intro/résumé par IntroDB. Ce produit utilise l’API TMDB, mais n’est ni approuvé ni certifié par TMDB."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Immagini, valutazioni e dettagli sono forniti da TMDB, dall'API di OMDb e da Trakt, e i dati per saltare intro/riepiloghi da IntroDB. Questo prodotto utilizza l'API di TMDB ma non è approvato o certificato da TMDB."
+            "value" : "Immagini, valutazioni e dettagli sono forniti da TMDB, da MDBList e da Trakt, e i dati per saltare intro/riepiloghi da IntroDB. Questo prodotto utilizza l'API di TMDB ma non è approvato o certificato da TMDB."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "アートワーク、評価、詳細情報はTMDB、OMDb API、Traktによって、イントロ/振り返りのスキップデータはIntroDBによって提供されています。本製品はTMDB APIを使用していますが、TMDBによる承認や認定を受けたものではありません。"
+            "value" : "アートワーク、評価、詳細情報はTMDB、MDBList、Traktによって、イントロ/振り返りのスキップデータはIntroDBによって提供されています。本製品はTMDB APIを使用していますが、TMDBによる承認や認定を受けたものではありません。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "아트워크, 평점, 세부 정보는 TMDB, OMDb API, Trakt에서 제공하며, 인트로/요약 건너뛰기 데이터는 IntroDB에서 제공합니다. 이 제품은 TMDB API를 사용하지만 TMDB의 보증이나 인증을 받지 않았습니다."
+            "value" : "아트워크, 평점, 세부 정보는 TMDB, MDBList, Trakt에서 제공하며, 인트로/요약 건너뛰기 데이터는 IntroDB에서 제공합니다. 이 제품은 TMDB API를 사용하지만 TMDB의 보증이나 인증을 받지 않았습니다."
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "As imagens, avaliações e detalhes são fornecidos pelo TMDB, pela API do OMDb e pelo Trakt, e os dados de pular introdução/recapitulação pelo IntroDB. Este produto usa a API do TMDB, mas não é endossado nem certificado pelo TMDB."
+            "value" : "As imagens, avaliações e detalhes são fornecidos pelo TMDB, pelo MDBList e pelo Trakt, e os dados de pular introdução/recapitulação pelo IntroDB. Este produto usa a API do TMDB, mas não é endossado nem certificado pelo TMDB."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "封面、评分和详细信息由TMDB、OMDb API和Trakt提供，片头/回顾跳过数据由IntroDB提供。本产品使用TMDB API，但未获得TMDB的认可或认证。"
+            "value" : "封面、评分和详细信息由TMDB、MDBList和Trakt提供，片头/回顾跳过数据由IntroDB提供。本产品使用TMDB API，但未获得TMDB的认可或认证。"
           }
         }
       }
@@ -3742,54 +3742,54 @@
         }
       }
     },
-    "Cached posters, cast, trailers and ratings from TMDB and OMDb will be removed. They are re-fetched when you open a movie or show." : {
+    "Cached posters, cast, trailers and ratings from TMDB and MDBList will be removed. They are re-fetched when you open a movie or show." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zwischengespeicherte Poster, Besetzung, Trailer und Bewertungen von TMDB und OMDb werden entfernt. Sie werden erneut geladen, wenn du einen Film oder eine Serie öffnest."
+            "value" : "Zwischengespeicherte Poster, Besetzung, Trailer und Bewertungen von TMDB und MDBList werden entfernt. Sie werden erneut geladen, wenn du einen Film oder eine Serie öffnest."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Se eliminarán los pósteres, repartos, tráilers y valoraciones en caché de TMDB y OMDb. Se vuelven a obtener cuando abres una película o serie."
+            "value" : "Se eliminarán los pósteres, repartos, tráilers y valoraciones en caché de TMDB y MDBList. Se vuelven a obtener cuando abres una película o serie."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Les affiches, distributions, bandes-annonces et notes en cache provenant de TMDB et OMDb seront supprimées. Elles sont récupérées à nouveau lorsque vous ouvrez un film ou une émission."
+            "value" : "Les affiches, distributions, bandes-annonces et notes en cache provenant de TMDB et MDBList seront supprimées. Elles sont récupérées à nouveau lorsque vous ouvrez un film ou une émission."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Le locandine, il cast, i trailer e le valutazioni in cache da TMDB e OMDb verranno rimossi. Vengono recuperati di nuovo quando apri un film o una serie."
+            "value" : "Le locandine, il cast, i trailer e le valutazioni in cache da TMDB e MDBList verranno rimossi. Vengono recuperati di nuovo quando apri un film o una serie."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "TMDBとOMDbからキャッシュされたポスター、キャスト、予告編、評価が削除されます。映画や番組を開いたときに再取得されます。"
+            "value" : "TMDBとMDBListからキャッシュされたポスター、キャスト、予告編、評価が削除されます。映画や番組を開いたときに再取得されます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "TMDB와 OMDb에서 가져온 캐시된 포스터, 출연진, 예고편, 평점이 제거됩니다. 영화나 프로그램을 열면 다시 가져옵니다."
+            "value" : "TMDB와 MDBList에서 가져온 캐시된 포스터, 출연진, 예고편, 평점이 제거됩니다. 영화나 프로그램을 열면 다시 가져옵니다."
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pôsteres, elenco, trailers e avaliações em cache do TMDB e do OMDb serão removidos. Eles são buscados novamente quando você abre um filme ou programa."
+            "value" : "Pôsteres, elenco, trailers e avaliações em cache do TMDB e do MDBList serão removidos. Eles são buscados novamente quando você abre um filme ou programa."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "来自TMDB和OMDb的缓存海报、演员、预告片和评分将被移除。打开电影或节目时会重新获取。"
+            "value" : "来自TMDB和MDBList的缓存海报、演员、预告片和评分将被移除。打开电影或节目时会重新获取。"
           }
         }
       }
@@ -19262,58 +19262,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "最早优先"
-          }
-        }
-      }
-    },
-    "OMDb API" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "OMDb API"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "API de OMDb"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "API OMDb"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "API OMDb"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "OMDb API"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "OMDb API"
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "API do OMDb"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "OMDb API"
           }
         }
       }

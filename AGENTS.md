@@ -51,7 +51,7 @@ Lume/
 ├── LumeApp.swift            App entry + SwiftData containers
 ├── Models/                  SwiftData @Model types (Playlist, LiveStream, Movie, Series, …)
 ├── Services/
-│   ├── Network/             XtreamClient, M3UClient, TMDBClient, OMDbClient, TraktService
+│   ├── Network/             XtreamClient, M3UClient, TMDBClient, MDBListClient, TraktService
 │   ├── Sync/                ContentSyncManager (background catalog indexing + enrichment)
 │   ├── Player/              PlayerSettings, PlayerHistory, NextUp resolver
 │   └── Images/              CachedAsyncImage, ImagePipeline
@@ -106,7 +106,7 @@ SwiftFormat + SwiftLint run as errors. Notable: `String(decoding:)` is banned; `
 | Service | Auth | Notes |
 |---------|------|-------|
 | TMDB | Bearer token (`.env`) | Metadata, artwork, trailers |
-| OMDb | API key (`.env`) | IMDb / RT / Metacritic ratings |
+| MDBList | API key (`.env`) | IMDb / RT / Metacritic / Trakt / Letterboxd ratings |
 | Trakt | Device OAuth (Keychain) | Scrobbling; no web view — works on tvOS |
 
 ---

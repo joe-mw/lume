@@ -32,7 +32,7 @@ not — and that line is yours to respect.
 | A native player UI for Apple platforms | A source of channels, streams, or media |
 | A client for **your** Xtream Codes / M3U credentials | An IPTV subscription or content provider |
 | Open-source software you can read, build, and modify | A service that resells or rebroadcasts content |
-| A tool that enriches metadata via public APIs (TMDB, OMDb, Trakt) | A directory or aggregator of streams |
+| A tool that enriches metadata via public APIs (TMDB, MDBList, Trakt) | A directory or aggregator of streams |
 
 Lume **bundles no content and pre-configures no providers.** Every channel, movie,
 or series you see comes exclusively from credentials or playlists **you** supply.

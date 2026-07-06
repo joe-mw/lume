@@ -4,7 +4,7 @@
 //
 //  Shows how much content is stored (movies, series, episodes, channels) and
 //  how much disk the catalog and image cache occupy, with actions to clear the
-//  image cache and the cached TMDB/OMDb metadata. iOS/macOS render a grouped
+//  image cache and the cached TMDB/MDBList metadata. iOS/macOS render a grouped
 //  list; tvOS renders flat sections that drop into the Settings detail pane.
 //
 
@@ -307,7 +307,7 @@ private extension View {
             Button("Clear", role: .destructive, action: onClearMetadata)
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Cached posters, cast, trailers and ratings from TMDB and OMDb will be removed. They are re-fetched when you open a movie or show.")
+            Text("Cached posters, cast, trailers and ratings from TMDB and MDBList will be removed. They are re-fetched when you open a movie or show.")
         }
     }
 

@@ -61,16 +61,16 @@ final class Series {
     @Relationship(deleteRule: .cascade, inverse: \CastMember.series)
     var castMembers: [CastMember] = []
 
-    // MARK: External ratings (OMDb, keyed by IMDb id — lazy-fetched on detail)
+    // MARK: External ratings (MDBList, keyed by TMDB id — lazy-fetched on detail)
 
-    /// IMDb id (e.g. `tt0944947`), resolved from TMDB's external ids. Required
-    /// to query OMDb for aggregator ratings.
+    /// IMDb id (e.g. `tt0944947`), resolved from TMDB's external ids. Used for
+    /// IntroDB intro/recap-skip lookups.
     var imdbId: String?
-    /// Encoded `[ExternalRating]` blob (IMDb / Rotten Tomatoes / Metacritic).
-    /// A `Data` blob for the same reason as `trailersData`. Access through
-    /// `externalRatings`.
+    /// Encoded `[ExternalRating]` blob (IMDb / Rotten Tomatoes / Metacritic /
+    /// Trakt / Letterboxd / TMDB). A `Data` blob for the same reason as
+    /// `trailersData`. Access through `externalRatings`.
     var externalRatingsData: Data?
-    /// When ratings were last fetched from OMDb; nil means never.
+    /// When ratings were last fetched from MDBList; nil means never.
     var ratingsEnrichedAt: Date?
 
     // MARK: Content index (built slowly in the background by ContentIndexer)
