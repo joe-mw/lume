@@ -28691,58 +28691,6 @@
         }
       }
     },
-    "Turn on debug logging, reproduce the problem, then email us at %@ with a description. Logs help us diagnose issues on Apple TV." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aktiviere die Debug-Protokollierung, reproduziere das Problem und schreibe uns mit einer Beschreibung an %@. Protokolle helfen uns, Probleme auf Apple TV zu diagnostizieren."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Activa el registro de depuración, reproduce el problema y luego escríbenos a %@ con una descripción. Los registros nos ayudan a diagnosticar problemas en el Apple TV."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Activez la journalisation de débogage, reproduisez le problème, puis écrivez-nous à %@ avec une description. Les journaux nous aident à diagnostiquer les problèmes sur Apple TV."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Attiva il registro di debug, riproduci il problema, quindi scrivici a %@ con una descrizione. I registri ci aiutano a diagnosticare i problemi su Apple TV."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "デバッグログを有効にして問題を再現し、説明を添えて %@ までメールしてください。ログはApple TVでの問題診断に役立ちます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "디버그 로깅을 켜고 문제를 재현한 다음 설명과 함께 %@(으)로 이메일을 보내주세요. 로그는 Apple TV의 문제를 진단하는 데 도움이 됩니다."
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ative o registro de depuração, reproduza o problema e escreva para %@ com uma descrição. Os registros nos ajudam a diagnosticar problemas na Apple TV."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "打开调试日志，重现问题，然后发送邮件至 %@ 并附上说明。日志有助于我们诊断 Apple TV 上的问题。"
-          }
-        }
-      }
-    },
     "Turn sections on or off and reorder them. Each appears on Home only when it has something to show. \"For You\" is built on-device from your library and what you watch." : {
       "localizations" : {
         "de" : {
