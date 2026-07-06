@@ -52,15 +52,24 @@
     /// Generic card lift used by episode, poster and cast cards.
     struct TVCardButtonStyle: ButtonStyle {
         var focusScale: CGFloat = 1.08
+        /// Hides the focus lift while keeping real focus — used by the
+        /// category rail to mask the engine's transient landing before it
+        /// snaps focus to the selected category.
+        var suppressFocusEffects = false
 
         func makeBody(configuration: Configuration) -> some View {
-            StyleBody(configuration: configuration, focusScale: focusScale)
+            StyleBody(configuration: configuration, focusScale: focusScale, suppressFocusEffects: suppressFocusEffects)
         }
 
         struct StyleBody: View {
             let configuration: ButtonStyleConfiguration
             let focusScale: CGFloat
-            @Environment(\.isFocused) private var isFocused
+            var suppressFocusEffects = false
+            @Environment(\.isFocused) private var isFocusedRaw
+
+            private var isFocused: Bool {
+                isFocusedRaw && !suppressFocusEffects
+            }
 
             var body: some View {
                 let pressed = configuration.isPressed
