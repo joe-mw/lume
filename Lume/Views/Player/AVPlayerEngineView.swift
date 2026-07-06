@@ -96,8 +96,11 @@ struct AVPlayerEngineView: View {
                 .ignoresSafeArea()
 
             // Always-present transparent layer that reliably catches taps over
-            // the player surface, mirroring the VLCKit/KSPlayer hosts.
+            // the player surface, mirroring the VLCKit/KSPlayer hosts. Full
+            // bleed: the host keeps the overlays inside the safe area on iOS,
+            // but a tap at the very edges should still summon the controls.
             tapCatcher
+                .ignoresSafeArea()
 
             if isControlsVisible, !loadFailed {
                 controlsOverlay

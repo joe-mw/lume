@@ -174,8 +174,19 @@ struct FullScreenPlayerView: View {
         ZStack(alignment: .topLeading) {
             Color.black.ignoresSafeArea()
 
-            playerView
-                .ignoresSafeArea()
+            // The engines pin their video surfaces edge-to-edge themselves, so
+            // only strip the safe area from the whole engine view (controls
+            // included) on platforms without system chrome. On iOS the
+            // controls must respect it: the status bar re-appears over the
+            // player whenever a system sheet is up (e.g. the AirPlay picker),
+            // and a top bar laid out in the status-bar / Dynamic-Island region
+            // collides with the clock and cellular indicators.
+            #if os(iOS)
+                playerView
+            #else
+                playerView
+                    .ignoresSafeArea()
+            #endif
 
             // VLCKit and KSPlayer ship their own close button inside the
             // auto-hiding controls overlay — showing a second one here means

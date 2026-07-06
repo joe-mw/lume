@@ -109,8 +109,11 @@ struct VLCPlayerEngineView: View {
             // Always-present transparent layer that reliably catches taps
             // over the VLC render surface. A UIView/NSView representable can
             // otherwise swallow touches before SwiftUI's gesture sees them,
-            // leaving no way to summon the controls once they auto-hide.
+            // leaving no way to summon the controls once they auto-hide. Full
+            // bleed: the host keeps the overlays inside the safe area on iOS,
+            // but a tap at the very edges should still summon the controls.
             tapCatcher
+                .ignoresSafeArea()
 
             if isControlsVisible, !loadFailed {
                 controlsOverlay
