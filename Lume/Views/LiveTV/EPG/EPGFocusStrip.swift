@@ -11,8 +11,11 @@
 //  guide's virtual navigation, covering remote presses *and* swipes even when
 //  a strong neighbour like the tab bar is the engine's proposed target.
 //
-//  The one move that leaves the guide is left from the channel hub. A
-//  full-height view projects its focus from screen centre, so the engine
+//  Two moves leave the guide. Up from the top row hands off to the tab bar
+//  directly above: the up sentinel is dropped so the engine's only upward
+//  candidate is that full-width neighbour, and the veto yields the move. Left
+//  from the channel hub goes back to the category rail. A full-height view
+//  projects its focus from screen centre, so the engine
 //  finds no candidate on the top-aligned rail; and driving the SwiftUI rail's
 //  focus state from here loses a fight with the UIKit strip (focus falls back
 //  to the tab bar). So a `UIFocusGuide` at the leading edge points at the
@@ -40,6 +43,9 @@
         /// Whether a left move should leave the guide (channel hub) rather
         /// than navigate virtually (programme cells).
         let exitsLeft: Bool
+        /// Whether an up move should leave the guide (top row → tab bar)
+        /// rather than navigate virtually to the row above.
+        let exitsUp: Bool
         /// Handles a consumed directional move.
         let onMove: (MoveCommandDirection) -> Void
         let onSelect: () -> Void
@@ -70,6 +76,7 @@
             view.strip.onSelect = onSelect
             view.strip.onLongSelect = onLongSelect
             view.setExitsLeft(exitsLeft)
+            view.setExitsUp(exitsUp)
             if view.lastRailExitToken != railExitToken {
                 view.lastRailExitToken = railExitToken
                 view.moveFocusToRail()
@@ -130,6 +137,17 @@
                 // left move leaves; on a cell it stays as the interior veto.
                 sentinels[.left]?.isFocusEnabled = !exits
                 refreshEdgeGuide()
+            }
+
+            func setExitsUp(_ exits: Bool) {
+                strip.exitsUp = exits
+                // On the top row the up sentinel yields so an up move finds the
+                // tab bar directly above and leaves; on deeper rows it stays as
+                // the interior veto that drives row-to-row navigation. No edge
+                // guide is needed as for the left exit — the tab bar is a
+                // full-width neighbour the engine finds by projecting straight
+                // up, where the top-aligned rail is missed by a sideways scan.
+                sentinels[.up]?.isFocusEnabled = !exits
             }
 
             override var preferredFocusEnvironments: [UIFocusEnvironment] {
@@ -233,6 +251,8 @@
             var onEngineFocusChanged: (() -> Void)?
             /// Whether a left move leaves the guide (hub) or navigates (cell).
             var exitsLeft = false
+            /// Whether an up move leaves the guide (top row) or navigates.
+            var exitsUp = false
 
             private(set) var isEngineFocused = false
             private var longPressFired = false
@@ -290,6 +310,9 @@
                 // Left from the hub leaves the guide: allow the move so the
                 // engine carries focus to the exit guide (→ the rail).
                 if direction == .left, exitsLeft { return true }
+                // Up from the top row leaves the guide: allow the move so the
+                // engine carries focus to the tab bar above.
+                if direction == .up, exitsUp { return true }
                 // Every other direction stays inside: veto and navigate
                 // virtually, even when the engine targeted the tab bar.
                 moveConsumed = true

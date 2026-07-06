@@ -248,6 +248,7 @@ struct EPGGridScroller: View {
             EPGFocusStrip(
                 isFocused: $surfaceFocused,
                 exitsLeft: exitsLeft,
+                exitsUp: exitsUp,
                 onMove: { direction in
                     moveVirtualFocus(direction)
                 },
@@ -277,11 +278,18 @@ struct EPGGridScroller: View {
         }
 
         /// Left from the channel hub leaves the guide towards the rail; from
-        /// a programme it navigates back towards the column. Up never exits —
-        /// the top row is the grid's ceiling, so up there is a no-op.
+        /// a programme it navigates back towards the column.
         private var exitsLeft: Bool {
             guard case .cell = virtualFocus else { return true }
             return false
+        }
+
+        /// Up from the top row (channel hub or cell) leaves the guide upwards
+        /// to the tab bar; every deeper row moves to the row above. The strip
+        /// yields the move to the engine rather than vetoing it, just like the
+        /// left exit.
+        private var exitsUp: Bool {
+            virtualFocus?.rowIndex == 0
         }
 
         /// Menu steps back one level: from a programme it collapses to the
@@ -327,6 +335,8 @@ struct EPGGridScroller: View {
             case .right:
                 landVirtualFocus(onRow: rowIndex)
             case .up:
+                // Row 0 exits upward to the tab bar (handled by the strip's
+                // up-exit, so this never runs there); deeper rows move up one.
                 if rowIndex > 0 {
                     focusChannel(rowIndex: rowIndex - 1)
                 }
@@ -356,10 +366,10 @@ struct EPGGridScroller: View {
                     focusCell(rowIndex: rowIndex, cell: row.cells[cellIndex + 1])
                 }
             case .up:
+                // Row 0 exits upward to the tab bar (handled by the strip's
+                // up-exit, so this never runs there); deeper rows move up one.
                 if rowIndex > 0 {
                     moveCellVertically(from: row.cells[cellIndex], to: rowIndex - 1)
-                } else {
-                    focusChannel(rowIndex: rowIndex)
                 }
             case .down:
                 if rowIndex + 1 < rows.count {
