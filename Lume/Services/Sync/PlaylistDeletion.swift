@@ -32,37 +32,42 @@ nonisolated enum PlaylistDeletion {
         let prefix = playlist.id.uuidString
 
         // Scope each fetch to the playlist in SQLite via the playlist-prefixed
-        // id (a UUID, which appears nowhere else, so a substring match is exact)
-        // instead of hydrating the whole catalog into memory just to filter it —
-        // on a large library that was a multi-table full dump per deletion.
+        // id instead of hydrating the whole catalog into memory just to filter
+        // it — on a large library that was a multi-table full dump per deletion.
+        // `starts(with:)` compiles to a range seek on the unique `id` index.
         let movieDescriptor = FetchDescriptor<Movie>(
-            predicate: #Predicate { $0.id.localizedStandardContains(prefix) }
+            predicate: #Predicate { $0.id.starts(with: prefix) }
         )
         for movie in (try? context.fetch(movieDescriptor)) ?? [] {
             context.delete(movie)
         }
 
         let seriesDescriptor = FetchDescriptor<Series>(
-            predicate: #Predicate { $0.id.localizedStandardContains(prefix) }
+            predicate: #Predicate { $0.id.starts(with: prefix) }
         )
         for show in (try? context.fetch(seriesDescriptor)) ?? [] {
             context.delete(show)
         }
 
-        // LiveStream is far smaller than the catalog and EPG tables, and the
-        // shared-channel partition below is simplest (and a predicate scoping a
-        // fetch on an optional via `?? ""` can't be expressed in SwiftData's SQL
-        // anyway), so fetch the streams once and split in memory: the channels
-        // this playlist brought in, and the ones still owned elsewhere — a
-        // channel another playlist also carries keeps its guide listings.
-        let streams = (try? context.fetch(FetchDescriptor<LiveStream>())) ?? []
-        let removedChannelIDs = Set(
-            streams.filter { $0.id.hasPrefix(prefix) }.compactMap(\.epgChannelId)
+        // Split the channels in SQLite too: the ones this playlist brought in
+        // (deleted below), and the ones still owned elsewhere — a channel
+        // another playlist also carries keeps its guide listings. The surviving
+        // fetch only needs `epgChannelId`, so it skips full-row hydration.
+        let removedDescriptor = FetchDescriptor<LiveStream>(
+            predicate: #Predicate { $0.id.starts(with: prefix) }
         )
+        let removedStreams = (try? context.fetch(removedDescriptor)) ?? []
+        let removedChannelIDs = Set(removedStreams.compactMap(\.epgChannelId))
+
+        var survivingDescriptor = FetchDescriptor<LiveStream>(
+            predicate: #Predicate { !$0.id.starts(with: prefix) }
+        )
+        survivingDescriptor.propertiesToFetch = [\.epgChannelId]
         let survivingChannelIDs = Set(
-            streams.filter { !$0.id.hasPrefix(prefix) }.compactMap(\.epgChannelId)
+            ((try? context.fetch(survivingDescriptor)) ?? []).compactMap(\.epgChannelId)
         )
-        for stream in streams where stream.id.hasPrefix(prefix) {
+
+        for stream in removedStreams {
             context.delete(stream)
         }
 

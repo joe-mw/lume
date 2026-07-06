@@ -10,11 +10,17 @@ final class LiveStream {
     // common Live TV query). Index it — and pair it with `isHidden`, which the
     // category predicate also tests — so a tap seeks the category's channels
     // instead of scanning every channel in a large playlist.
+    // The standalone `isHidden` index serves the reconciler's export fetch
+    // (`isFavorite || isHidden`): SQLite's OR optimization needs each disjunct
+    // independently indexed, and the composite above can't serve `isHidden`
+    // without a `categoryId` prefix — without it every reconcile scans the
+    // whole channel table.
     #Index<LiveStream>(
         [\.isFavorite],
         [\.lastWatchedDate],
         [\.categoryId],
-        [\.categoryId, \.isHidden]
+        [\.categoryId, \.isHidden],
+        [\.isHidden]
     )
 
     @Attribute(.unique) var id: String

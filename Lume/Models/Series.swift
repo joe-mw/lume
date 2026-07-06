@@ -13,6 +13,8 @@ final class Series {
     // `genre` for the browse-by-genre derivation; index both so opening a
     // category or switching playlists seeks instead of scanning the whole
     // catalog on a large library.
+    // `indexedAt` backs the content indexer's pending/progress scans, run once
+    // per chunk for a whole indexing pass.
     #Index<Series>(
         [\.tmdbId],
         [\.isFavorite],
@@ -20,7 +22,8 @@ final class Series {
         [\.addedToWatchlistDate],
         [\.recommendationVoteRaw],
         [\.categoryId],
-        [\.genre]
+        [\.genre],
+        [\.indexedAt]
     )
 
     @Attribute(.unique) var id: String
@@ -83,6 +86,12 @@ final class Series {
     @Relationship(deleteRule: .cascade) var episodes: [Episode] = []
 
     var isFavorite: Bool = false
+    /// A user-defined order for the unified Favorites collection, spanning movies,
+    /// series and live channels. `nil` means "follow the default order"; once the
+    /// favorites are reordered in Content Management, every favorite (of any type)
+    /// gets a dense value so a series can sit above a channel and the arrangement
+    /// survives re-syncs. Mirrors `LiveStream.favoriteOrder`.
+    var favoriteOrder: Int?
     var lastWatchedDate: Date?
     var addedToWatchlistDate: Date?
     var traktId: String?

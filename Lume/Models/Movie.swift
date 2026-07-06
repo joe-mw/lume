@@ -14,6 +14,9 @@ final class Movie {
     // `genre` for the browse-by-genre derivation; index both so opening a
     // category or switching playlists seeks instead of scanning the whole
     // catalog on a large library.
+    // `indexedAt` backs the content indexer's pending/progress scans (run once
+    // per chunk for a whole indexing pass) and `downloadStatusRaw` the Downloads
+    // screen's live `@Query`, which re-evaluates during catalog syncs.
     #Index<Movie>(
         [\.tmdbId],
         [\.isFavorite],
@@ -23,7 +26,9 @@ final class Movie {
         [\.watchProgress],
         [\.recommendationVoteRaw],
         [\.categoryId],
-        [\.genre]
+        [\.genre],
+        [\.indexedAt],
+        [\.downloadStatusRaw]
     )
 
     @Attribute(.unique) var id: String
@@ -102,6 +107,12 @@ final class Movie {
     var directURL: String?
 
     var isFavorite: Bool = false
+    /// A user-defined order for the unified Favorites collection, spanning movies,
+    /// series and live channels. `nil` means "follow the default order"; once the
+    /// favorites are reordered in Content Management, every favorite (of any type)
+    /// gets a dense value so a movie can sit above a channel and the arrangement
+    /// survives re-syncs. Mirrors `LiveStream.favoriteOrder`.
+    var favoriteOrder: Int?
     var watchProgress: Double = 0.0
     var isWatched: Bool = false
 
