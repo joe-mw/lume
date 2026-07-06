@@ -158,6 +158,13 @@ Prefer a third-party app? Lume can hand streams off to an **external player** â€
 Downloads always play in Lume, and playback falls back to the built-in player when
 the selected app is not installed.
 
+Send playback to the TV with **AirPlay** â€” a route picker sits in the player overlay.
+Full-screen video is delivered through Apple's AVPlayer: on iOS and iPadOS, picking a
+receiver while on the KSPlayer or VLCKit engine hands the current stream to AVPlayer
+for the cast and resumes where it left off (formats AVPlayer can't decode fall back to
+audio-only). On macOS the picker appears on the AVPlayer engine, which routes the
+picked receiver directly. (Chromecast support is on the [roadmap](#roadmap).)
+
 ---
 
 ## Architecture
