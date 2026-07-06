@@ -97,24 +97,26 @@ struct HomeView: View {
         streams.fetchLimit = 20
         _watchedStreams = Query(streams)
 
-        // Favorites: alphabetical, capped.
+        // Favorites: by the unified favorites order (Content Management →
+        // Favorites), falling back to name; capped. The cross-type interleave
+        // happens in the `favorites` accessor.
         var favMovies = FetchDescriptor<Movie>(
             predicate: #Predicate { $0.isFavorite },
-            sortBy: [SortDescriptor(\.name)]
+            sortBy: [SortDescriptor(\.favoriteOrder), SortDescriptor(\.name)]
         )
         favMovies.fetchLimit = 30
         _favoriteMovies = Query(favMovies)
 
         var favSeries = FetchDescriptor<Series>(
             predicate: #Predicate { $0.isFavorite },
-            sortBy: [SortDescriptor(\.name)]
+            sortBy: [SortDescriptor(\.favoriteOrder), SortDescriptor(\.name)]
         )
         favSeries.fetchLimit = 30
         _favoriteSeries = Query(favSeries)
 
         var favStreams = FetchDescriptor<LiveStream>(
             predicate: #Predicate { $0.isFavorite },
-            sortBy: [SortDescriptor(\.name)]
+            sortBy: [SortDescriptor(\.favoriteOrder), SortDescriptor(\.name)]
         )
         favStreams.fetchLimit = 30
         _favoriteStreams = Query(favStreams)
@@ -306,9 +308,23 @@ struct HomeView: View {
     }
 
     private var favorites: [HomeMediaItem] {
-        favoriteMovies.filter { belongsToActivePlaylist($0.id) }.excludingRestricted(restriction).map(HomeMediaItem.movie)
-            + favoriteSeries.filter { belongsToActivePlaylist($0.id) }.excludingRestricted(restriction).map(HomeMediaItem.series)
-            + favoriteStreams.filter { belongsToActivePlaylist($0.id) }.excludingRestricted(restriction).map(HomeMediaItem.live)
+        let movies = favoriteMovies.filter { belongsToActivePlaylist($0.id) }.excludingRestricted(restriction)
+        let series = favoriteSeries.filter { belongsToActivePlaylist($0.id) }.excludingRestricted(restriction)
+        let streams = favoriteStreams.filter { belongsToActivePlaylist($0.id) }.excludingRestricted(restriction)
+
+        // Interleave the three types by the cross-type `favoriteOrder` set in
+        // Content Management → Favorites, so a movie placed above a channel shows
+        // above it here too. Items never reordered (nil) fall back to a stable
+        // type/name grouping (channels, movies, then series) — the same fallback
+        // the favorites manager uses.
+        let entries: [(order: Int?, rank: Int, name: String, item: HomeMediaItem)] =
+            streams.map { ($0.favoriteOrder, 0, $0.name, HomeMediaItem.live($0)) }
+                + movies.map { ($0.favoriteOrder, 1, $0.name, HomeMediaItem.movie($0)) }
+                + series.map { ($0.favoriteOrder, 2, $0.name, HomeMediaItem.series($0)) }
+
+        return entries
+            .sorted { ($0.order ?? Int.max, $0.rank, $0.name) < ($1.order ?? Int.max, $1.rank, $1.name) }
+            .map(\.item)
     }
 
     /// Truly empty home — only show the empty state once trending has settled

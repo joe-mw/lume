@@ -86,6 +86,7 @@ extension CloudSyncEngine {
         movie.isWatched = values.isWatched
         movie.lastWatchedDate = values.lastWatchedDate
         movie.isFavorite = values.isFavorite
+        movie.favoriteOrder = values.favoriteOrder
         movie.addedToWatchlistDate = values.addedToWatchlistDate
         movie.recommendationVoteRaw = values.recommendationVoteRaw
         return true
@@ -94,6 +95,7 @@ extension CloudSyncEngine {
     private func applySeriesToLocal(_ values: ContentStateValues, id: String, loaded: (any PersistentModel)?) throws -> Bool {
         guard let series = try (loaded as? Series) ?? fetchSeries(id) else { return false }
         series.isFavorite = values.isFavorite
+        series.favoriteOrder = values.favoriteOrder
         series.addedToWatchlistDate = values.addedToWatchlistDate
         series.lastWatchedDate = values.lastWatchedDate
         series.recommendationVoteRaw = values.recommendationVoteRaw
@@ -134,10 +136,12 @@ extension CloudSyncEngine {
             movie.isWatched = false
             movie.lastWatchedDate = nil
             movie.isFavorite = false
+            movie.favoriteOrder = nil
             movie.addedToWatchlistDate = nil
             movie.recommendationVoteRaw = 0
         case let series as Series:
             series.isFavorite = false
+            series.favoriteOrder = nil
             series.addedToWatchlistDate = nil
             series.lastWatchedDate = nil
             series.recommendationVoteRaw = 0

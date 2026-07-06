@@ -123,7 +123,7 @@ extension CloudSyncEngine {
                     lastWatchedDate: movie.lastWatchedDate,
                     isFavorite: movie.isFavorite,
                     addedToWatchlistDate: movie.addedToWatchlistDate,
-                    favoriteOrder: nil,
+                    favoriteOrder: movie.favoriteOrder,
                     recommendationVoteRaw: movie.recommendationVoteRaw
                 ),
                 kind: .movie,
@@ -144,7 +144,7 @@ extension CloudSyncEngine {
                     lastWatchedDate: item.lastWatchedDate,
                     isFavorite: item.isFavorite,
                     addedToWatchlistDate: item.addedToWatchlistDate,
-                    favoriteOrder: nil,
+                    favoriteOrder: item.favoriteOrder,
                     recommendationVoteRaw: item.recommendationVoteRaw
                 ),
                 kind: .series,

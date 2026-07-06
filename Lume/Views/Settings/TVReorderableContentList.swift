@@ -29,7 +29,7 @@
 
     import SwiftUI
 
-    struct TVReorderableContentList<Item: ContentItem>: View {
+    struct TVReorderableContentList<Item: ReorderableRowItem>: View {
         /// The persisted order (already sorted by the caller). Shown whenever no
         /// row is lifted.
         let items: [Item]
