@@ -112,12 +112,12 @@ struct SettingsView: View {
                     downloadsSection
                     playerSection
                     storageSection
-                    diagnosticsSection
                     supportSection
                     aboutSection
                     #if DEBUG && !SIDE_LOAD
                         developerSection
                     #endif
+                    diagnosticsSection
                 }
                 #if os(macOS)
                 .listStyle(.inset(alternatesRowBackgrounds: true))
