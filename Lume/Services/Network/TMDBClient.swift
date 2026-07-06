@@ -113,6 +113,10 @@ nonisolated struct TMDBClient {
     /// shows titles already in the library, so a wider net surfaces more of them.
     func trending(_ media: MediaType, timeWindow: TimeWindow = .week, pages: Int = 5) async throws -> [TrendingTitle] {
         let basePath = "/trending/\(media.rawValue)/\(timeWindow.rawValue)"
+        let cacheKey = "\(basePath)-\(pages)-\(Locale.preferredLanguages.first ?? "")"
+        if let cached = await TrendingFeedCache.shared.titles(for: cacheKey, maxAge: 30 * 60) {
+            return cached
+        }
 
         // Fetch the first page up front so we learn the real page count and
         // never request pages beyond what TMDB has.
@@ -135,7 +139,7 @@ nonisolated struct TMDBClient {
         }
 
         // Reassemble in page order to preserve TMDB's popularity ranking.
-        return (1 ... pageCount)
+        let titles = (1 ... pageCount)
             .flatMap { itemsByPage[$0] ?? [] }
             .map {
                 TrendingTitle(
@@ -145,6 +149,8 @@ nonisolated struct TMDBClient {
                     backdropPath: $0.backdropPath
                 )
             }
+        await TrendingFeedCache.shared.store(titles, for: cacheKey)
+        return titles
     }
 
     static var heroBackdropSize: String {
@@ -280,7 +286,7 @@ nonisolated struct TMDBClient {
 // MARK: - Public types
 
 /// A trending title with the metadata the home hero carousel renders.
-struct TrendingTitle: Identifiable, Hashable {
+nonisolated struct TrendingTitle: Identifiable, Hashable {
     let id: Int
     let title: String
     let overview: String

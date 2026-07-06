@@ -202,10 +202,10 @@ struct HomeView: View {
                 }
             #endif
                 .task(id: "\(playlists.count)-\(selectedPlaylistID)-\(activePlaylist?.lastSyncDate?.timeIntervalSince1970 ?? 0)") {
-                    await loadTrending()
+                    await loadTrending(cacheKey: "\(playlists.count)-\(selectedPlaylistID)-\(activePlaylist?.lastSyncDate?.timeIntervalSince1970 ?? 0)")
                 }
                 .task(id: "watchlist-\(trakt.isConnected)-\(selectedPlaylistID)") {
-                    await loadWatchlist()
+                    await loadWatchlist(cacheKey: "watchlist-\(trakt.isConnected)-\(selectedPlaylistID)")
                 }
                 .task(id: recommendationsKey) {
                     await loadRecommendations()
