@@ -19,9 +19,16 @@
 import Foundation
 import SwiftUI // for Array.move(fromOffsets:toOffset:)
 
-/// A piece of content the user can hide and reorder in Content Management.
-protocol ContentItem: AnyObject {
+/// The minimal identity a row needs to appear in a reorderable Content
+/// Management list (`TVReorderableContentList`). `ContentItem` refines it for the
+/// category/channel lists; the unified favorites manager's row wrapper — which is
+/// a value type spanning three model types — conforms directly.
+protocol ReorderableRowItem {
     var id: String { get }
+}
+
+/// A piece of content the user can hide and reorder in Content Management.
+protocol ContentItem: ReorderableRowItem, AnyObject {
     var customOrder: Int? { get set }
     var isHidden: Bool { get set }
 }
@@ -73,10 +80,13 @@ enum ContentOrganizer {
 
 // MARK: - Favorites ordering
 
-/// Content that carries an independent ordering for the Favorites collection,
-/// alongside its primary `customOrder`. Live channels are reorderable both
-/// within their category and within Favorites, so the two orders are stored
-/// separately.
+/// Content that carries an independent ordering for the unified Favorites
+/// collection, alongside any primary `customOrder`. Movies, series and live
+/// channels all conform, so the favorites manager can arrange the three types in
+/// a single list and a movie can sit above a channel. `favoriteOrder` is stamped
+/// densely across *all* favorites regardless of type, so a plain sort by it
+/// interleaves the types in the user's chosen order. It's kept separate from a
+/// channel's within-category `customOrder`, which is an independent placement.
 protocol FavoriteOrderable: AnyObject {
     var id: String { get }
     var favoriteOrder: Int? { get set }
@@ -84,11 +94,15 @@ protocol FavoriteOrderable: AnyObject {
 }
 
 extension LiveStream: FavoriteOrderable {}
+extension Movie: FavoriteOrderable {}
+extension Series: FavoriteOrderable {}
 
 extension ContentOrganizer {
-    /// Applies a SwiftUI `.onMove` to an already-sorted favorites group and
-    /// stamps a dense `favoriteOrder` so the arrangement persists.
-    static func reorderFavorites(_ items: [some FavoriteOrderable], from source: IndexSet, to destination: Int) {
+    /// Applies a SwiftUI `.onMove` to an already-sorted favorites list and stamps
+    /// a dense `favoriteOrder` so the arrangement persists. The list is
+    /// heterogeneous (movies, series, channels), so a single dense stamp across
+    /// the whole array is what lets the types interleave.
+    static func reorderFavorites(_ items: [any FavoriteOrderable], from source: IndexSet, to destination: Int) {
         var arranged = items
         arranged.move(fromOffsets: source, toOffset: destination)
         stampFavoriteOrder(arranged)
@@ -96,18 +110,20 @@ extension ContentOrganizer {
 
     /// Persists an explicit final favorites arrangement in one pass (tvOS
     /// pick-up/place reorder).
-    static func commitFavoriteOrder(_ arranged: [some FavoriteOrderable]) {
+    static func commitFavoriteOrder(_ arranged: [any FavoriteOrderable]) {
         stampFavoriteOrder(arranged)
     }
 
-    /// Clears the user-defined favorites order, reverting to provider order.
-    static func resetFavoriteOrder(_ items: [some FavoriteOrderable]) {
+    /// Clears the user-defined favorites order, reverting to the default order.
+    static func resetFavoriteOrder(_ items: [any FavoriteOrderable]) {
         for item in items {
             item.favoriteOrder = nil
         }
     }
 
-    private static func stampFavoriteOrder(_ arranged: [some FavoriteOrderable]) {
-        stamp(arranged, into: \.favoriteOrder)
+    private static func stampFavoriteOrder(_ arranged: [any FavoriteOrderable]) {
+        for (index, item) in arranged.enumerated() {
+            item.favoriteOrder = index
+        }
     }
 }

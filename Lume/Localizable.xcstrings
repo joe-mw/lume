@@ -2320,6 +2320,58 @@
         }
       }
     },
+    "All Favorites" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle Favoriten"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Todos los favoritos"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tous les favoris"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tutti i preferiti"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "すべてのお気に入り"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "모든 즐겨찾기"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Todos os favoritos"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "所有收藏"
+          }
+        }
+      }
+    },
     "All features unlocked" : {
       "localizations" : {
         "de" : {
@@ -7429,6 +7481,7 @@
       }
     },
     "Drag to reorder your favorite channels — this sets the order shown in the Favorites category. Tap the heart to remove one. Reset restores the provider's order." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7476,6 +7529,58 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "拖动以重新排列您收藏的频道——这将设置“收藏”类别中显示的顺序。轻点心形可移除频道。“重置”可恢复服务商的顺序。"
+          }
+        }
+      }
+    },
+    "Drag to reorder your favorites across channels, movies, and series — a movie can sit above a channel. Tap the heart to remove one. Reset restores the default order." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ziehe, um deine Favoriten über Sender, Filme und Serien hinweg neu anzuordnen – ein Film kann über einem Sender stehen. Tippe auf das Herz, um einen zu entfernen. Zurücksetzen stellt die Standardreihenfolge wieder her."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arrastra para reordenar tus favoritos entre canales, películas y series: una película puede ir por encima de un canal. Toca el corazón para quitar uno. Restablecer restaura el orden predeterminado."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Faites glisser pour réorganiser vos favoris parmi les chaînes, films et séries — un film peut se placer au-dessus d’une chaîne. Touchez le cœur pour en retirer un. Réinitialiser rétablit l’ordre par défaut."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trascina per riordinare i tuoi preferiti tra canali, film e serie: un film può stare sopra un canale. Tocca il cuore per rimuoverne uno. Reimposta ripristina l’ordine predefinito."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ドラッグして、チャンネル・映画・シリーズをまたいでお気に入りを並べ替えられます。映画をチャンネルの上に置くこともできます。ハートをタップすると削除できます。リセットで既定の順序に戻ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "드래그하여 채널, 영화, 시리즈에 걸쳐 즐겨찾기 순서를 변경하세요. 영화를 채널 위에 놓을 수도 있습니다. 하트를 탭하면 제거됩니다. 재설정하면 기본 순서로 돌아갑니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arraste para reordenar seus favoritos entre canais, filmes e séries — um filme pode ficar acima de um canal. Toque no coração para remover um. Redefinir restaura a ordem padrão."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拖动即可在频道、电影和剧集之间重新排列收藏——电影可以排在频道上方。点按心形可移除。重置将恢复默认顺序。"
           }
         }
       }
@@ -9899,6 +10004,7 @@
       }
     },
     "Favorite Channels" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -17114,6 +17220,7 @@
       }
     },
     "No favorite channels yet." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -17166,6 +17273,7 @@
       }
     },
     "No favorite channels yet. Mark channels as favorites to manage their order here." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -17213,6 +17321,110 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "暂无收藏的频道。将频道标记为收藏即可在此处管理其顺序。"
+          }
+        }
+      }
+    },
+    "No favorites yet." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch keine Favoriten."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aún no hay favoritos."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucun favori pour l’instant."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ancora nessun preferito."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "お気に入りはまだありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아직 즐겨찾기가 없습니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ainda não há favoritos."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂无收藏。"
+          }
+        }
+      }
+    },
+    "No favorites yet. Mark channels, movies, or series as favorites to manage their order here." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch keine Favoriten. Markiere Sender, Filme oder Serien als Favoriten, um ihre Reihenfolge hier zu verwalten."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aún no hay favoritos. Marca canales, películas o series como favoritos para gestionar su orden aquí."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucun favori pour l’instant. Marquez des chaînes, films ou séries comme favoris pour gérer leur ordre ici."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ancora nessun preferito. Contrassegna canali, film o serie come preferiti per gestirne l’ordine qui."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "お気に入りはまだありません。チャンネル、映画、シリーズをお気に入りに登録すると、ここで順序を管理できます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아직 즐겨찾기가 없습니다. 채널, 영화 또는 시리즈를 즐겨찾기로 표시하면 여기에서 순서를 관리할 수 있습니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ainda não há favoritos. Marque canais, filmes ou séries como favoritos para gerenciar a ordem deles aqui."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂无收藏。将频道、电影或剧集标记为收藏，即可在此管理它们的顺序。"
           }
         }
       }
@@ -21365,6 +21577,60 @@
         }
       }
     },
+    "Remove %@ from Favorites" : {
+      "comment" : "A button that removes a live channel from the user's favorites. The argument is the name of the channel.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ aus Favoriten entfernen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quitar %@ de favoritos"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retirer %@ des favoris"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rimuovi %@ dai preferiti"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@をお気に入りから削除"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "즐겨찾기에서 %@ 제거"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remover %@ dos favoritos"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将%@从收藏中移除"
+          }
+        }
+      }
+    },
     "Remove download" : {
       "comment" : "A button that deletes a download.",
       "isCommentAutoGenerated" : true,
@@ -21681,7 +21947,60 @@
         }
       }
     },
+    "Reorder all your favorite channels, movies, and series in one list." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ordne alle deine Lieblingssender, -filme und -serien in einer Liste neu an."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reordena todos tus canales, películas y series favoritos en una sola lista."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réorganisez toutes vos chaînes, films et séries favoris dans une seule liste."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Riordina tutti i tuoi canali, film e serie preferiti in un unico elenco."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "お気に入りのチャンネル・映画・シリーズをすべて 1 つのリストで並べ替えます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "즐겨찾는 채널, 영화, 시리즈를 하나의 목록에서 모두 재정렬하세요."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reordene todos os seus canais, filmes e séries favoritos em uma única lista."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在一个列表中重新排列你收藏的所有频道、电影和剧集。"
+          }
+        }
+      }
+    },
     "Reorder the channels in your Favorites category." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
