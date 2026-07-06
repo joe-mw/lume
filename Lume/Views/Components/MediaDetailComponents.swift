@@ -366,6 +366,7 @@ struct SimilarRow: View {
 struct DetailPosterCard: View {
     let title: String
     let imageURL: URL?
+    var badge: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -388,6 +389,7 @@ struct DetailPosterCard: View {
             }
             .frame(width: 120, height: 180)
             .clipShape(RoundedRectangle(cornerRadius: 8))
+            .posterBadge(badge)
             .shadow(radius: 2)
 
             Text(title)

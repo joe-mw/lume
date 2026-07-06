@@ -37,6 +37,7 @@ struct SeriesDetailView: View {
     @State private var playingMedia: PlayableMedia?
     @State private var similar: [HomeMediaItem] = []
     @State private var otherSources: [HomeMediaItem] = []
+    @State private var otherPlaylistSources: [OtherSources.PlaylistSource] = []
     @State private var refreshToken: UUID = .init()
     @State private var isLoadingTMDB: Bool
     #if !os(tvOS)
@@ -177,6 +178,12 @@ struct SeriesDetailView: View {
                     if !otherSources.isEmpty {
                         section(title: "Other Sources") {
                             SimilarRow(items: otherSources, animationNamespace: animationNamespace)
+                        }
+                    }
+
+                    if !otherPlaylistSources.isEmpty {
+                        section(title: "Available on Other Playlists") {
+                            PlaylistSourcesRow(sources: otherPlaylistSources, animationNamespace: animationNamespace)
                         }
                     }
                 }
@@ -496,6 +503,7 @@ private extension SeriesDetailView {
 
     func resolveOtherSources() {
         otherSources = OtherSources.resolve(for: series, in: modelContext)
+        otherPlaylistSources = OtherSources.resolveOtherPlaylists(for: series, in: modelContext)
     }
 }
 

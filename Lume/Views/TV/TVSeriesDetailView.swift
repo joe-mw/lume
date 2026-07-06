@@ -24,6 +24,7 @@
         @State private var playingMedia: PlayableMedia?
         @State private var similar: [HomeMediaItem] = []
         @State private var otherSources: [HomeMediaItem] = []
+        @State private var otherPlaylistSources: [OtherSources.PlaylistSource] = []
         @State private var refreshToken: UUID = .init()
         @State private var isLoadingTMDB: Bool
         @State private var showYouTubeUnavailable = false
@@ -123,6 +124,12 @@
                     if !otherSources.isEmpty {
                         TVRail(title: "Other Sources", items: otherSources) { item in
                             posterLink(for: item)
+                        }
+                    }
+
+                    if !otherPlaylistSources.isEmpty {
+                        TVRail(title: "Available on Other Playlists", items: otherPlaylistSources) { source in
+                            posterLink(for: source.item, badge: source.playlistName)
                         }
                     }
                 }
@@ -286,16 +293,16 @@
         // MARK: - Rail items
 
         @ViewBuilder
-        private func posterLink(for item: HomeMediaItem) -> some View {
+        private func posterLink(for item: HomeMediaItem, badge: String? = nil) -> some View {
             switch item {
             case let .movie(movie):
                 NavigationLink(value: movie) {
-                    TVPosterCard(title: item.title, imageURL: item.imageURL)
+                    TVPosterCard(title: item.title, imageURL: item.imageURL, badge: badge)
                 }
                 .buttonStyle(TVCardButtonStyle())
             case let .series(series):
                 NavigationLink(value: series) {
-                    TVPosterCard(title: item.title, imageURL: item.imageURL)
+                    TVPosterCard(title: item.title, imageURL: item.imageURL, badge: badge)
                 }
                 .buttonStyle(TVCardButtonStyle())
             case .live:
@@ -502,6 +509,7 @@
 
         func resolveOtherSources() {
             otherSources = OtherSources.resolve(for: series, in: modelContext)
+            otherPlaylistSources = OtherSources.resolveOtherPlaylists(for: series, in: modelContext)
         }
     }
 
