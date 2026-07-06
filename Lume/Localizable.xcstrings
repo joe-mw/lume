@@ -2321,6 +2321,58 @@
         }
       }
     },
+    "All Favorites" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle Favoriten"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Todos los favoritos"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tous les favoris"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tutti i preferiti"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "すべてのお気に入り"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "모든 즐겨찾기"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Todos os favoritos"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "所有收藏"
+          }
+        }
+      }
+    },
     "All features unlocked" : {
       "localizations" : {
         "de" : {
@@ -5905,6 +5957,110 @@
         }
       }
     },
+    "Couldn't Prepare Logs" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Protokolle konnten nicht vorbereitet werden"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudieron preparar los registros"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de préparer les journaux"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossibile preparare i registri"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ログを準備できませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "로그를 준비할 수 없습니다"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível preparar os registros"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法准备日志"
+          }
+        }
+      }
+    },
+    "Couldn't read the logs." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Protokolle konnten nicht gelesen werden."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudieron leer los registros."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de lire les journaux."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossibile leggere i registri."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ログを読み取れませんでした。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "로그를 읽을 수 없습니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível ler os registros."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法读取日志。"
+          }
+        }
+      }
+    },
     "Creator" : {
       "localizations" : {
         "de" : {
@@ -6005,6 +6161,58 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "自定义指南"
+          }
+        }
+      }
+    },
+    "Debug Logging" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Debug-Protokollierung"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registro de depuración"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Journalisation de débogage"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registro di debug"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "デバッグログ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "디버그 로깅"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registro de depuração"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "调试日志"
           }
         }
       }
@@ -6640,6 +6848,58 @@
         }
       }
     },
+    "Describe the problem here. The diagnostic log is attached.\n\n" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beschreibe das Problem hier. Das Diagnoseprotokoll ist angehängt.\n\n"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Describe el problema aquí. El registro de diagnóstico está adjunto.\n\n"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Décrivez le problème ici. Le journal de diagnostic est joint.\n\n"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Descrivi il problema qui. Il registro diagnostico è allegato.\n\n"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ここで問題を説明してください。診断ログを添付しています。\n\n"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "여기에 문제를 설명하세요. 진단 로그가 첨부되어 있습니다.\n\n"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Descreva o problema aqui. O registro de diagnóstico está anexado.\n\n"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请在此处描述问题。诊断日志已附上。\n\n"
+          }
+        }
+      }
+    },
     "Design" : {
       "localizations" : {
         "de" : {
@@ -6793,6 +7053,58 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "开发者"
+          }
+        }
+      }
+    },
+    "Diagnostics" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diagnose"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diagnóstico"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diagnostics"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diagnostica"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "診断"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "진단"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diagnóstico"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "诊断"
           }
         }
       }
@@ -7430,6 +7742,7 @@
       }
     },
     "Drag to reorder your favorite channels — this sets the order shown in the Favorites category. Tap the heart to remove one. Reset restores the provider's order." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7477,6 +7790,58 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "拖动以重新排列您收藏的频道——这将设置“收藏”类别中显示的顺序。轻点心形可移除频道。“重置”可恢复服务商的顺序。"
+          }
+        }
+      }
+    },
+    "Drag to reorder your favorites across channels, movies, and series — a movie can sit above a channel. Tap the heart to remove one. Reset restores the default order." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ziehe, um deine Favoriten über Sender, Filme und Serien hinweg neu anzuordnen – ein Film kann über einem Sender stehen. Tippe auf das Herz, um einen zu entfernen. Zurücksetzen stellt die Standardreihenfolge wieder her."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arrastra para reordenar tus favoritos entre canales, películas y series: una película puede ir por encima de un canal. Toca el corazón para quitar uno. Restablecer restaura el orden predeterminado."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Faites glisser pour réorganiser vos favoris parmi les chaînes, films et séries — un film peut se placer au-dessus d’une chaîne. Touchez le cœur pour en retirer un. Réinitialiser rétablit l’ordre par défaut."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trascina per riordinare i tuoi preferiti tra canali, film e serie: un film può stare sopra un canale. Tocca il cuore per rimuoverne uno. Reimposta ripristina l’ordine predefinito."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ドラッグして、チャンネル・映画・シリーズをまたいでお気に入りを並べ替えられます。映画をチャンネルの上に置くこともできます。ハートをタップすると削除できます。リセットで既定の順序に戻ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "드래그하여 채널, 영화, 시리즈에 걸쳐 즐겨찾기 순서를 변경하세요. 영화를 채널 위에 놓을 수도 있습니다. 하트를 탭하면 제거됩니다. 재설정하면 기본 순서로 돌아갑니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arraste para reordenar seus favoritos entre canais, filmes e séries — um filme pode ficar acima de um canal. Toque no coração para remover um. Redefinir restaura a ordem padrão."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拖动即可在频道、电影和剧集之间重新排列收藏——电影可以排在频道上方。点按心形可移除。重置将恢复默认顺序。"
           }
         }
       }
@@ -8320,6 +8685,110 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "电子邮件"
+          }
+        }
+      }
+    },
+    "Email Logs to Developer" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Protokolle an Entwickler senden"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviar registros al desarrollador"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envoyer les journaux au développeur"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invia i registri allo sviluppatore"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開発者にログをメール送信"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "개발자에게 로그 이메일 보내기"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviar registros ao desenvolvedor"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将日志发送给开发者"
+          }
+        }
+      }
+    },
+    "Email the Developer" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Entwickler per E-Mail kontaktieren"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviar correo al desarrollador"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Contacter le développeur par e-mail"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invia un'email allo sviluppatore"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開発者にメールする"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "개발자에게 이메일 보내기"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviar e-mail ao desenvolvedor"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "给开发者发邮件"
           }
         }
       }
@@ -9900,6 +10369,7 @@
       }
     },
     "Favorite Channels" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -13977,6 +14447,110 @@
         }
       }
     },
+    "Logs" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Protokolle"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registros"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Journaux"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registri"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ログ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "로그"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registros"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "日志"
+          }
+        }
+      }
+    },
+    "Logs are sent to %@." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Protokolle werden an %@ gesendet."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Los registros se envían a %@."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les journaux sont envoyés à %@."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I registri vengono inviati a %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ログは %@ に送信されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "로그는 %@(으)로 전송됩니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Os registros são enviados para %@."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "日志将发送至 %@。"
+          }
+        }
+      }
+    },
     "Loop Playback" : {
       "comment" : "A toggle to loop playback",
       "isCommentAutoGenerated" : true,
@@ -14133,6 +14707,58 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Lume"
+          }
+        }
+      }
+    },
+    "Lume Diagnostics — %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lume-Diagnose – %@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diagnóstico de Lume: %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diagnostics Lume — %@"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diagnostica Lume — %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lume診断 — %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lume 진단 — %@"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diagnóstico do Lume — %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lume 诊断 — %@"
           }
         }
       }
@@ -17115,6 +17741,7 @@
       }
     },
     "No favorite channels yet." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -17167,6 +17794,7 @@
       }
     },
     "No favorite channels yet. Mark channels as favorites to manage their order here." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -17214,6 +17842,110 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "暂无收藏的频道。将频道标记为收藏即可在此处管理其顺序。"
+          }
+        }
+      }
+    },
+    "No favorites yet." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch keine Favoriten."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aún no hay favoritos."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucun favori pour l’instant."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ancora nessun preferito."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "お気に入りはまだありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아직 즐겨찾기가 없습니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ainda não há favoritos."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂无收藏。"
+          }
+        }
+      }
+    },
+    "No favorites yet. Mark channels, movies, or series as favorites to manage their order here." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch keine Favoriten. Markiere Sender, Filme oder Serien als Favoriten, um ihre Reihenfolge hier zu verwalten."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aún no hay favoritos. Marca canales, películas o series como favoritos para gestionar su orden aquí."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucun favori pour l’instant. Marquez des chaînes, films ou séries comme favoris pour gérer leur ordre ici."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ancora nessun preferito. Contrassegna canali, film o serie come preferiti per gestirne l’ordine qui."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "お気に入りはまだありません。チャンネル、映画、シリーズをお気に入りに登録すると、ここで順序を管理できます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아직 즐겨찾기가 없습니다. 채널, 영화 또는 시리즈를 즐겨찾기로 표시하면 여기에서 순서를 관리할 수 있습니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ainda não há favoritos. Marque canais, filmes ou séries como favoritos para gerenciar a ordem deles aqui."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂无收藏。将频道、电影或剧集标记为收藏，即可在此管理它们的顺序。"
           }
         }
       }
@@ -20322,6 +21054,58 @@
         }
       }
     },
+    "Prepare Logs" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Protokolle vorbereiten"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preparar registros"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Préparer les journaux"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prepara i registri"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ログを準備"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "로그 준비"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preparar registros"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "准备日志"
+          }
+        }
+      }
+    },
     "Preparing…" : {
       "localizations" : {
         "de" : {
@@ -21156,6 +21940,58 @@
         }
       }
     },
+    "Records diagnostic logs as you use the app. Reproduce the problem, then send the logs below. They stay on your device until you send them, and personal details are hidden." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zeichnet Diagnoseprotokolle auf, während du die App verwendest. Reproduziere das Problem und sende dann unten die Protokolle. Sie verbleiben auf deinem Gerät, bis du sie sendest, und persönliche Daten werden ausgeblendet."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registra los datos de diagnóstico mientras usas la app. Reproduce el problema y luego envía los registros de abajo. Permanecen en tu dispositivo hasta que los envíes y los datos personales quedan ocultos."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enregistre des journaux de diagnostic pendant que vous utilisez l'app. Reproduisez le problème, puis envoyez les journaux ci-dessous. Ils restent sur votre appareil jusqu'à leur envoi et les données personnelles sont masquées."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registra i log diagnostici mentre usi l'app. Riproduci il problema, quindi invia i registri qui sotto. Rimangono sul tuo dispositivo finché non li invii e i dati personali vengono nascosti."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリの使用中に診断ログを記録します。問題を再現してから、下のログを送信してください。ログは送信するまでデバイスに保存され、個人情報は非表示になります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "앱을 사용하는 동안 진단 로그를 기록합니다. 문제를 재현한 다음 아래에서 로그를 보내세요. 로그는 보낼 때까지 기기에 남아 있으며 개인 정보는 숨겨집니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registra logs de diagnóstico enquanto você usa o app. Reproduza o problema e envie os registros abaixo. Eles permanecem no seu dispositivo até você enviá-los e os dados pessoais ficam ocultos."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在你使用应用时记录诊断日志。重现问题后，发送下方的日志。日志会保留在你的设备上，直到你发送它们，个人信息将被隐藏。"
+          }
+        }
+      }
+    },
     "Redeem Code" : {
       "localizations" : {
         "de" : {
@@ -21260,6 +22096,58 @@
         }
       }
     },
+    "Refresh Logs" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Protokolle aktualisieren"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Actualizar registros"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Actualiser les journaux"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aggiorna i registri"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ログを更新"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "로그 새로 고침"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Atualizar registros"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "刷新日志"
+          }
+        }
+      }
+    },
     "Released" : {
       "localizations" : {
         "de" : {
@@ -21313,6 +22201,60 @@
       }
     },
     "Remove %@ from favorites" : {
+      "comment" : "A button that removes a live channel from the user's favorites. The argument is the name of the channel.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ aus Favoriten entfernen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quitar %@ de favoritos"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retirer %@ des favoris"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rimuovi %@ dai preferiti"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@をお気に入りから削除"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "즐겨찾기에서 %@ 제거"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remover %@ dos favoritos"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将%@从收藏中移除"
+          }
+        }
+      }
+    },
+    "Remove %@ from Favorites" : {
       "comment" : "A button that removes a live channel from the user's favorites. The argument is the name of the channel.",
       "isCommentAutoGenerated" : true,
       "localizations" : {
@@ -21682,7 +22624,60 @@
         }
       }
     },
+    "Reorder all your favorite channels, movies, and series in one list." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ordne alle deine Lieblingssender, -filme und -serien in einer Liste neu an."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reordena todos tus canales, películas y series favoritos en una sola lista."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réorganisez toutes vos chaînes, films et séries favoris dans une seule liste."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Riordina tutti i tuoi canali, film e serie preferiti in un unico elenco."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "お気に入りのチャンネル・映画・シリーズをすべて 1 つのリストで並べ替えます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "즐겨찾는 채널, 영화, 시리즈를 하나의 목록에서 모두 재정렬하세요."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reordene todos os seus canais, filmes e séries favoritos em uma única lista."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在一个列表中重新排列你收藏的所有频道、电影和剧集。"
+          }
+        }
+      }
+    },
     "Reorder the channels in your Favorites category." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -22414,6 +23409,58 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "重试下载"
+          }
+        }
+      }
+    },
+    "Review exactly what will be sent before you share it." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prüfe genau, was gesendet wird, bevor du es teilst."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Revisa exactamente lo que se enviará antes de compartirlo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vérifiez exactement ce qui sera envoyé avant de le partager."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Controlla esattamente ciò che verrà inviato prima di condividerlo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共有する前に、送信される内容を正確に確認できます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "공유하기 전에 전송될 내용을 정확히 확인하세요."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Revise exatamente o que será enviado antes de compartilhar."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在共享之前，请准确查看将要发送的内容。"
           }
         }
       }
@@ -23722,6 +24769,58 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "设置"
+          }
+        }
+      }
+    },
+    "Share Logs…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Protokolle teilen …"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compartir registros…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Partager les journaux…"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Condividi i registri…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ログを共有…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "로그 공유…"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compartilhar registros…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共享日志…"
           }
         }
       }
@@ -27384,6 +28483,58 @@
         }
       }
     },
+    "Troubleshooting" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fehlerbehebung"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Solución de problemas"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dépannage"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Risoluzione dei problemi"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "トラブルシューティング"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "문제 해결"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Solução de problemas"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "疑难解答"
+          }
+        }
+      }
+    },
     "Try Again" : {
       "localizations" : {
         "de" : {
@@ -27484,6 +28635,110 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "关闭PIN码"
+          }
+        }
+      }
+    },
+    "Turn on debug logging to help diagnose a problem, then send the logs to the developer." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktiviere die Debug-Protokollierung, um ein Problem zu diagnostizieren, und sende die Protokolle dann an den Entwickler."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Activa el registro de depuración para ayudar a diagnosticar un problema y luego envía los registros al desarrollador."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Activez la journalisation de débogage pour aider à diagnostiquer un problème, puis envoyez les journaux au développeur."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Attiva il registro di debug per aiutare a diagnosticare un problema, quindi invia i registri allo sviluppatore."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "問題の診断に役立てるためにデバッグログを有効にし、ログを開発者に送信します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "문제 진단에 도움이 되도록 디버그 로깅을 켠 다음 로그를 개발자에게 보내세요."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ative o registro de depuração para ajudar a diagnosticar um problema e envie os registros ao desenvolvedor."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开调试日志以帮助诊断问题，然后将日志发送给开发者。"
+          }
+        }
+      }
+    },
+    "Turn on debug logging, reproduce the problem, then email us at %@ with a description. Logs help us diagnose issues on Apple TV." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktiviere die Debug-Protokollierung, reproduziere das Problem und schreibe uns mit einer Beschreibung an %@. Protokolle helfen uns, Probleme auf Apple TV zu diagnostizieren."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Activa el registro de depuración, reproduce el problema y luego escríbenos a %@ con una descripción. Los registros nos ayudan a diagnosticar problemas en el Apple TV."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Activez la journalisation de débogage, reproduisez le problème, puis écrivez-nous à %@ avec une description. Les journaux nous aident à diagnostiquer les problèmes sur Apple TV."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Attiva il registro di debug, riproduci il problema, quindi scrivici a %@ con una descrizione. I registri ci aiutano a diagnosticare i problemi su Apple TV."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "デバッグログを有効にして問題を再現し、説明を添えて %@ までメールしてください。ログはApple TVでの問題診断に役立ちます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "디버그 로깅을 켜고 문제를 재현한 다음 설명과 함께 %@(으)로 이메일을 보내주세요. 로그는 Apple TV의 문제를 진단하는 데 도움이 됩니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ative o registro de depuração, reproduza o problema e escreva para %@ com uma descrição. Os registros nos ajudam a diagnosticar problemas na Apple TV."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开调试日志，重现问题，然后发送邮件至 %@ 并附上说明。日志有助于我们诊断 Apple TV 上的问题。"
           }
         }
       }
@@ -28531,6 +29786,58 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "视频"
+          }
+        }
+      }
+    },
+    "View Logs" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Protokolle anzeigen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ver registros"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Afficher les journaux"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Visualizza i registri"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ログを表示"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "로그 보기"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ver registros"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "查看日志"
           }
         }
       }
