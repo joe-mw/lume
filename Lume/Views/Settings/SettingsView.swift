@@ -112,6 +112,7 @@ struct SettingsView: View {
                     downloadsSection
                     playerSection
                     storageSection
+                    diagnosticsSection
                     supportSection
                     aboutSection
                     #if DEBUG && !SIDE_LOAD
