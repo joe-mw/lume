@@ -23,7 +23,7 @@
         @State private var isLoadingEpisodes = false
         @State private var playingMedia: PlayableMedia?
         @State private var similar: [HomeMediaItem] = []
-        @State private var otherSources: [HomeMediaItem] = []
+        @State private var otherSources: [OtherSources.Source] = []
         @State private var refreshToken: UUID = .init()
         @State private var isLoadingTMDB: Bool
         @State private var showYouTubeUnavailable = false
@@ -121,8 +121,8 @@
                     }
 
                     if !otherSources.isEmpty {
-                        TVRail(title: "Other Sources", items: otherSources) { item in
-                            posterLink(for: item)
+                        TVRail(title: "Other Sources", items: otherSources) { source in
+                            posterLink(for: source.item, badge: source.playlistName)
                         }
                     }
                 }
@@ -286,16 +286,16 @@
         // MARK: - Rail items
 
         @ViewBuilder
-        private func posterLink(for item: HomeMediaItem) -> some View {
+        private func posterLink(for item: HomeMediaItem, badge: String? = nil) -> some View {
             switch item {
             case let .movie(movie):
                 NavigationLink(value: movie) {
-                    TVPosterCard(title: item.title, imageURL: item.imageURL)
+                    TVPosterCard(title: item.title, imageURL: item.imageURL, badge: badge)
                 }
                 .buttonStyle(TVCardButtonStyle())
             case let .series(series):
                 NavigationLink(value: series) {
-                    TVPosterCard(title: item.title, imageURL: item.imageURL)
+                    TVPosterCard(title: item.title, imageURL: item.imageURL, badge: badge)
                 }
                 .buttonStyle(TVCardButtonStyle())
             case .live:

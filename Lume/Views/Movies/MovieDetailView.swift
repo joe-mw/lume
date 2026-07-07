@@ -31,7 +31,7 @@ struct MovieDetailView: View {
     @State private var playingMedia: PlayableMedia?
     @State private var similar: [HomeMediaItem] = []
     @State private var collectionMovies: [HomeMediaItem] = []
-    @State private var otherSources: [HomeMediaItem] = []
+    @State private var otherSources: [OtherSources.Source] = []
     @State private var refreshToken: UUID = .init()
     @State private var isLoadingTMDB: Bool
     #if !os(tvOS)
@@ -191,7 +191,7 @@ struct MovieDetailView: View {
 
                     if !otherSources.isEmpty {
                         section(title: "Other Sources") {
-                            SimilarRow(items: otherSources, animationNamespace: animationNamespace)
+                            OtherSourcesRow(sources: otherSources, animationNamespace: animationNamespace)
                         }
                     }
                 }
