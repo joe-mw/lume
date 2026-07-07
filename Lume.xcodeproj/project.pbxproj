@@ -883,7 +883,7 @@
 			repositoryURL = "https://github.com/virtualox/vlckit-spm";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = "4.0.0-alpha.19";
+				minimumVersion = "4.0.0-alpha.20";
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */

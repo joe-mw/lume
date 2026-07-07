@@ -218,7 +218,7 @@ final class VLCPlayerCoordinator: NSObject, ObservableObject {
     ///
     private func handleRetry(for state: VLCMediaPlayerState) {
         switch state {
-        case .opening, .buffering, .playing:
+        case .opening, .playing:
             isReloading = false
             if state == .playing {
                 retry.reset()
@@ -466,25 +466,16 @@ extension VLCPlayerCoordinator: VLCMediaPlayerDelegate {
         }
     }
 
-    /// Log player state transitions, and measure how long each buffering
-    /// episode lasts — frequent or long rebuffers are the clearest fingerprint
-    /// of a struggling live stream.
+    /// Log player state transitions. Buffering is no longer a discrete state in
+    /// VLCKit 4 — its duration is measured separately in
+    /// ``mediaPlayerBufferingChanged(_:)``.
     private func logStateChange() {
         let state = mediaPlayer.state
         let name = VLCMediaPlayerStateToString(state)
         guard name != lastStateName else { return }
         lastStateName = name
 
-        if state == .buffering {
-            bufferingStartedAt = Date()
-            Logger.player.log("state → \(name, privacy: .public)")
-        } else if let started = bufferingStartedAt {
-            let elapsed = Date().timeIntervalSince(started)
-            bufferingStartedAt = nil
-            Logger.player.log("state → \(name, privacy: .public) (rebuffered \(elapsed, format: .fixed(precision: 2), privacy: .public)s)")
-        } else {
-            Logger.player.log("state → \(name, privacy: .public)")
-        }
+        Logger.player.log("state → \(name, privacy: .public)")
 
         // Re-assert deinterlace once a vout exists: the runtime setting doesn't
         // survive the output being (re)created, e.g. across a stream reload.
@@ -492,6 +483,26 @@ extension VLCPlayerCoordinator: VLCMediaPlayerDelegate {
 
         if state == .error {
             Logger.player.error("player entered error state")
+        }
+    }
+
+    /// Measure how long each buffering episode lasts — frequent or long
+    /// rebuffers are the clearest fingerprint of a struggling live stream.
+    /// VLCKit 4 reports buffering as a progress signal rather than a state:
+    /// progress climbs to 1.0 when buffering completes.
+    func mediaPlayerBufferingChanged(_ progress: Float) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            if progress >= 1.0 {
+                if let started = bufferingStartedAt {
+                    let elapsed = Date().timeIntervalSince(started)
+                    bufferingStartedAt = nil
+                    Logger.player.log("buffering complete (rebuffered \(elapsed, format: .fixed(precision: 2), privacy: .public)s)")
+                }
+            } else if bufferingStartedAt == nil {
+                bufferingStartedAt = Date()
+                Logger.player.log("buffering started")
+            }
         }
     }
 

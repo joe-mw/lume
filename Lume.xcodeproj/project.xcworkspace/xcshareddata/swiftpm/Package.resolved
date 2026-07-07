@@ -24,8 +24,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/virtualox/vlckit-spm",
       "state" : {
-        "revision" : "1d19105c52515a1d52813923d88515947cdeb3d8",
-        "version" : "4.0.0-alpha.19"
+        "revision" : "88f1543f59181fe8ae75b36a29b68b9c0345db70",
+        "version" : "4.0.0-alpha.20"
       }
     }
   ],
