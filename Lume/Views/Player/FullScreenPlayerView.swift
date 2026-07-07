@@ -329,6 +329,18 @@ struct FullScreenPlayerView: View {
         // Keyed on the engine attempt so falling back tears the failed engine
         // down and builds the next one fresh, rather than reusing in-flight state.
         switch engine {
+        case .lumeEngine:
+            LumeEngineEngineView(
+                media: media,
+                clock: clock,
+                nextUpMedia: nextUpMedia,
+                skipSegments: skipSegments,
+                reportsStartupFailure: hasFallbackEngine,
+                usesQuickStartupTimeout: hasFallbackEngine,
+                onPlaybackFailed: fallBackToNextEngine,
+                onSelectMedia: switchMedia
+            )
+            .id(engineAttempt)
         case .avPlayer:
             AVPlayerEngineView(
                 media: media,

@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		C66C81672FC5A59D0048468D /* KSPlayer in Frameworks */ = {isa = PBXBuildFile; productRef = C66C81682FC5A59D0048468D /* KSPlayer */; };
+		C6AA10012FDD00010000AA01 /* LumeEngine in Frameworks */ = {isa = PBXBuildFile; productRef = C6AA10022FDD00010000AA02 /* LumeEngine */; };
+		C6AA10042FDD00010000AA04 /* LumeEngine in Embed Frameworks */ = {isa = PBXBuildFile; productRef = C6AA10022FDD00010000AA02 /* LumeEngine */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		C6FF000A2FC5A59D00484601 /* VLCKitSPM in Frameworks */ = {isa = PBXBuildFile; productRef = C6FF000B2FC5A59D00484602 /* VLCKitSPM */; };
 /* End PBXBuildFile section */
 
@@ -72,6 +74,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				C66C81672FC5A59D0048468D /* KSPlayer in Frameworks */,
+				C6AA10012FDD00010000AA01 /* LumeEngine in Frameworks */,
 				C6FF000A2FC5A59D00484601 /* VLCKitSPM in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -125,6 +128,7 @@
 				C67C02BC2F880F2200842DBA /* Sources */,
 				C67C02BD2F880F2200842DBA /* Frameworks */,
 				C67C02BE2F880F2200842DBA /* Resources */,
+				C6AA10052FDD00010000AA05 /* Embed Frameworks */,
 				C6FEED020000000000000002 /* Inject .env secrets */,
 			);
 			buildRules = (
@@ -137,6 +141,7 @@
 			name = Lume;
 			packageProductDependencies = (
 				C66C81682FC5A59D0048468D /* KSPlayer */,
+				C6AA10022FDD00010000AA02 /* LumeEngine */,
 				C6FF000B2FC5A59D00484602 /* VLCKitSPM */,
 			);
 			productName = Lume;
@@ -232,6 +237,7 @@
 			packageReferences = (
 				C66C81662FC5A59D0048468D /* XCRemoteSwiftPackageReference "KSPlayer" */,
 				C6FF000C2FC5A59D00484603 /* XCRemoteSwiftPackageReference "vlckit-spm" */,
+				C6AA10032FDD00010000AA03 /* XCLocalSwiftPackageReference "../LumeEngine" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C67C02C12F880F2200842DBA /* Products */;
@@ -268,6 +274,20 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		C6AA10052FDD00010000AA05 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				C6AA10042FDD00010000AA04 /* LumeEngine in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
 		C66C81692FC5A59D0048468D /* Fix Embedded Framework CFBundleIdentifier */ = {
@@ -869,6 +889,13 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		C6AA10032FDD00010000AA03 /* XCLocalSwiftPackageReference "../LumeEngine" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../LumeEngine;
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCRemoteSwiftPackageReference section */
 		C66C81662FC5A59D0048468D /* XCRemoteSwiftPackageReference "KSPlayer" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -893,6 +920,10 @@
 			isa = XCSwiftPackageProductDependency;
 			package = C66C81662FC5A59D0048468D /* XCRemoteSwiftPackageReference "KSPlayer" */;
 			productName = KSPlayer;
+		};
+		C6AA10022FDD00010000AA02 /* LumeEngine */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = LumeEngine;
 		};
 		C6FF000B2FC5A59D00484602 /* VLCKitSPM */ = {
 			isa = XCSwiftPackageProductDependency;

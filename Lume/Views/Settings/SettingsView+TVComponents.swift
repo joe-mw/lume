@@ -51,6 +51,11 @@ import SwiftUI
                     VLCEngineSettingsTVDetail()
                 case .ksPlayer:
                     KSEngineSettingsTVDetail()
+                case .lumeEngine:
+                    Text("Lume Engine has no configurable options yet.")
+                        .font(.system(size: 20))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, TVSettingsMetrics.rowHPadding)
                 case .avPlayer:
                     Text("AVPlayer has no configurable options.")
                         .font(.system(size: 20))
