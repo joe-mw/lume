@@ -68,7 +68,7 @@ nonisolated enum CreditsInfo {
     // MARK: - Metadata providers (attribution required by their terms)
 
     static let tmdb = "https://www.themoviedb.org"
-    static let omdb = "https://www.omdbapi.com"
+    static let mdblist = "https://mdblist.com"
     static let trakt = "https://trakt.tv"
     static let introDB = "https://introdb.app"
 
@@ -76,8 +76,8 @@ nonisolated enum CreditsInfo {
         URL(string: tmdb)
     }
 
-    static var omdbURL: URL? {
-        URL(string: omdb)
+    static var mdblistURL: URL? {
+        URL(string: mdblist)
     }
 
     static var traktURL: URL? {

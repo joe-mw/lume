@@ -52,12 +52,12 @@ else
     echo "warning: TMDB_ACCESS_TOKEN not set in .env — Trending will be hidden"
 fi
 
-OMDB_API_KEY="$(read_env OMDB_API_KEY)"
-if [ -n "$OMDB_API_KEY" ]; then
-    set_plist OMDBAPIKey "$OMDB_API_KEY"
-    echo "Injected OMDB_API_KEY into Info.plist"
+MDBLIST_API_KEY="$(read_env MDBLIST_API_KEY)"
+if [ -n "$MDBLIST_API_KEY" ]; then
+    set_plist MDBListAPIKey "$MDBLIST_API_KEY"
+    echo "Injected MDBLIST_API_KEY into Info.plist"
 else
-    echo "warning: OMDB_API_KEY not set in .env — extra ratings will be hidden"
+    echo "warning: MDBLIST_API_KEY not set in .env — extra ratings will be hidden"
 fi
 
 INTRO_DB_API_KEY="$(read_env INTRO_DB_API_KEY)"

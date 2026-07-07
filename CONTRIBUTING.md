@@ -56,7 +56,7 @@ Planned work is tracked in [GitHub Issues](https://github.com/bilipp/Lume/issues
 
 - **Xcode 26.4** or later (Swift 6.3 toolchain)
 - macOS capable of running that Xcode
-- *(Optional)* TMDB / OMDb / Trakt API keys for the metadata, ratings, and scrobbling
+- *(Optional)* TMDB / MDBList / Trakt API keys for the metadata, ratings, and scrobbling
   features — see [Configuration](README.md#configuration). Features degrade gracefully
   when keys are absent, so you don't need them to build and run.
 

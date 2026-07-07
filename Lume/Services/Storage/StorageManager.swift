@@ -7,7 +7,7 @@
 //  and performs the clear operations.
 //
 //  Everything the user can clear here is re-derivable: image artwork
-//  re-downloads on demand and TMDB/OMDb enrichment is re-fetched the next time
+//  re-downloads on demand and TMDB/MDBList enrichment is re-fetched the next time
 //  a title's detail screen opens. Playlists, downloads, watch history and
 //  favorites live in separate stores and are never touched.
 //
@@ -73,7 +73,7 @@ enum StorageManager {
     /// one clear doesn't build a single giant transaction in memory.
     private static let clearBatchSize = 1000
 
-    /// Drops cached TMDB/OMDb enrichment (artwork paths, cast, trailers, ratings
+    /// Drops cached TMDB/MDBList enrichment (artwork paths, cast, trailers, ratings
     /// and collection info) from every enriched movie and series so it re-fetches
     /// lazily on the next detail-screen visit. Runs on a private background
     /// context — hydrating and mutating every enriched title (plus cascade-
@@ -210,7 +210,7 @@ enum StorageManager {
     }
 
     #if DEBUG
-        /// DEBUG-only: wipes the on-device search index end to end — the TMDB/OMDb
+        /// DEBUG-only: wipes the on-device search index end to end — the TMDB/MDBList
         /// enrichment (via `clearMetadataEnrichment`), the embedding vectors, the
         /// resolved `tmdbId` links and each title's `indexedAt` stamp — so the
         /// next indexing pass rebuilds everything from scratch. Used to exercise

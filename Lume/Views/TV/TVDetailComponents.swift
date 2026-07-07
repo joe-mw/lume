@@ -111,15 +111,17 @@
 
     // MARK: - External ratings
 
-    /// A row of aggregator-rating chips (IMDb, Rotten Tomatoes, Metacritic)
-    /// sourced from OMDb, sized for the 10-foot UI. Renders nothing when empty.
+    /// A row of MDBList aggregator-rating chips sized for the 10-foot UI. Shows
+    /// at most four chips (highest display priority first) so the row can't
+    /// outgrow the About column. Renders nothing when empty.
     struct TVExternalRatingsView: View {
         let ratings: [ExternalRating]
 
         var body: some View {
-            if !ratings.isEmpty {
+            let displayed = ratings.sorted { $0.source.displayPriority < $1.source.displayPriority }.prefix(4)
+            if !displayed.isEmpty {
                 HStack(spacing: 22) {
-                    ForEach(ratings) { rating in
+                    ForEach(displayed) { rating in
                         HStack(spacing: 14) {
                             Circle()
                                 .fill(rating.tint)

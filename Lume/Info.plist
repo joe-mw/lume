@@ -45,7 +45,7 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
-	<key>OMDBAPIKey</key>
+	<key>MDBListAPIKey</key>
 	<string></string>
 	<key>TMDBAccessToken</key>
 	<string></string>
