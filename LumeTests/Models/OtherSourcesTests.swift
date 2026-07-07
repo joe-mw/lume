@@ -2,8 +2,9 @@
 //  OtherSourcesTests.swift
 //  LumeTests
 //
-//  Coverage for the detail screens' "Other Sources" (same playlist) and
-//  "Available on Other Playlists" (cross-playlist) resolution.
+//  Coverage for the detail screens' combined "Other Sources" row: same-playlist
+//  alternates first (unlabelled), then cross-playlist copies badged with the
+//  owning playlist's name.
 //
 
 import Foundation
@@ -33,7 +34,7 @@ struct OtherSourcesTests {
         return series
     }
 
-    @Test func `movie cross-playlist sources carry the owning playlist's name`() throws {
+    @Test func `movie sources list same-playlist alternates first, then badged cross-playlist copies`() throws {
         let container = try makeTestContainer()
         let context = container.mainContext
 
@@ -46,15 +47,12 @@ struct OtherSourcesTests {
         _ = makeMovie(id: "\(playlistB.id.uuidString)-movie-4", streamId: 4, tmdbId: 7, in: context)
         try context.save()
 
-        let samePlaylistSources = OtherSources.resolve(for: current, in: context)
-        #expect(samePlaylistSources.map(\.id) == [HomeMediaItem.movie(sameList).id])
-
-        let crossPlaylistSources = OtherSources.resolveOtherPlaylists(for: current, in: context)
-        #expect(crossPlaylistSources.map(\.id) == [HomeMediaItem.movie(otherList).id])
-        #expect(crossPlaylistSources.map(\.playlistName) == ["Provider B"])
+        let sources = OtherSources.resolve(for: current, in: context)
+        #expect(sources.map(\.id) == [HomeMediaItem.movie(sameList).id, HomeMediaItem.movie(otherList).id])
+        #expect(sources.map(\.playlistName) == [nil, "Provider B"])
     }
 
-    @Test func `series cross-playlist sources carry the owning playlist's name`() throws {
+    @Test func `series sources badge cross-playlist copies with the owning playlist's name`() throws {
         let container = try makeTestContainer()
         let context = container.mainContext
 
@@ -65,11 +63,9 @@ struct OtherSourcesTests {
         let otherList = makeSeries(id: "\(playlistB.id.uuidString)-series-2", seriesId: 2, tmdbId: 314, in: context)
         try context.save()
 
-        #expect(OtherSources.resolve(for: current, in: context).isEmpty)
-
-        let crossPlaylistSources = OtherSources.resolveOtherPlaylists(for: current, in: context)
-        #expect(crossPlaylistSources.map(\.id) == [HomeMediaItem.series(otherList).id])
-        #expect(crossPlaylistSources.map(\.playlistName) == ["Provider B"])
+        let sources = OtherSources.resolve(for: current, in: context)
+        #expect(sources.map(\.id) == [HomeMediaItem.series(otherList).id])
+        #expect(sources.map(\.playlistName) == ["Provider B"])
     }
 
     @Test func `cross-playlist sources sort by playlist name`() throws {
@@ -85,11 +81,11 @@ struct OtherSourcesTests {
         _ = makeMovie(id: "\(alpha.id.uuidString)-movie-3", streamId: 3, tmdbId: 42, in: context)
         try context.save()
 
-        let names = OtherSources.resolveOtherPlaylists(for: current, in: context).map(\.playlistName)
+        let names = OtherSources.resolve(for: current, in: context).map(\.playlistName)
         #expect(names == ["Alpha IPTV", "Zeta TV"])
     }
 
-    @Test func `cross-playlist sources drop entries with no owning playlist`() throws {
+    @Test func `cross-playlist copies with no owning playlist are dropped`() throws {
         let container = try makeTestContainer()
         let context = container.mainContext
 
@@ -99,10 +95,10 @@ struct OtherSourcesTests {
         _ = makeMovie(id: "\(UUID().uuidString)-movie-2", streamId: 2, tmdbId: 42, in: context)
         try context.save()
 
-        #expect(OtherSources.resolveOtherPlaylists(for: current, in: context).isEmpty)
+        #expect(OtherSources.resolve(for: current, in: context).isEmpty)
     }
 
-    @Test func `cross-playlist sources are empty without a tmdb id`() throws {
+    @Test func `sources are empty without a tmdb id`() throws {
         let container = try makeTestContainer()
         let context = container.mainContext
 
@@ -113,6 +109,6 @@ struct OtherSourcesTests {
         _ = makeMovie(id: "\(playlistB.id.uuidString)-movie-2", streamId: 2, tmdbId: nil, in: context)
         try context.save()
 
-        #expect(OtherSources.resolveOtherPlaylists(for: current, in: context).isEmpty)
+        #expect(OtherSources.resolve(for: current, in: context).isEmpty)
     }
 }

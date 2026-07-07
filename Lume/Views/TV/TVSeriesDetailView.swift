@@ -23,8 +23,7 @@
         @State private var isLoadingEpisodes = false
         @State private var playingMedia: PlayableMedia?
         @State private var similar: [HomeMediaItem] = []
-        @State private var otherSources: [HomeMediaItem] = []
-        @State private var otherPlaylistSources: [OtherSources.PlaylistSource] = []
+        @State private var otherSources: [OtherSources.Source] = []
         @State private var refreshToken: UUID = .init()
         @State private var isLoadingTMDB: Bool
         @State private var showYouTubeUnavailable = false
@@ -122,13 +121,7 @@
                     }
 
                     if !otherSources.isEmpty {
-                        TVRail(title: "Other Sources", items: otherSources) { item in
-                            posterLink(for: item)
-                        }
-                    }
-
-                    if !otherPlaylistSources.isEmpty {
-                        TVRail(title: "Available on Other Playlists", items: otherPlaylistSources) { source in
+                        TVRail(title: "Other Sources", items: otherSources) { source in
                             posterLink(for: source.item, badge: source.playlistName)
                         }
                     }
@@ -509,7 +502,6 @@
 
         func resolveOtherSources() {
             otherSources = OtherSources.resolve(for: series, in: modelContext)
-            otherPlaylistSources = OtherSources.resolveOtherPlaylists(for: series, in: modelContext)
         }
     }
 

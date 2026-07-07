@@ -1,17 +1,17 @@
 //
-//  PlaylistSourcesRow.swift
+//  OtherSourcesRow.swift
 //  Lume
 //
-//  The "Available on Other Playlists" strip on the movie/series detail screens:
-//  same-title entries found on other playlists (see `OtherSources`
-//  `resolveOtherPlaylists`), each badged with the owning playlist's name. The
-//  badge overlay is shared with the tvOS rails via `posterBadge(_:)`.
+//  The "Other Sources" strip on the movie/series detail screens: same-title
+//  entries resolved by `OtherSources`, with entries from other playlists badged
+//  with the owning playlist's name. The badge overlay is shared with the tvOS
+//  rails via `posterBadge(_:)`.
 //
 
 import SwiftUI
 
-struct PlaylistSourcesRow: View {
-    let sources: [OtherSources.PlaylistSource]
+struct OtherSourcesRow: View {
+    let sources: [OtherSources.Source]
     var animationNamespace: Namespace.ID?
 
     var body: some View {
