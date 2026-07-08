@@ -94,11 +94,12 @@ struct LumeEngineEngineView: View {
             LumeEngineVideoSurface(coordinator: coordinator)
                 .ignoresSafeArea()
 
-            // The engine decodes the selected subtitle into `subtitleText`; the
+            // The engine decodes the selected subtitle into `subtitleCues`; the
             // bare video surface draws only video, so this leaf renders those
-            // cues. Isolated so per-cue text updates never re-render this body
+            // cues. It observes the standalone cue model (not the coordinator),
+            // so per-cue updates invalidate this leaf alone — never this body
             // (which would rebuild the controls overlay / open track menus).
-            LumeEngineSubtitleOverlay(coordinator: coordinator, controlsVisible: isControlsVisible)
+            LumeEngineSubtitleOverlay(cues: coordinator.subtitleCues, controlsVisible: isControlsVisible)
 
             // Always-present transparent layer that reliably catches taps over
             // the engine's render layer, which can otherwise swallow touches
@@ -482,16 +483,18 @@ struct LumeEngineEngineView: View {
 // MARK: - Engine-rendered subtitles
 
 /// Draws the engine's active subtitle cues over the video. A leaf that observes
-/// only the coordinator, so per-cue `subtitleText` changes invalidate this view
-/// alone — never the engine view above it (which would rebuild the controls
-/// overlay and flicker any open track menu).
+/// only the standalone `SubtitleCueModel`, so per-cue changes invalidate this
+/// view alone — never the engine view above it, and never the controls overlay
+/// (both of which observe the coordinator, whose `objectWillChange` therefore
+/// no longer fires at tick rate). Keeping the cue text off the coordinator is
+/// what stops an open track menu flickering and dropping taps.
 private struct LumeEngineSubtitleOverlay: View {
-    @ObservedObject var coordinator: LumeEngineCoordinator
+    @ObservedObject var cues: SubtitleCueModel
     /// Lifts the cues above the controls' scrubber while they're showing.
     let controlsVisible: Bool
 
     var body: some View {
-        if let text = coordinator.subtitleText, !text.isEmpty {
+        if let text = cues.text, !text.isEmpty {
             VStack {
                 Spacer()
                 Text(text)

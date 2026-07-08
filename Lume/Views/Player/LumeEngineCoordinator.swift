@@ -4,6 +4,25 @@ import Foundation
 import LumeEngine
 import SwiftUI
 
+/// Holds the engine's active subtitle cue text, refreshed from the coordinator's
+/// 10 Hz playback tick. Deliberately a separate `ObservableObject` from
+/// `LumeEngineCoordinator`: were the cue text `@Published` on the coordinator,
+/// every per-tick update would fire the coordinator's `objectWillChange` and
+/// re-render every overlay that observes it — flickering an open audio/subtitle
+/// `Menu` and cancelling in-flight taps. Only the subtitle-rendering leaf
+/// observes this model, so a cue change invalidates that leaf alone. Mirrors why
+/// KSPlayer keeps its `SubtitleModel` off the controls overlay's observed surface.
+@MainActor
+final class SubtitleCueModel: ObservableObject {
+    @Published private(set) var text: String?
+
+    /// Assigns only on an actual change, so an unchanged cue repeated across
+    /// ticks doesn't invalidate the leaf ten times a second.
+    func update(_ newText: String?) {
+        if text != newText { text = newText }
+    }
+}
+
 /// Playback surface for the LumeEngine (FFmpeg) backend.
 ///
 /// Wraps a `PlayerSession` per stream — the engine has no rebuild-in-place, so
@@ -22,8 +41,14 @@ final class LumeEngineCoordinator: NSObject, ObservableObject {
     @Published private(set) var audioTrackOptions: [PlayerTrackOption] = []
     @Published private(set) var textTrackOptions: [PlayerTrackOption] = []
     @Published private(set) var isPipActive = false
-    /// Active subtitle cue text (engine-rendered cues drawn by the view).
-    @Published private(set) var subtitleText: String?
+    /// Active subtitle cue text, on its own observable so the 10 Hz tick that
+    /// refreshes it doesn't invalidate this coordinator. A `@Published` here
+    /// would fire `objectWillChange` on every tick, re-rendering every overlay
+    /// that observes the coordinator (iOS `LumeEngineControlsOverlay`, tvOS
+    /// `TVPlayerControlsOverlay`) — which flickers an open audio/subtitle `Menu`
+    /// and cancels in-flight taps. Only the subtitle-rendering leaf observes
+    /// this model, so a cue change invalidates that leaf alone.
+    let subtitleCues = SubtitleCueModel()
 
     var isPipSupported: Bool {
         pipBridge?.isSupported ?? false
@@ -141,7 +166,7 @@ final class LumeEngineCoordinator: NSObject, ObservableObject {
         isPlaying = false
         isBuffering = false
         hasStartedPlayback = false
-        subtitleText = nil
+        subtitleCues.update(nil)
         isPipActive = false
     }
 
@@ -194,7 +219,7 @@ final class LumeEngineCoordinator: NSObject, ObservableObject {
         let session = session
         let index = id.flatMap(Int32.init)
         Task { await session?.selectSubtitleTrack(index) }
-        if id == nil { subtitleText = nil }
+        if id == nil { subtitleCues.update(nil) }
         if let info = mediaInfo {
             publishTracks(info: info)
         }
@@ -235,7 +260,7 @@ final class LumeEngineCoordinator: NSObject, ObservableObject {
         if now != .min {
             let cues = session.subtitles.activeCues(at: now)
             let text = cues.map(\.text).joined(separator: "\n")
-            subtitleText = text.isEmpty ? nil : text
+            subtitleCues.update(text.isEmpty ? nil : text)
         }
     }
 
