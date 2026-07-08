@@ -281,4 +281,57 @@ enum PlayerSettings {
             }
         }
     }
+
+    // MARK: - Lume Engine options
+
+    /// Storage keys and defaults for the Lume Engine, mapped onto
+    /// `PlayerConfiguration` / `DemuxerOptions` fields. The defaults reproduce
+    /// the values the coordinator previously hard-coded (1 s live / 2 s VOD
+    /// buffer target, 15 s network timeout) and the engine's own defaults for
+    /// everything else.
+    enum Lume {
+        static let hardwareDecodeKey = "player.lume.hardwareDecode"
+        static let httpReconnectKey = "player.lume.httpReconnect"
+        static let liveBufferKey = "player.lume.liveBuffer"
+        static let vodBufferKey = "player.lume.vodBuffer"
+        static let videoQueueDepthKey = "player.lume.videoQueueDepth"
+        static let audioQueueDepthKey = "player.lume.audioQueueDepth"
+        static let stallThresholdKey = "player.lume.stallThreshold"
+        static let ioTimeoutKey = "player.lume.ioTimeout"
+        static let probeSizeKey = "player.lume.probeSize"
+        static let analyzeDurationKey = "player.lume.analyzeDuration"
+
+        static let hardwareDecodeDefault = true
+        static let httpReconnectDefault = true
+        /// Buffer target before starting/resuming a live stream, in milliseconds.
+        static let liveBufferDefault = 1000
+        /// Buffer target before starting/resuming an on-demand stream, in milliseconds.
+        static let vodBufferDefault = 2000
+        /// Decoded-video channel capacity, in frames. Each slot retains a full
+        /// decoded pixel buffer, so 4K content pays ~12 MB per slot.
+        static let videoQueueDepthDefault = 8
+        /// Decoded-audio channel capacity, in frames.
+        static let audioQueueDepthDefault = 48
+        /// Seconds without playhead progress before the stall watchdog fires.
+        static let stallThresholdDefault = 8
+
+        /// Every persisted Lume Engine option key. Used to wipe the stored
+        /// values so each `@AppStorage` binding reverts to its default.
+        static var allKeys: [String] {
+            [
+                hardwareDecodeKey, httpReconnectKey, liveBufferKey, vodBufferKey,
+                videoQueueDepthKey, audioQueueDepthKey, stallThresholdKey,
+                ioTimeoutKey, probeSizeKey, analyzeDurationKey
+            ]
+        }
+
+        /// Clear every stored Lume Engine option so the engine and its settings
+        /// UI fall back to the built-in defaults.
+        static func resetToDefaults() {
+            let defaults = UserDefaults.standard
+            for key in allKeys {
+                defaults.removeObject(forKey: key)
+            }
+        }
+    }
 }

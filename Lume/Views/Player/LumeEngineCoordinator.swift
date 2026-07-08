@@ -94,12 +94,7 @@ final class LumeEngineCoordinator: NSObject, ObservableObject {
         currentMedia = media
         reportedFailure = false
 
-        var configuration = PlayerConfiguration()
-        configuration.bufferTarget = media.isLive ? 1.0 : 2.0
-        configuration.demuxer.ioTimeout = 15_000_000
-        configuration.demuxer.openTimeout = startupTimeout
-
-        let session = PlayerSession(configuration: configuration)
+        let session = PlayerSession(configuration: makeConfiguration(for: media))
         self.session = session
         displayLayer = session.renderer.displayLayer
         session.renderer.audioTimePitchAlgorithm = .timeDomain
@@ -226,6 +221,30 @@ final class LumeEngineCoordinator: NSObject, ObservableObject {
     }
 
     // MARK: Internals
+
+    /// Builds the session configuration from the stored Lume Engine options
+    /// (Settings → Lume Engine Options), re-read on every configure/reload.
+    private func makeConfiguration(for media: PlayableMedia) -> PlayerConfiguration {
+        let options = LumeEngineOptions.load()
+        var configuration = PlayerConfiguration()
+        configuration.hardwareDecode = options.hardwareDecode ? .videoToolbox : .software
+        configuration.bufferTarget = Double(media.isLive ? options.liveBuffer : options.vodBuffer) / 1000
+        configuration.videoQueueDepth = options.videoQueueDepth
+        configuration.audioQueueDepth = options.audioQueueDepth
+        configuration.stallThreshold = Double(options.stallThreshold)
+        configuration.demuxer.enableReconnect = options.httpReconnect
+        configuration.demuxer.ioTimeout = options.ioTimeout
+        // The open timeout stays tied to the engine-fallback budget rather than
+        // a user option, so the fallback chain keeps its timing guarantees.
+        configuration.demuxer.openTimeout = startupTimeout
+        if let probeSize = options.probeSize {
+            configuration.demuxer.probeSize = probeSize
+        }
+        if let analyzeDuration = options.analyzeDuration {
+            configuration.demuxer.maxAnalyzeDuration = analyzeDuration
+        }
+        return configuration
+    }
 
     private func handle(event: PlayerEvent) {
         switch event {
