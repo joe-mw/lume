@@ -1,4 +1,5 @@
 import LumeEngine
+import OSLog
 import SwiftData
 import SwiftUI
 
@@ -244,12 +245,17 @@ struct LumeEngineEngineView: View {
             if !isSeeking, current.isFinite { clock.current = current }
             if duration.isFinite, duration > 0 { clock.duration = duration }
         }
-        coordinator.onPlaybackFailure = { reportFailure() }
+        coordinator.onPlaybackFailure = {
+            Logger.player.error("LumeEngine startup failure → \(reportsStartupFailure && !coordinator.hasStartedPlayback ? "falling back to next engine" : "failure overlay", privacy: .public)")
+            reportFailure()
+        }
         coordinator.onStalled = {
             // Mid-stream drop: bounded exponential backoff, then give up loudly.
             if reconnector.hasGivenUp {
+                Logger.player.error("LumeEngine stall retries exhausted → failure overlay")
                 withAnimation(.easeInOut(duration: 0.25)) { loadFailed = true }
             } else {
+                Logger.player.warning("LumeEngine stalled → scheduling engine reload")
                 reconnector.scheduleRetry { coordinator.reload() }
             }
         }

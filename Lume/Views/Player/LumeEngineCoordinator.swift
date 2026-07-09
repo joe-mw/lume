@@ -2,6 +2,7 @@ import AVFoundation
 import Combine
 import Foundation
 import LumeEngine
+import OSLog
 import SwiftUI
 
 /// Holds the engine's active subtitle cue text, refreshed from the coordinator's
@@ -83,6 +84,8 @@ final class LumeEngineCoordinator: NSObject, ObservableObject {
     private var currentMedia: PlayableMedia?
     private var eventTask: Task<Void, Never>?
     private var tickTask: Task<Void, Never>?
+    /// 10 Hz tick counter driving the diagnostics heartbeat cadence.
+    private var tickCount = 0
     private var startupTask: Task<Void, Never>?
     private var reportedFailure = false
     private var selectedSubtitleID: String?
@@ -110,11 +113,7 @@ final class LumeEngineCoordinator: NSObject, ObservableObject {
                 await self.tick()
             }
         }
-        startupTask = Task { [startupTimeout] in
-            try? await Task.sleep(for: .seconds(startupTimeout))
-            guard !Task.isCancelled, !self.hasStartedPlayback else { return }
-            self.reportFailure()
-        }
+        startupTask = makeStartupWatchdog()
 
         Task {
             do {
@@ -123,12 +122,43 @@ final class LumeEngineCoordinator: NSObject, ObservableObject {
                 self.publishTracks(info: info)
                 self.publishVideoInfo(info: info)
                 self.pipBridge = PictureInPictureBridge(session: session, mediaInfo: info)
-                if media.startTime > 1, !media.isLive {
-                    await session.seek(to: media.startTime)
+                // Resume position is handled by the engine via
+                // configuration.startPosition (seek-before-first-read).
+                if media.startTime > 1, !media.isLive, !info.isSeekable {
+                    Logger.player.warning("LumeEngine cannot resume: source is not seekable")
                 }
                 await session.play()
             } catch {
                 self.reportFailure()
+            }
+        }
+    }
+
+    /// Startup failure watchdog. The window is rolling while the engine
+    /// demonstrably downloads: a multi-second buffer target on a ~1× link
+    /// legitimately pre-buffers past any fixed window, while a dead stream
+    /// shows no byte progress and still fails within `startupTimeout`. A hard
+    /// cap bounds pathological "downloads but never starts" cases.
+    private func makeStartupWatchdog() -> Task<Void, Never> {
+        Task { [startupTimeout] in
+            let hardDeadline = Date(timeIntervalSinceNow: max(startupTimeout * 3, 60))
+            var deadline = Date(timeIntervalSinceNow: startupTimeout)
+            var lastBytes: Int64 = 0
+            while !Task.isCancelled, !self.hasStartedPlayback {
+                try? await Task.sleep(for: .seconds(5))
+                guard !Task.isCancelled, !self.hasStartedPlayback else { return }
+                if let session = self.session {
+                    let bytes = await session.diagnostics.deliveredBytes
+                    if bytes > lastBytes {
+                        lastBytes = bytes
+                        deadline = min(Date(timeIntervalSinceNow: startupTimeout), hardDeadline)
+                    }
+                }
+                if Date() >= deadline {
+                    Logger.player.error("LumeEngine startup window elapsed (read \(lastBytes) bytes, never played)")
+                    self.reportFailure()
+                    return
+                }
             }
         }
     }
@@ -227,6 +257,12 @@ final class LumeEngineCoordinator: NSObject, ObservableObject {
     private func makeConfiguration(for media: PlayableMedia) -> PlayerConfiguration {
         let options = LumeEngineOptions.load()
         var configuration = PlayerConfiguration()
+        // Resume position goes through the engine (seek-before-first-read):
+        // an open-then-seek from here seeks a connection that is already
+        // streaming, which some IPTV providers kill (dead stream, no data).
+        if media.startTime > 1, !media.isLive {
+            configuration.startPosition = media.startTime
+        }
         configuration.hardwareDecode = options.hardwareDecode ? .videoToolbox : .software
         configuration.bufferTarget = Double(media.isLive ? options.liveBuffer : options.vodBuffer) / 1000
         configuration.videoQueueDepth = options.videoQueueDepth
@@ -249,6 +285,7 @@ final class LumeEngineCoordinator: NSObject, ObservableObject {
     private func handle(event: PlayerEvent) {
         switch event {
         case let .stateChanged(state):
+            Logger.player.info("LumeEngine state → \(String(describing: state), privacy: .public)")
             isPlaying = state == .playing
             isBuffering = state == .buffering || state == .opening
             if state == .playing {
@@ -256,15 +293,23 @@ final class LumeEngineCoordinator: NSObject, ObservableObject {
                 onRecovered?()
             }
             if state == .failed {
+                Logger.player.error("LumeEngine failed (hasStartedPlayback: \(hasStartedPlayback))")
                 if hasStartedPlayback {
                     onStalled?()
                 } else {
                     reportFailure()
                 }
             }
-        case .stalled:
+        case let .stalled(position):
+            Logger.player.warning("LumeEngine stalled at \(position, format: .fixed(precision: 2))s")
             onStalled?()
-        case .opened, .didSeek, .decoderDowngraded, .error:
+        case let .error(error):
+            Logger.player.error("LumeEngine error: \(String(describing: error), privacy: .public)")
+        case let .didSeek(position):
+            Logger.player.info("LumeEngine didSeek → \(position, format: .fixed(precision: 2))s")
+        case let .decoderDowngraded(error):
+            Logger.player.warning("LumeEngine decoder downgraded: \(String(describing: error), privacy: .public)")
+        case .opened:
             break
         }
     }
@@ -274,6 +319,17 @@ final class LumeEngineCoordinator: NSObject, ObservableObject {
         let position = await session.position
         let duration = await session.duration ?? 0
         onTime?(position, duration)
+
+        // Pipeline-health heartbeat: every ~3 s until playback settles, then
+        // every ~30 s. Ground truth for triaging device-only failures (silent
+        // audio, wedged buffering, throttled delivery) from a sysdiagnose or
+        // Console stream without a debugger.
+        tickCount += 1
+        let heartbeatEvery = hasStartedPlayback && isPlaying ? 300 : 30
+        if tickCount % heartbeatEvery == 0 {
+            let diagnostics = await session.diagnostics
+            Logger.player.info("LumeEngine \(diagnostics.description, privacy: .public)")
+        }
 
         let now = session.renderer.currentTime
         if now != .min {
