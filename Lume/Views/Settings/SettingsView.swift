@@ -326,6 +326,7 @@ struct SettingsView: View {
 
                 NavigationLink("VLCKit Options") { VLCEngineSettingsScreen() }
                 NavigationLink("KSPlayer Options") { KSEngineSettingsScreen() }
+                NavigationLink("Lume Engine Options") { LumeEngineSettingsScreen() }
 
                 Picker("External Player", selection: $externalPlayerRaw) {
                     Text("Off").tag("")
