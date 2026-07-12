@@ -14,10 +14,10 @@ struct AppearanceSettingsTests {
         #expect(AppAppearance.resolve("sepia") == .system)
     }
 
-    @Test func `color scheme mapping`() {
-        #expect(AppAppearance.system.colorScheme == nil)
-        #expect(AppAppearance.dark.colorScheme == .dark)
-        #expect(AppAppearance.light.colorScheme == .light)
+    @Test func `interface style mapping`() {
+        #expect(AppAppearance.system.interfaceStyle == .unspecified)
+        #expect(AppAppearance.dark.interfaceStyle == .dark)
+        #expect(AppAppearance.light.interfaceStyle == .light)
     }
 
     @Test func `default is system`() {
