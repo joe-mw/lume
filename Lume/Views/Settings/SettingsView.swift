@@ -36,6 +36,10 @@ struct SettingsView: View {
     var showSkipIntroButton = PlayerSettings.Playback.showSkipIntroButtonDefault
     @AppStorage(SearchSettings.searchAllPlaylistsKey)
     private var searchAllPlaylists = SearchSettings.searchAllPlaylistsDefault
+    /// The app-wide appearance override (System / Dark / Light), applied at
+    /// the scene root in `LumeApp`.
+    @AppStorage(AppAppearance.storageKey)
+    private var appearanceRaw = AppAppearance.defaultValue.rawValue
     /// Not `private`: read by the SettingsView+AutoSync extension (separate file).
     @AppStorage(SyncFrequency.storageKey) var syncFrequencyRaw: String = SyncFrequency.defaultValue.rawValue
     #if !os(tvOS)
@@ -101,6 +105,7 @@ struct SettingsView: View {
                     playlistsSection
                     librarySection
                     layoutSection
+                    appearanceSection
                     searchSection
                     autoSyncSection
                     epgSection
@@ -229,6 +234,21 @@ struct SettingsView: View {
                 Text("Layout")
             } footer: {
                 Text("Choose which sections appear on Home and in what order.")
+            }
+        }
+
+        private var appearanceSection: some View {
+            Section {
+                Picker("Appearance", selection: $appearanceRaw) {
+                    ForEach(AppAppearance.allCases) { appearance in
+                        Text(appearance.title).tag(appearance.rawValue)
+                    }
+                }
+                .pickerStyle(.menu)
+            } header: {
+                Text("Appearance")
+            } footer: {
+                Text("Follow the device appearance, or keep Lume always in Dark or Light Mode.")
             }
         }
 
@@ -461,6 +481,7 @@ struct SettingsView: View {
                         }
                     case .profiles: TVProfilesSettingsView()
                     case .home: tvHomeLayoutDetail
+                    case .appearance: tvAppearanceDetail
                     case .epg: EPGSettingsView()
                     case .search: tvSearchDetail
                     case .storage: StorageManagementView()
@@ -485,6 +506,21 @@ struct SettingsView: View {
 
         private var tvIntegrationsDetail: some View {
             TVTraktIntegrationView()
+        }
+
+        private var tvAppearanceDetail: some View {
+            VStack(alignment: .leading, spacing: 8) {
+                TVSettingsSectionLabel("Appearance")
+                TVOptionCycleRow(
+                    title: "Appearance",
+                    valueLabel: AppAppearance.resolve(appearanceRaw).label
+                ) { appearanceRaw = PlayerOptionCycle.next(appearanceRaw, in: AppAppearance.self) }
+                Text("Follow the device appearance, or keep Lume always in Dark or Light Mode.")
+                    .font(.system(size: 20))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, TVSettingsMetrics.rowHPadding)
+                    .padding(.top, 6)
+            }
         }
 
         private var tvSearchDetail: some View {
