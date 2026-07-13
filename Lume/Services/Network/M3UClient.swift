@@ -41,6 +41,30 @@ nonisolated enum M3UError: LocalizedError {
             "The playlist file could not be found."
         }
     }
+
+    /// Credential-free summary for diagnostic logs. Interpolated with
+    /// `privacy: .public`, so it must never contain a URL — playlist and EPG
+    /// URLs can carry account credentials as query items, and underlying
+    /// `NSError` descriptions can embed the failing URL.
+    var logDescription: String {
+        switch self {
+        case .invalidURL:
+            return "invalid URL"
+        case let .networkError(error):
+            let nsError = error as NSError
+            return "network error (\(nsError.domain) \(nsError.code))"
+        case let .serverError(code):
+            return "HTTP \(code)"
+        case .invalidResponse:
+            return "non-HTTP response"
+        case .notAPlaylist:
+            return "not an m3u playlist"
+        case .enigma2Bouquet:
+            return "Enigma2 bouquet URL"
+        case .fileNotFound:
+            return "file not found"
+        }
+    }
 }
 
 nonisolated class M3UClient {

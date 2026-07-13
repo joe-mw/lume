@@ -70,7 +70,11 @@ actor EPGSyncManager {
             markSynced(sourceID)
             return true
         } catch {
-            Logger.database.warning("EPG source \(sourceID) sync failed: \(error.localizedDescription)")
+            // Credential-free detail (never a URL) so it can be public in
+            // user-exported diagnostic logs.
+            let nsError = error as NSError
+            let detail = (error as? M3UError)?.logDescription ?? "\(nsError.domain) \(nsError.code)"
+            Logger.database.warning("EPG source \(sourceID, privacy: .public) sync failed: \(detail, privacy: .public)")
             markStatus(sourceID, .error)
             return false
         }
