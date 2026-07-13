@@ -5,7 +5,8 @@
 //  The user's app-wide appearance override (System / Dark / Light). Persisted
 //  as a plain string and applied at the scene root, so a device in Light Mode
 //  can still run Lume permanently dark (and vice versa). `system` keeps the
-//  previous follow-the-device behaviour.
+//  previous follow-the-device behaviour. Not offered on tvOS — the TV UI is
+//  designed dark, so the setting isn't shown there and the applier is a no-op.
 //
 //  Applied as a *window-level* style override (`overrideUserInterfaceStyle` /
 //  `NSApp.appearance`) rather than `.preferredColorScheme`: once that modifier
@@ -40,7 +41,7 @@ enum AppAppearance: String, CaseIterable, Identifiable {
         rawValue
     }
 
-    #if canImport(UIKit)
+    #if canImport(UIKit) && !os(tvOS)
         /// The window override style; `.unspecified` follows the device.
         var interfaceStyle: UIUserInterfaceStyle {
             switch self {
@@ -68,25 +69,18 @@ enum AppAppearance: String, CaseIterable, Identifiable {
         case .light: "Light"
         }
     }
-
-    /// Localized plain-string label for surfaces that can't take a
-    /// `LocalizedStringKey` (the tvOS cycle row).
-    var label: String {
-        switch self {
-        case .system: String(localized: "System")
-        case .dark: String(localized: "Dark")
-        case .light: String(localized: "Light")
-        }
-    }
 }
 
 extension View {
     /// Applies the user's appearance override to the hosting window (see the
     /// file header for why this is not `.preferredColorScheme`). Views that
     /// force their own scheme (the players' `.preferredColorScheme(.dark)`)
-    /// still win for their presentation.
+    /// still win for their presentation. No-op on tvOS, which has no
+    /// Appearance setting — the TV UI is designed dark.
     func appAppearance(_ appearance: AppAppearance) -> some View {
-        #if canImport(UIKit)
+        #if os(tvOS)
+            return self
+        #elseif canImport(UIKit)
             return background(
                 AppearanceWindowApplier(style: appearance.interfaceStyle)
                     .allowsHitTesting(false)
@@ -99,7 +93,7 @@ extension View {
     }
 }
 
-#if canImport(UIKit)
+#if canImport(UIKit) && !os(tvOS)
     /// A zero-size probe that reaches its hosting `UIWindow` and sets
     /// `overrideUserInterfaceStyle` — restyling every presentation in the
     /// window (including open sheets) and cleanly reverting to the device
