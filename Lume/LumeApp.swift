@@ -173,6 +173,13 @@ struct LumeApp: App {
 
     @Environment(\.scenePhase) private var scenePhase
 
+    /// The user's appearance override (issue #135), applied at the scene root
+    /// as a window-level style override so every screen (and sheets presented
+    /// from it) restyles immediately — see `AppearanceSettings.swift` for why
+    /// `.preferredColorScheme` can't do this. The players stay unaffected —
+    /// they force dark themselves.
+    @AppStorage(AppAppearance.storageKey) private var appearanceRaw = AppAppearance.defaultValue.rawValue
+
     var body: some Scene {
         WindowGroup {
             ContentView()
@@ -243,6 +250,7 @@ struct LumeApp: App {
                         }
                     #endif
                 }
+                .appAppearance(AppAppearance.resolve(appearanceRaw))
         }
         .modelContainer(catalogContainer)
 
