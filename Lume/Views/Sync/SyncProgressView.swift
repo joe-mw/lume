@@ -104,7 +104,10 @@ struct SyncProgressView: View {
                     ContentIndexingService.shared.kick(after: .seconds(3))
                     // Refresh the guide so a freshly synced playlist's channels
                     // get EPG data without waiting for the next scheduled run.
-                    EPGSyncService.shared.syncNow()
+                    // Gated: defers while another queued playlist sync is due,
+                    // so the guide download never races a content sync for the
+                    // provider's connection allowance.
+                    EPGSyncService.shared.syncAfterContentSync()
                     phase = .finished
                     // Auto-sync gets out of the way as soon as it succeeds so the
                     // user can start browsing; the manual flow waits for Done.

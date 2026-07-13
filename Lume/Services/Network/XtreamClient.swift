@@ -8,54 +8,6 @@
 import Foundation
 import OSLog
 
-enum XtreamError: LocalizedError {
-    case invalidURL
-    case authenticationFailed
-    case networkError(Error)
-    case decodingError(Error)
-    case invalidResponse
-    case serverError(Int)
-
-    var errorDescription: String? {
-        switch self {
-        case .invalidURL:
-            "The server URL is invalid."
-        case .authenticationFailed:
-            "Authentication failed. The provider rejected the request (this can also happen when the account's connection limit is reached)."
-        case let .networkError(error):
-            "Network error: \(error.localizedDescription)"
-        case let .decodingError(error):
-            "Failed to read the server response: \(error.localizedDescription)"
-        case .invalidResponse:
-            "Received an invalid response from the server."
-        case let .serverError(code):
-            "Server error (HTTP \(code))."
-        }
-    }
-
-    /// Whether the failure is likely transient and worth retrying.
-    /// Note: `authenticationFailed` (HTTP 401/403) is *not* retriable by
-    /// default — for login it means bad credentials. During an
-    /// already-authenticated sync it's usually the provider's connection /
-    /// rate limit, so those call sites opt in via `retryAuthFailure`.
-    var isRetriable: Bool {
-        switch self {
-        case .networkError:
-            // Timeouts, connection reset (RST), lost connection — transient.
-            true
-        case let .serverError(code):
-            code >= 500
-        case .invalidURL, .authenticationFailed, .decodingError, .invalidResponse:
-            false
-        }
-    }
-
-    var isAuthFailure: Bool {
-        if case .authenticationFailed = self { return true }
-        return false
-    }
-}
-
 // MARK: - XtreamClient
 
 class XtreamClient: APIClient {
@@ -164,13 +116,18 @@ class XtreamClient: APIClient {
                 return try await performRequest(url)
             } catch let error as XtreamError {
                 let retriable = error.isRetriable || (retryAuthFailure && error.isAuthFailure)
-                guard retriable, attempt < Self.maxAttempts else { throw error }
+                guard retriable, attempt < Self.maxAttempts else {
+                    Logger.network.error(
+                        "Xtream request failed permanently (\(error.logDescription, privacy: .public)) after \(attempt) attempt(s)"
+                    )
+                    throw error
+                }
 
                 // Exponential backoff: 2s, then 4s. Gives the provider time to
                 // release the connection slot / clear the rate-limit window.
                 let delay = pow(2.0, Double(attempt))
                 Logger.network.warning(
-                    "Xtream request failed (\(error.localizedDescription)); retry \(attempt)/\(Self.maxAttempts - 1) in \(delay)s"
+                    "Xtream request failed (\(error.logDescription, privacy: .public)); retry \(attempt)/\(Self.maxAttempts - 1) in \(delay)s"
                 )
                 try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
             }

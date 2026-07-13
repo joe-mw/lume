@@ -186,8 +186,68 @@ struct SyncFrequencyTests {
         ))
     }
 
-    // MARK: - EPGSyncSchedule
+    // MARK: - blocksEPGRefresh
 
+    @Test func `epg refresh blocked while a sync is running`() {
+        // A manual sync in flight blocks even when the playlist isn't due.
+        #expect(AutoSync.blocksEPGRefresh(
+            syncEnabled: true,
+            status: .syncing,
+            lastSyncDate: Date(),
+            frequency: .daily
+        ))
+    }
+
+    @Test func `epg refresh blocked while a sync is due`() {
+        #expect(AutoSync.blocksEPGRefresh(
+            syncEnabled: true,
+            status: .idle,
+            lastSyncDate: nil,
+            frequency: .daily
+        ))
+    }
+
+    @Test func `epg refresh blocked while a failed sync is still due`() {
+        #expect(AutoSync.blocksEPGRefresh(
+            syncEnabled: true,
+            status: .error,
+            lastSyncDate: Date().addingTimeInterval(-48 * 60 * 60),
+            frequency: .daily
+        ))
+    }
+
+    @Test func `epg refresh not blocked by a recently synced playlist`() {
+        #expect(!AutoSync.blocksEPGRefresh(
+            syncEnabled: true,
+            status: .idle,
+            lastSyncDate: Date().addingTimeInterval(-60),
+            frequency: .daily
+        ))
+    }
+
+    @Test func `epg refresh not blocked by a sync-disabled playlist`() {
+        // Auto-sync will never run for it, so there is nothing to defer for.
+        #expect(!AutoSync.blocksEPGRefresh(
+            syncEnabled: false,
+            status: .idle,
+            lastSyncDate: nil,
+            frequency: .daily
+        ))
+    }
+
+    // MARK: - label
+
+    @Test func `sync frequency has labels`() {
+        for frequency in SyncFrequency.allCases {
+            #expect(!frequency.label.key.isEmpty)
+        }
+    }
+}
+
+/// Serialized: both tests mutate the same `UserDefaults.standard` key, so
+/// running them in parallel races the shared value.
+@Suite(.serialized)
+struct EPGSyncScheduleTests {
     @Test func `epg sync schedule stores and retrieves date`() {
         let date = Date(timeIntervalSince1970: 1_700_000_000)
         EPGSyncSchedule.lastSyncDate = date
@@ -197,13 +257,5 @@ struct SyncFrequencyTests {
     @Test func `epg sync schedule nil when never set`() {
         EPGSyncSchedule.lastSyncDate = nil
         #expect(EPGSyncSchedule.lastSyncDate == nil)
-    }
-
-    // MARK: - label
-
-    @Test func `sync frequency has labels`() {
-        for frequency in SyncFrequency.allCases {
-            #expect(!frequency.label.key.isEmpty)
-        }
     }
 }
