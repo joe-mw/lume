@@ -6,6 +6,7 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     /// Not `private`: read by the SettingsView+Profiles extension (separate file).
     @Environment(ProfileManager.self) var profileManager: ProfileManager?
+    @Environment(CloudSyncCoordinator.self) private var cloudSync: CloudSyncCoordinator?
     /// Not `private`: read by the SettingsView+AutoSync extension (separate file).
     @Query var playlists: [Playlist]
     /// Not `private`: read by the SettingsView+Playlists extension (separate file).
@@ -378,9 +379,23 @@ struct SettingsView: View {
         }
 
         private func deletePlaylists(offsets: IndexSet) {
-            withAnimation {
-                for index in offsets {
-                    PlaylistDeletion.delete(playlists[index], in: modelContext)
+            // Route through the sync engine so the deletion also clears the
+            // CloudKit mirror and shadow baseline — deleting on the view
+            // context alone leaves a surviving mirror that resurrects the last
+            // playlist (#136). Previews have no coordinator; local-only
+            // deletion is fine there.
+            if let cloudSync {
+                let ids = offsets.map { playlists[$0].id }
+                Task {
+                    for id in ids {
+                        await cloudSync.deletePlaylist(id: id)
+                    }
+                }
+            } else {
+                withAnimation {
+                    for index in offsets {
+                        PlaylistDeletion.delete(playlists[index], in: modelContext)
+                    }
                 }
             }
         }

@@ -4,6 +4,7 @@ import SwiftUI
 struct PlaylistDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(CloudSyncCoordinator.self) private var cloudSync: CloudSyncCoordinator?
     @Bindable var playlist: Playlist
 
     /// tvOS: called to leave this detail when it is shown inline in the Settings
@@ -444,7 +445,16 @@ struct PlaylistDetailView: View {
     }
 
     private func deletePlaylist() {
-        PlaylistDeletion.delete(playlist, in: modelContext)
+        // Route through the sync engine so the deletion also clears the
+        // CloudKit mirror and shadow baseline — deleting on the view context
+        // alone leaves a surviving mirror that resurrects the last playlist
+        // (#136). Previews have no coordinator; local-only deletion is fine.
+        if let cloudSync {
+            let id = playlist.id
+            Task { await cloudSync.deletePlaylist(id: id) }
+        } else {
+            PlaylistDeletion.delete(playlist, in: modelContext)
+        }
         #if os(tvOS)
             onClose?()
         #else

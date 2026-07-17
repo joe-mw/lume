@@ -190,6 +190,20 @@ final class CloudSyncCoordinator {
         }
     }
 
+    // MARK: - Playlist deletion
+
+    /// The user deleted a playlist: propagate it through the engine (cloud
+    /// mirror + shadow + local catalog) as one actor-serialized operation, so
+    /// deleting the last playlist can't be misread by the empty-store
+    /// integrity gate and resurrected from the surviving mirror (#136).
+    func deletePlaylist(id: UUID) async {
+        do {
+            try await engine.deletePlaylist(id: id)
+        } catch {
+            Logger.sync.error("Playlist deletion failed: \(error.localizedDescription)")
+        }
+    }
+
     // MARK: - Profiles
 
     /// Bootstrap the profile store (ensure a default, resolve the active profile,
