@@ -6,7 +6,12 @@
 //  as a plain string and applied at the scene root, so a device in Light Mode
 //  can still run Lume permanently dark (and vice versa). `system` keeps the
 //  previous follow-the-device behaviour. Not offered on tvOS — the TV UI is
-//  designed dark, so the setting isn't shown there and the applier is a no-op.
+//  designed dark and the whole app is pinned dark via the Info.plist
+//  `UIUserInterfaceStyle` key (`INFOPLIST_KEY_UIUserInterfaceStyle
+//  [sdk=appletv*]` in the target build settings), so the applier is a no-op.
+//  A runtime window override is not enough on tvOS: the system draws the
+//  scene backdrop behind the (transparent) window from the *device*
+//  appearance, so content pinned dark still sat on a light backdrop (#140).
 //
 //  Applied as a *window-level* style override (`overrideUserInterfaceStyle` /
 //  `NSApp.appearance`) rather than `.preferredColorScheme`: once that modifier
@@ -76,7 +81,8 @@ extension View {
     /// file header for why this is not `.preferredColorScheme`). Views that
     /// force their own scheme (the players' `.preferredColorScheme(.dark)`)
     /// still win for their presentation. No-op on tvOS, which has no
-    /// Appearance setting — the TV UI is designed dark.
+    /// Appearance setting — the TV UI is pinned dark by the Info.plist
+    /// `UIUserInterfaceStyle` key (see the file header).
     func appAppearance(_ appearance: AppAppearance) -> some View {
         #if os(tvOS)
             return self
