@@ -398,7 +398,8 @@ struct FullScreenPlayerView: View {
             resolvedMedia = try await StalkerStreamResolver.resolve(activeMedia, container: modelContext.container)
         } catch {
             resolveError = error.localizedDescription
-            Logger.player.error("Stalker stream resolution failed: \(error.localizedDescription, privacy: .public)")
+            let detail = (error as? StalkerError)?.logDescription ?? LogRedaction.describe(error)
+            Logger.player.error("Stalker stream resolution failed: \(detail, privacy: .public)")
         }
     }
 

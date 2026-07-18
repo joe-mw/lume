@@ -83,7 +83,11 @@ nonisolated struct DebugLogExporter {
             .compactMap { $0 as? OSLogEntryLog }
             .map { entry in
                 let time = Self.entryStamp.string(from: entry.date)
-                return "\(time)  [\(entry.category)] \(Self.label(for: entry.level))  \(entry.composedMessage)"
+                // Last line of defense: even if a future call site accidentally
+                // interpolates a URL with `privacy: .public`, it must not reach
+                // a shared report — stream URLs carry playlist credentials.
+                let message = LogRedaction.scrubURLs(in: entry.composedMessage)
+                return "\(time)  [\(entry.category)] \(Self.label(for: entry.level))  \(message)"
             }
     }
 
