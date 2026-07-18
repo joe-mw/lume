@@ -106,16 +106,20 @@ private final class VLCLogBridge: NSObject, VLCLogging {
         // harmless, and drowns out everything else. Drop it.
         if message.contains("lookup failed (-25300") { return }
 
+        // libvlc echoes the full MRL in many messages ("open of '…' failed",
+        // redirects, access setup) — and stream URLs carry the playlist
+        // credentials, so scrub before the public interpolation.
+        let scrubbed = LogRedaction.scrubURLs(in: message)
         let module = context?.module ?? "vlc"
         switch logLevel {
         case .error:
-            Logger.player.error("libvlc[\(module, privacy: .public)] \(message, privacy: .public)")
+            Logger.player.error("libvlc[\(module, privacy: .public)] \(scrubbed, privacy: .public)")
         case .warning:
-            Logger.player.warning("libvlc[\(module, privacy: .public)] \(message, privacy: .public)")
+            Logger.player.warning("libvlc[\(module, privacy: .public)] \(scrubbed, privacy: .public)")
         case .info:
-            Logger.player.info("libvlc[\(module, privacy: .public)] \(message, privacy: .public)")
+            Logger.player.info("libvlc[\(module, privacy: .public)] \(scrubbed, privacy: .public)")
         default:
-            Logger.player.debug("libvlc[\(module, privacy: .public)] \(message, privacy: .public)")
+            Logger.player.debug("libvlc[\(module, privacy: .public)] \(scrubbed, privacy: .public)")
         }
     }
 }

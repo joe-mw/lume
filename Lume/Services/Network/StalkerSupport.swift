@@ -148,6 +148,34 @@ enum StalkerError: LocalizedError {
         }
     }
 
+    /// Credential-free summary for diagnostic logs. Interpolated with
+    /// `privacy: .public` so user-exported logs stay actionable — which means
+    /// it must never contain a URL: Stalker portal links carry the MAC
+    /// address and short-lived tokens, and underlying `NSError` descriptions
+    /// can embed the failing URL.
+    var logDescription: String {
+        switch self {
+        case .invalidURL:
+            return "invalid portal URL"
+        case .handshakeFailed:
+            return "portal handshake failed"
+        case .authenticationFailed:
+            return "portal rejected the MAC address"
+        case .noStreamURL:
+            return "no playable stream in portal response"
+        case let .networkError(error):
+            let nsError = error as NSError
+            return "network error (\(nsError.domain) \(nsError.code))"
+        case let .decodingError(error):
+            let nsError = error as NSError
+            return "undecodable portal response (\(nsError.domain) \(nsError.code))"
+        case .invalidResponse:
+            return "non-HTTP response"
+        case let .serverError(code):
+            return "HTTP \(code)"
+        }
+    }
+
     /// Whether the failure is likely transient and worth retrying.
     var isRetriable: Bool {
         switch self {

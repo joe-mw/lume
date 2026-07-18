@@ -381,8 +381,11 @@ final class CloudSyncCoordinator {
            let perItem = ckError.partialErrorsByItemID, !perItem.isEmpty
         {
             for (itemID, itemError) in perItem {
+                // LogRedaction.describe, not String(reflecting:): conflict
+                // errors can dump the whole CKRecord, and synced-playlist
+                // records carry server URLs and account credentials.
                 Logger.sync.error(
-                    "CloudKit \(phase, privacy: .public) rejected \(String(describing: itemID), privacy: .public): \(String(reflecting: itemError), privacy: .public)"
+                    "CloudKit \(phase, privacy: .public) rejected \(String(describing: itemID), privacy: .public): \(LogRedaction.describe(itemError), privacy: .public)"
                 )
             }
             // Records usually all fail identically; collapse to the distinct
@@ -391,7 +394,7 @@ final class CloudSyncCoordinator {
             return messages.sorted().joined(separator: "; ")
         }
 
-        Logger.sync.error("CloudKit \(phase, privacy: .public) failed: \(String(reflecting: error), privacy: .public)")
+        Logger.sync.error("CloudKit \(phase, privacy: .public) failed: \(LogRedaction.describe(error), privacy: .public)")
         return error.localizedDescription
     }
 

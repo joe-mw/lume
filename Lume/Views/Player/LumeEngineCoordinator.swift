@@ -306,11 +306,11 @@ final class LumeEngineCoordinator: NSObject, ObservableObject {
             Logger.player.warning("LumeEngine stalled at \(position, format: .fixed(precision: 2))s")
             onStalled?()
         case let .error(error):
-            Logger.player.error("LumeEngine error: \(String(describing: error), privacy: .public)")
+            Logger.player.error("LumeEngine error: \(LogRedaction.scrubURLs(in: String(describing: error)), privacy: .public)")
         case let .didSeek(position):
             Logger.player.info("LumeEngine didSeek → \(position, format: .fixed(precision: 2))s")
         case let .decoderDowngraded(error):
-            Logger.player.warning("LumeEngine decoder downgraded: \(String(describing: error), privacy: .public)")
+            Logger.player.warning("LumeEngine decoder downgraded: \(LogRedaction.scrubURLs(in: String(describing: error)), privacy: .public)")
         case .opened:
             break
         }
