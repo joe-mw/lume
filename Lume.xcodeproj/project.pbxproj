@@ -397,6 +397,7 @@
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UIUserInterfaceStyle = Automatic;
 				"INFOPLIST_KEY_UIUserInterfaceStyle[sdk=appletvos*]" = Dark;
 				"INFOPLIST_KEY_UIUserInterfaceStyle[sdk=appletvsimulator*]" = Dark;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
@@ -449,6 +450,7 @@
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UIUserInterfaceStyle = Automatic;
 				"INFOPLIST_KEY_UIUserInterfaceStyle[sdk=appletvos*]" = Dark;
 				"INFOPLIST_KEY_UIUserInterfaceStyle[sdk=appletvsimulator*]" = Dark;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
@@ -774,6 +776,7 @@
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UIUserInterfaceStyle = Automatic;
 				"INFOPLIST_KEY_UIUserInterfaceStyle[sdk=appletvos*]" = Dark;
 				"INFOPLIST_KEY_UIUserInterfaceStyle[sdk=appletvsimulator*]" = Dark;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
